@@ -49,7 +49,7 @@ docs/kit-contract.md says what each dependency is and how the kit wires them.
 | Sending | onboarding a domain for Email Sending has no API, so it is a dashboard tap; the test (`POST /api/mail/cloudflare/test`) tells the states apart and the route sends nothing until a test passed |
 | Mode | Paid only when the plan setting says Workers Paid, Free otherwise; a change of plan asks for the test again |
 | What it takes | never bulk mail; every recipient a verified staff address, or in Paid mode anyone while `mail.cloudflare_first` is on; from the route's own address unless the message's From is on its domain (the original From becomes the reply address); a message from an address someone picked on another domain is left to its provider |
-| Its answers | sorted into email's one list by `cloudflareFailure` (`src/routes.ts`): a refusal for that message, a setup problem, a throttle or a day used up let the providers try; a receiving server's refusal fails the message; Cloudflare's server error or a code it does not know pins the message to Cloudflare (mail law M-1) |
+| Its answers | sorted into email's one list by `cloudflareFailure` (`src/routes.ts`): a refusal for that message, a setup problem, a throttle or a day used up let the providers try; a receiving server's refusal fails the message; Cloudflare's server error or a code it does not know pins the message to Cloudflare (mail law M-1), and since the binding takes no message key it is not asked again: the message reads "May have been sent" (2026-11-21) |
 | Stopping | `DELETE /api/mail/cloudflare` forgets the route here; Email Routing and the verified addresses stay in Cloudflare |
 
 ## Records on Cloudflare

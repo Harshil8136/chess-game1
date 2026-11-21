@@ -116,3 +116,10 @@ None yet.
 | P305 | Settings and System status: switches, check boxes, a select and a progress bar | They look as before | [record](records/2026-11-20-codebase-review.md) |
 | P306 | System status | Files storage, Campaign reputation and the email allowance checks are listed and green | [record](records/2026-11-20-codebase-review.md) |
 | P307 | Email's inbox: archive or delete every message of one conversation, then come back after an hour | The conversation is gone from every box | [record](records/2026-11-20-codebase-review.md) |
+
+### Your two picks, 21 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P308 | Settings, Modules, Access | Ending access emails and Access review reminder stay as you left them on your portal; a portal set up from now on shows both off | [log](verification-log.md) |
+| P309 | Email, Sent, after an email Brevo or Cloudflare gave no clear answer for | It reads May have been sent, not Failed, and was sent once only | [log](verification-log.md) |

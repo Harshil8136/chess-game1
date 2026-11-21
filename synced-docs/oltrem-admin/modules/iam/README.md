@@ -374,7 +374,9 @@ what the Vendor removed on purpose stays out.
 
 ## Care on the tick
 
-The module keeps two rules without anyone having to remember them (`src/care.ts`):
+The module keeps two rules without anyone having to remember them (`src/care.ts`). Each is an
+extra of the Access part, switched on and off on the Modules page, and since 2026-11-21 (the
+owner's pick) both start off on a new portal; a portal that already saved its list keeps it:
 
 | Kind | Id | What it does |
 |---|---|---|

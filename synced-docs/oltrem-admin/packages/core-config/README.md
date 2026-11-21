@@ -164,7 +164,8 @@ the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives
 checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
 part). Nothing they wrote is deleted. An extra marked `startsOff` (the daily seal, the nightly
 backup and the drill reminder, since 2026-11-12: work on the timer that costs database rows every
-day) is off on a new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's
+day; Access's ending-access emails and access-review reminder, since 2026-11-21, the owner's pick:
+mail and warnings a new portal did not ask for) is off on a new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's
 default, so a portal whose list was already saved keeps what it saved. The others are on until
 switched off.
 

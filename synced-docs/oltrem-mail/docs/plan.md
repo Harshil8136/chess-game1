@@ -191,7 +191,8 @@ flowchart TD
   error codes and each provider's answers): a recipient problem (record it, move on), a throttle or
   a used-up day (wait, or try the backup), a setup problem (stop and tell the owner in words). An
   unclear answer, such as a timeout, is never sent again by another route: the first may have
-  delivered it.
+  delivered it. Since 2026-11-21 (the owner's ruling) it is asked again only on a route that
+  knows the message's key (Resend); on any other it ends as "may have been sent".
 - **Every route carries the thread.** A reply passes `In-Reply-To` and `References` on every route
   ([inbox](inbox.md#5-threads)).
 
