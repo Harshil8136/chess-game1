@@ -87,6 +87,7 @@ const audit = createAuditModule<Env>({
 | Route | Capability | What it answers |
 |---|---|---|
 | `GET /entries?outcome=&module=&actor=&target=&action=&before=` | `audit.read` at the company | 50 rows, newest first, narrowed by outcome, module, person, what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
+| `GET /since?at=` | `audit.read` at the company | Home's What changed card (2026-11-21): what others did since `at` (the person's last Mark as seen; a day back without it, a week back at most, `SINCE_DAYS`), the kinds of change by action, the most made first, the first six (`SINCE_KINDS`) with their counts, and the total. Only a person's changes that went through count: not the person asking, not refusals or failures, not the system's own rows (the Vendor's count), and not coming and going (`iam.sign-in`, `iam.sign-out`, `iam.sign-out-everywhere`, `iam.device-end`). One grouped read on `oltrem_audit_log_at`, which reads the rows since that time, a week's at most; the card is an extra that starts off (`audit.since`, `@oltrem/core-config`) |
 | `GET /seals` | `audit.read` at the company | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) at the company | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands; nothing about the seal when `sealing` answers false (the Daily seal switched off) |
@@ -132,5 +133,7 @@ write and its reported failure, the filters and the paging, and a row changed by
 its sequence number. The module's own tests: the seal chained and copied, sealed once a day, an
 empty day sealed; a row changed and a row removed after the seal, each found by the next run
 and failing the check; a large seal checked over three runs from its kept place, a change late
-in it still found, and a row removed from it found by its first run; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
+in it still found, and a row removed from it found by its first run; What changed by kind, the
+most first, the Vendor's counted, leaving out the asker, refusals, the system and sign-ins, a day back by default and a
+week at most; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
 the Home card, and the card with the seal switched off.

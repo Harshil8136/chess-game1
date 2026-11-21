@@ -229,6 +229,25 @@ Not measured here yet: GitHub Actions minutes, which `oltrem doctor` is to show 
 the sandbox: the `actionType` value of a KV write and the unit of the CPU quantile, taken from
 Cloudflare's documentation.
 
+## Service status
+
+Given `statusPages`, a `pages(env)` function and, for tests, a `fetch`, the health module declares
+one more check (2026-11-21, the feature plan's provider status): `health.status-pages`, lane
+`services`, every 30 minutes (`STATUS_PAGES_EVERY`). It reads the public status page of each
+service the portal leans on, side by side, at `<page>/api/v2/status.json`, the common format
+those pages answer in, each within 3 seconds (`STATUS_PAGE_MS`), at that address only (a move
+elsewhere is said, not followed) and 16 KB of its answer at most. The client template names
+Cloudflare's page and the page of each email service set to send (the active one and its
+failovers) whose provider definition names one (`status`, `@oltrem/providers`).
+
+Only a major or critical outage warns, naming the service first; a minor problem somewhere in a
+large network is reported most days and changes nothing for the portal, so it is OK, said in the
+page's own words. A page that does not answer, answers an error or answers another shape is said
+so and stays OK: the check never fails, so it never opens an alert. An outside page's words are
+kept to letters, digits and plain punctuation, 80 characters each. It is an extra of the System
+status part that starts off (`health.status-pages`, `@oltrem/core-config`): off, it is neither
+run nor listed, and no page is asked.
+
 ## Table
 
 Migration `0009`, `oltrem_health`: `id`, `module_id`, `lane`, `status`, `message`, `checked_at`,
@@ -260,4 +279,9 @@ client's, gone once Cloudflare takes the key. Workers
 Paid: the month asked from the 1st, the budgets it includes, 96% failing without a pause, the
 month's figures not counting once back on the free plan; a plan that cannot be read taken as
 free; and the queue's backlog read live, warning at 20 minutes, failing at 90, and a backlog that
-cannot be read warning.
+cannot be read warning. Service status, with a stand-in for the status pages
+(`test/status-pages.test.ts`): declared only when the portal names the pages; a minor problem OK
+in the page's words, each page asked at its status address; a major outage warning, its service
+named first, and no alert opened; a page that does not answer, answers 404 or another shape said
+so and OK; a move not followed and an answer larger than a status not read; an outside page's
+words kept plain and short; and nothing asked while its extra is off.

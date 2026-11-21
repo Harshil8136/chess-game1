@@ -25,6 +25,7 @@ export const notes = defineModule({
 | `idle` | optional: a slower pace, longer than `every`, for a job that mostly finds nothing to do (below) |
 | `summary` | a few words the jobs page shows |
 | `run(env, ctx)` | the work; it throws to fail, and may answer `'idle'` |
+| `check(env)` | optional (2026-11-21): what waits for it now, in one plain sentence, without doing any of it; the jobs page's **Check for work** asks it. A few reads at most, never a write |
 
 The contract (`@oltrem/core-module`) refuses a bad id, interval or summary when the module loads,
 and an `idle` that is not longer than `every`.
@@ -92,7 +93,17 @@ minutes) runs it. Both write the rows of the declared jobs first, so they work b
 tick, and answer false for a job no mounted module declares.
 
 `list(env)` returns every row, with `declared` false for the row of a job no mounted module
-declares any more; the row and its history are kept.
+declares any more; the row and its history are kept. `standDown(env)` answers the pause's reason
+while the due jobs wait for a spent budget, or null (2026-11-21, for the jobs page).
+
+### The last day of a job (2026-11-21)
+
+The write that records a run also keeps what the job did in each of the last 24 hours, as one
+short line in its row (`last_day`, `<hour>|<24 marks>`): `markDay` moves the line the run found on
+by the hours since and marks this hour as went through, had nothing to do (`'idle'`) or failed,
+a failure winning within an hour. `dayMarks(line, at)` reads it back as the 24 hours up to `at`,
+oldest first, null for an hour without a run; a line older than a day reads as empty. No table of
+runs and no extra write: the jobs page draws a day's strip from it.
 
 ### The queries of one tick
 
@@ -170,7 +181,8 @@ started by hand (`startFlow`), it still runs.
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
 `lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
 index on `next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand;
-`0031` adds `last_queries`, the database queries the last run made. Tiers
+`0031` adds `last_queries`, the database queries the last run made; `0069` (2026-11-21) adds
+`last_day`, the last 24 hours above. Tiers
 (plan 4.3) come later; the budgets' pause above needs no column.
 
 ## Tests
@@ -186,7 +198,10 @@ before the first tick; the queries a run makes counted through a batch, a job th
 left for the next tick where it goes first, and more jobs fitting once their queries are known;
 a job that answers `'idle'` run at its idle pace, woken by `wakeJobs`, a wake made while it ran
 kept; a tick reading only the due rows through the index, every row on the first tick and once an
-hour; and the contract's refusals. The client template's worker test ticks a fresh portal until every
+hour; the contract's refusals; the day line written with each run, moved on by the hours since,
+read back up to a later hour, empty after a day, a failure winning within an hour and a clock gone
+back starting it again; and `standDown` saying the pause's reason, null once it lifts or without
+one. The client template's worker test ticks a fresh portal until every
 job has run, which takes more than one tick, each run's queries recorded. With a stand-in step: a schedule running its flows in
 module order with their steps named after them, a start by hand with its params, a failed flow
 reported while the other runs, and an instance no flow matches.

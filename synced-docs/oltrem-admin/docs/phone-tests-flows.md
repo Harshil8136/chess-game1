@@ -2,8 +2,8 @@
 title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
-last_verified: 2026-11-15
-sources: [docs/records/2026-11-15-flows-fixed.md]
+last_verified: 2026-11-21
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -123,3 +123,19 @@ None yet.
 |---|---|---|---|
 | P308 | Settings, Modules, Access | Ending access emails and Access review reminder stay as you left them on your portal; a portal set up from now on shows both off | [log](verification-log.md) |
 | P309 | Email, Sent, after an email Brevo or Cloudflare gave no clear answer for | It reads May have been sent, not Failed, and was sent once only | [log](verification-log.md) |
+
+### Safer and calmer, 21 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P310 | Settings, Modules | Sign-in alerts, Unusual sign-ins, What changed card and Service status are off; everything else as you left it | [record](records/2026-11-21-safer-and-calmer.md) |
+| P311 | Switch Sign-in alerts on, then sign in from another browser | An email naming that browser, your country and the time, with Sign out everywhere | [record](records/2026-11-21-safer-and-calmer.md) |
+| P312 | My access, Your sign-ins | Each browser signed in as you, this one marked; Sign out everywhere asks first, then signs you out | [record](records/2026-11-21-safer-and-calmer.md) |
+| P313 | Users, Signed in today, as the Owner | Who signed in in the last day, from which browser and country, the refused addresses, and Sign everyone else out behind a dialog | [record](records/2026-11-21-safer-and-calmer.md) |
+| P314 | Switch Unusual sign-ins on; System status | Unusual sign-ins is listed and OK | [record](records/2026-11-21-safer-and-calmer.md) |
+| P315 | Settings, Files, Allowed types: documents; then upload a photo in Files | Refused: This kind of file is not allowed here; set back to any, the photo uploads | [record](records/2026-11-21-safer-and-calmer.md) |
+| P316 | Files, share a file with a passcode and your email address; open the link from the email | The email names the file and says a passcode is asked; a wrong passcode asks again; the right one downloads | [record](records/2026-11-21-safer-and-calmer.md) |
+| P317 | Developer, Jobs | Each job shows its last 24 hours; Check for work on the trash job (Deletes for good what has been in the trash…) says what waits and deletes nothing | [record](records/2026-11-21-safer-and-calmer.md) |
+| P318 | Switch What changed card on; Home | What others changed since you last looked; Mark as seen leaves Nobody else changed anything | [record](records/2026-11-21-safer-and-calmer.md) |
+| P319 | Forms, Try the form and send an answer; then the inbox | The answer is bold and Unread (1); open it and go back, it is plain; Mark unread makes it bold again | [record](records/2026-11-21-safer-and-calmer.md) |
+| P320 | Switch Service status on; System status, Check again now | Service status is listed, naming Cloudflare and your email service | [record](records/2026-11-21-safer-and-calmer.md) |

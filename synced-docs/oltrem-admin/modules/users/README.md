@@ -83,6 +83,21 @@ A session's **end time** (`PATCH /people/:id/sessions/:device`, thirty days at m
 clears it) signs that browser out when it passes. Audited as `users.block` (with the time and
 the reason), `users.unblock` and `users.session-change` (with the device and the time).
 
+**Signed in today** (2026-11-21, the feature plan's "Signed in now"). `GET /signed-in` answers who
+signed in within the last 24 hours, by person, newest first, read from the audit log's
+`iam.sign-in` rows (one batch of two reads on its action index, at most 500 sign-ins and 50
+refusals, `SIGNED_IN_ROWS` and `REFUSED_ROWS`), so no session record is read: each sign-in with
+its browser, the country Cloudflare saw and what the access module's comparison found (`new`,
+`unusual`), and the person's `signedOutAt`; then the sign-ins refused for an address with no
+account here (the access module writes one an hour for each address). A sign-in's row is written
+when the browser first signs in, so a person signed in yesterday on a browser still open is not
+listed, and "Inactive for an hour" is not shown: it would need a write on every request.
+**Sign everyone else out** (`POST /sign-out-everyone`, an Owner or the Vendor alone, else
+`KIT-E-2104`) writes `signed_out_at` on every other active person of the company and moves the
+policy version once, so every other sign-in is refused within one recheck (five minutes) with no
+session record read or written for each person; the Vendor and service accounts are not touched.
+Audited as `users.sign-out-everyone` with how many accounts it reached.
+
 ## Search
 
 The portal's search (`GET /api/users/search?q=`, `users.read`) finds people by address or display
@@ -124,8 +139,11 @@ audited.
 | `PATCH /people/:id/sessions/:device` | `users.manage` | give one an end time (`endsAt`, thirty days at most), or clear it with `null` |
 | `POST /people/:id/block`, `POST /people/:id/unblock` | `users.manage` | block sign-in until a time, or for good without one, with a reason if one is given; lift either |
 | `POST /people/:id/sign-out` | `users.manage` | end every open one at once; answers `{ ended }` |
+| `GET /signed-in?probe=` | `users.manage` at the company | who signed in within the last day, by person, with the refused addresses (above); `probe=1` answers `{ may: true }` and reads nothing, for the screens' tab, which asks on every page of its row |
+| `POST /sign-out-everyone` | `users.manage`, an Owner or the Vendor | end every sign-in in the company but your own; answers `{ people }` |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
+| `GET /me/seen`, `POST /me/seen` | `users.self` | when I last marked Home's What changed card as seen (`{ at }`, null before the first time); mark it now (no body, answers 204). Personal, like the theme: not audited |
 | `GET /me/views?path=`, `POST /me/views`, `DELETE /me/views/:id` | `users.self` | my saved views of one page: list, save under a name (the same name replaces), remove; another person's id removes nothing |
 | `GET /me/notifications?before=&unread=` | `users.self` | my notifications, newest first, thirty a page, with the unread count and a cursor for the next page |
 | `GET /me/notifications/unread` | `users.self` | how many are unread, up to 100: the bell |
@@ -147,6 +165,12 @@ Migration `0007_users.sql`, additive and idempotent, in the one ledger `oltrem_m
 `users_profiles` (`principal_id`, `display_name`, `locale`, `updated_at`). The account itself is
 `iam_principals` (`@oltrem/iam`, migration `0004`).
 
+Migration `0070_users_seen.sql` (2026-11-21): `users_profiles.seen_at`, when the person last
+pressed Mark as seen on Home's What changed card; the card counts the others' changes since then
+(`GET /api/audit/since`, `@oltrem/core-audit`). Written only on that press, never when a page is
+shown, so a page the frame fetched ahead of a tap marks nothing. A person with no profile row gets
+one on the first press.
+
 Migration `0055_users_views.sql` (2026-11-03): `users_views` (`id`, `principal_id`, `path`,
 `name`, `query`, `created_at`, one name per person and page). A saved view keeps a page's address
 and its filters, never rows, so opening it runs the page's own permission check. At most
@@ -162,7 +186,7 @@ person) with indexes for the newest first, the unread and the age; `users_notify
 
 The module owns the `2100` to `2199` block: `KIT-E-2101` nothing to change (the account is in
 that state already), `KIT-E-2102` an Owner cannot be deactivated or blocked, `KIT-E-2103` too many saved
-views on one page. What the permission model names
+views on one page, `KIT-E-2104` only an Owner or the Vendor may sign everyone else out. What the permission model names
 keeps its codes: `KIT-E-2007` beyond your standing, `KIT-E-2008` your own account, `KIT-E-2010`
 a bad profile or a missing reason, and the core's `KIT-E-0404` for a person who does not exist.
 
@@ -177,7 +201,7 @@ grant at the root, refused for oneself and for an Owner, needing a reason, done 
 to change the second time, the sessions following each switch, and the Vendor standing above a
 manager; blocking for an hour and for good, refused to a clerk, for oneself, for an Owner and for
 a time past, the door's refusal with the time, unblocking with the ended sign-in staying ended,
-and a session's end time set, refused below standing or past, and cleared; the audit rows with their actors, reasons and refusals; saved views; notifications kept
+and a session's end time set, refused below standing or past, and cleared; the audit rows with their actors, reasons and refusals; Signed in today by person with the flags, the refused addresses and nothing older than a day, refused to a clerk; Sign everyone else out refused to a manager, done by an Owner, their own sign-in kept and a new sign-in let in, and the What changed mark, empty before the first press, kept for each person apart, a profile row made on the first press (`test/signed-in.test.ts`); saved views; notifications kept
 and emailed as each person chose (an inactive account and an address of nobody emailed only, a
 key kept once, off keeps and sends nothing), the link taken from the text and never another
 site's, opened by its owner only, all read, the privacy rows, pages of thirty by a cursor that

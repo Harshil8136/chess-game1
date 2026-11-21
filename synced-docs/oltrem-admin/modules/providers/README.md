@@ -127,6 +127,13 @@ repeated field name, an event mapped to an unknown kind, a webhook signature wit
 reads its key from, `hmac-body` without its header. A field marked `optional` may be left out of an instance: the webhook keys
 are, so a provider sends before its delivery reports are set up.
 
+A definition may name its provider's public status page (`status`, 2026-11-21): `https://` and a
+host alone, a page that answers at `/api/v2/status.json` in the common format, read by System
+status's Service status check (`@oltrem/core-health`) for the email services set to send. The
+kit's name it for Resend, Brevo, Mailgun, Mailjet and SMTP2GO, each page read on the day. It is
+left out for SendGrid, whose page is Twilio's as a whole, and for Postmark and Mailtrap, whose
+pages did not answer in that shape; the others are left out until a page of theirs is read in it.
+
 ## Routes
 
 Under `/api/providers`, with `providers.read` (class read), `providers.manage` (class admin,

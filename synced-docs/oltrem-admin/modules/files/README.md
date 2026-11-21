@@ -69,6 +69,25 @@ stored under `files/<id>` before the row is written, so a row never points at no
 A file is served as a download under its own name, an image in place with `inline=1`, always with
 `nosniff` and a sandboxing content security policy: a file never runs as a page of the portal.
 
+### What kind of file it is, and the room each person has (2026-11-21)
+
+An upload's first 16 bytes are read before it is stored, as well as its name (`src/kinds.ts`): the
+common shapes of a program, a document, a picture, sound or video, and an archive are known by
+their bytes. A program dressed as something else (a Windows, Linux or Mac program, or a script
+that names what runs it, saved as `photo.jpg` or `notes.txt`) is refused whatever the settings say
+(`KIT-E-2406`); under a program's own name it is kept, unless the setting narrows the kinds. The
+setting `files.allowed_types` is `any` by default, so a portal keeps taking what it took; set to
+`documents and pictures` or `documents`, a file is kept only when its bytes show one of those kinds
+and its name fits that kind (`KIT-E-2407`). A file of no shape the bytes show (plain text, CSV) is
+judged by its name alone.
+
+The setting `files.person_room_mb` gives each person that much room, counted over the files they
+uploaded, the trash included, in every place (0, the default, is no limit). An upload that would
+pass it is refused before it is stored when its length is known, and removed again when it is not
+(`KIT-E-2408`). One indexed sum answers it, and only when the setting is on. Two uploads by the
+same person at the same moment are each judged against the room before either is counted, so
+together they may pass it once by up to one file.
+
 ## Links that end
 
 A link hands one file to anyone who has it, for one to thirty days, and optionally for a number
@@ -76,7 +95,22 @@ of downloads; it is shown once, with a Copy button, and the database keeps only 
 `/hooks/files/s/<token>`, past the door, and ends when its day passes, its downloads are used
 (one statement counts a download only while the link is good), someone ends it by hand, or its
 file goes to the trash. An ended link answers `410` with a line of text. Each download is
-audited as `files.share-download`.
+audited as `files.share-download`, and the file's page shows when each link was last downloaded.
+
+A link may ask for a passcode (2026-11-21), 4 to 64 characters, kept only as a SHA-256 of the link's
+id and the passcode, and compared in constant time. Its address then shows a page of its own with one field and no script, never
+cached and never indexed; the right passcode gives the file, a wrong one the page again (`403`),
+and the tenth wrong one over the link's life ends it (`410`, shown as Locked), audited as the
+system's `files.share-locked` on the file. Each wrong guess is counted by one statement and a right
+one downloads only while the link is not locked, so guesses sent at once do no better than ten in
+turn. A share with a customer has no passcode: they sign in.
+
+A link may be emailed as it is made (`to`), through the portal's email service: the email carries
+the file's name and the link, and says a passcode is asked for, never what it is. The link stands
+whether the email goes or not, and the answer's `sent` says which; the address is kept in the
+share's audit row (`to`), so the file's history says where the link went. It goes from the
+company's sending address through the email service, within that service's own daily limits.
+Since only the link's hash is kept, a link is emailed only when it is made.
 
 ## Shared with a customer
 
@@ -103,8 +137,9 @@ Moving an item to the trash hides it and everything inside it, and ends its link
 brings it back to its folder, or to the top of its place when that folder is gone, numbered on a
 clash. Only an item in the trash is deleted for good (`KIT-E-2404` otherwise), with everything
 inside it, their content and their links. The job `files.empty-trash` runs daily and deletes what
-has stayed longer than the setting `files.trash_days` (30 by default), then removes link rows
-that ended a month ago.
+has stayed longer than the setting `files.trash_days` (30 by default), 100 items a run at most,
+then removes link rows that ended a month ago. Its check (the jobs page's **Check for work**,
+2026-11-21) counts what the next run would delete, and deletes nothing.
 
 ## The pages
 
@@ -127,13 +162,14 @@ file holds.
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself |
 | `POST /folders`, `POST /uploads`, `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
-| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
+| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`, `passcode`, `to` to email it, with `sent` saying whether it went), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
 
-The hook `GET /hooks/files/s/:token` opens a link. Every change is audited by the module
+The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:token` takes its
+passcode from the page. Every change is audited by the module
 (`files.folder-create`, `files.upload`, `files.update`, `files.trash`, `files.restore`,
-`files.purge`, `files.share`, `files.share-revoke`; the system's `files.share-download` and
-`files.trash-empty`), with names and sizes, never content.
+`files.purge`, `files.share`, `files.share-revoke`; the system's `files.share-download`,
+`files.share-locked` and `files.trash-empty`), with names and sizes, never content.
 
 The module has no card on Home: Home reads a card without the person, and a count of every file
 would tell someone about places their roles do not reach. Its check `files.storage` counts the
@@ -148,7 +184,10 @@ Migration `0019_files.sql`, additive and idempotent, in the one ledger `oltrem_m
 changed it and when, when it went to the trash) and `files_shares` (each link: its item, the
 hash of its token, who made it, when it ends, its download limit and count, when it was ended).
 Migration `0040_files_customers.sql` adds the address a share is for (`email`, empty for a link)
-and an index on it in lower case, which a customer's account page reads by.
+and an index on it in lower case, which a customer's account page reads by. Migration
+`0068_files_passcodes_and_room.sql` (2026-11-21) adds a link's passcode hash and its count of wrong
+passcodes, and an index on the files by who uploaded them with their sizes, which Room per person
+sums from the index alone.
 
 ## Settings
 
@@ -156,12 +195,16 @@ and an index on it in lower case, which a customer's account page reads by.
 |---|---|---|
 | `files.max_upload_mb` | 25 (1 to 100) | an Owner |
 | `files.trash_days` | 30 (1 to 365) | an Owner |
+| `files.allowed_types` | `any` (or `documents and pictures`, `documents`) | an Owner |
+| `files.person_room_mb` | 0, no limit (0 to 10240) | an Owner |
 
 ## Errors
 
 The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in that folder,
 `KIT-E-2402` the file is larger than the setting allows, `KIT-E-2403` that folder cannot hold it,
-`KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link. An item that
+`KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link, `KIT-E-2406`
+a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
+`KIT-E-2408` the person's room is used up. An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
@@ -178,10 +221,15 @@ the storage check; a file shared with a customer for a year without a link, a li
 and a bad address refused, listed and opened for that address only and in that company only, hidden
 while its folder is in the trash and back when restored, gone when ended by hand or at its day,
 the newest twenty with more, the download audited without the address; the email only when asked,
-and the share kept when the email fails; the trash's days answered with a folder. The pages,
+and the share kept when the email fails; the trash's days answered with a folder; a program
+dressed as a picture or a text refused whatever the settings, Allowed types narrowing the rest,
+Room per person counted for each one, a link's passcode page, a wrong passcode and the right one,
+the tenth wrong one locking the link with its audit row, a link emailed without its passcode and
+its address in the share's audit row, and the room's sum read from its index alone. The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
-after the trash and the trash's days, one file and many files. The client template's
+after the trash and the trash's days, one file and many files, a link's passcode and email sent
+on, and a link's passcode, last download and Locked shown. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.

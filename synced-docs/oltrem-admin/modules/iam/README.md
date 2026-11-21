@@ -177,6 +177,25 @@ audit row `iam.sign-in` whose target is the account id and whose details hold th
 browser's own description (the person's Sign-in history). Once per sign-in on a browser, never
 per request.
 
+Since 2026-11-21 that moment also **compares** the new sign-in with the person's earlier ones:
+their last 50 `iam.sign-in` rows of the last 90 days (`SIGN_INS_COMPARED`,
+`SIGN_IN_LOOKBACK_DAYS`), one read on the index of the audit log's target, after the answer like
+the rest. The country is Cloudflare's own two letters for the request (`countryOf`, kept on the
+device and in the row; `T1` is the Tor network). A browser whose description, with its version
+numbers set aside, is not among them, or a country not among those the earlier rows name, makes
+the row `new: true`; another country within 60 minutes (`TWO_COUNTRIES_MINUTES`) makes it
+`unusual: true`, with `countries`, the new one first. A first sign-in has nothing to compare
+with, and a row without a country compares by browser alone. Either flag calls the `signedIn`
+option with a `SignInEvent` (the person, the device, the browser, the country, the time, the
+portal's address); `createIam` turns it into the **sign-in alert** below. A sign-in refused
+because the address has no active account here is recorded too: an `iam.sign-in` row with outcome
+`refused`, target empty and details `{reason: 'no account', country}`, at most once an hour for
+each address in an isolate, so a door left knocking costs a write an hour, not one a request.
+The comparison and the refused rows are kept whatever the two extras below say, since Users'
+Signed in today reads them; the extras switch only the email and the warning. A refused row keeps
+the address that tried as its actor, as long as the audit log keeps its rows, like any row's actor:
+only someone the door let through reaches it, so the address is one Cloudflare Access verified.
+
 The **authorizer** refuses when the hook did not run (no session: fail closed), then asks
 `holdsAnywhere`: the capability at the root or at any scope with a grant, since a route is the
 widest question and the handler narrows to the scope at hand. A route held to the company
@@ -374,17 +393,22 @@ what the Vendor removed on purpose stays out.
 
 ## Care on the tick
 
-The module keeps two rules without anyone having to remember them (`src/care.ts`). Each is an
+The module keeps four rules without anyone having to remember them (`src/care.ts`). Each is an
 extra of the Access part, switched on and off on the Modules page, and since 2026-11-21 (the
-owner's pick) both start off on a new portal; a portal that already saved its list keeps it:
+owner's pick) all start off on a new portal; a portal that already saved its list keeps it, and
+the two added that day are added to a saved list as off (migration `0067`, `@oltrem/core-config`):
 
 | Kind | Id | What it does |
 |---|---|---|
-| Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, with the count and the first cause in its words (since 2026-11-17; the count alone hid why), and the next run sends what is missing. Without `mail`, it does nothing. |
+| Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, with the count and the first cause in its words (since 2026-11-17; the count alone hid why), and the next run sends what is missing. Without `mail`, it does nothing. Its check (the jobs page's **Check for work**, 2026-11-21) counts the grants it would notice, by the same rule, and sends nothing. |
 | Health check, lane `access` | `iam.reviews` | Warns when an open access review is past its due date, or when none was opened for 90 days (`REVIEW_EVERY_DAYS`), counted from the company's creation until the first one. |
+| Email, at sign-in | `iam.sign-in-alerts` | Sign-in alerts (2026-11-21): a sign-in compared as new or unusual (above) emails the person, after the answer: the browser by name (`deviceName`, also its own entry `@oltrem/iam/device`, with no Workers type, which the customers' sign-ins read; the Users pages keep their own copy of the same names, the screens depending on core-ui alone), the country in English, the time in UTC, and "If it was not you, sign out everywhere" with the address of My access, its sign-ins (`MY_SIGN_INS`), then tell whoever looks after access, who can block the account. An unusual one says "two countries within an hour" in the subject. Keyed `iam.sign-in:<person>:<device>`, so once. Without `mail`, or while the extra is off, nothing is sent; the row is written either way. |
+| Health check, lane `access`, hourly | `iam.unusual` | Unusual sign-ins (2026-11-21): over the last 7 days, warns when a sign-in came from two countries within the hour, or when 10 or more sign-ins were refused for addresses with no account (`REFUSED_WARN`); fewer refused ones are only counted in its words (someone who left, a mistyped address). One query on the audit log's action index. |
 
-Both only read the rows. The notice goes through the same `mail` as an invitation, and the
-health page shows the check's last result with the others.
+The four only read the rows. The notices go through the same `mail` as an invitation, and the
+health page shows the checks' last results with the others. Cloudflare's bot score, which the
+plan named for unusual sign-ins, is not used: it needs Bot Management, which the free plan does
+not have.
 
 Home's "Needs you" (`todo`, `src/todo.ts`) asks the module for what waits for the person signed
 in, under `iam.self`: the access requests and second-person approvals they may decide, each
@@ -473,7 +497,7 @@ database was made before a pull would otherwise refuse the new capabilities to e
 Vendor included. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: sixty-seven JSON routes under `/api/iam` (the Home card's `GET /home`, under
+The manifest: sixty-eight JSON routes under `/api/iam` (the Home card's `GET /home`, under
 `iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
@@ -485,6 +509,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map, with `may`: whether I hold, anywhere, what the access pages change (`read`, `give` for grants and invitations, `roles`, `groups`, `places`, `vendor`), by the routes' own check, so a screen offers only what would be allowed; my sign-ins; end one of them (`iam.device-end` in the audit log) |
+| `POST /me/sign-out-everywhere` | `iam.self` | Sign out everywhere (My access, its sign-ins, and the sign-in alert's link; no body): ends every sign-in of mine (`iam.sign-out-everywhere` in the audit log, with how many), then answers 303 to Access's own sign-out like the one below |
 | `POST /me/sign-out` | `iam.self` | Sign out (the sidebar's plain form; no body): ends this sign-in (`iam.sign-out` in the audit log), then answers 303 to `/cdn-cgi/access/logout` (`ACCESS_SIGN_OUT`), Cloudflare Access's own sign-out, which clears the door's cookie and ends the Access session |
 | `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
 | `GET /me/options` | `iam.self` | what I may ask for: every role but the Owner's and every place, by name, so a member who cannot read the Access page can still ask |
@@ -604,4 +629,9 @@ Owner's session recompiled without a new sign-in. The care is tested on the rows
 person's own grant ending within the week is noticed (not one ended, later, eligible, a deny, an
 inactive person's, a group's or an activation), a renewed end is noticed again, a refused message
 fails the run after the others, and the review check moves from none due, to none yet, to on time,
-to past due, to none for a quarter.
+to past due, to none for a quarter. `test/sign-in-alerts.test.ts`: the first sign-in and the same
+browser after an update are nothing new, another browser is, a known browser from another country
+within the hour is unusual and after 61 minutes only new, a row without a country compares by
+browser alone; an address with no account is recorded once an hour; the alert names the browser,
+the country and the way out, and is sent only while the extra is on; Sign out everywhere ends
+both browsers; the week's check warns and counts.

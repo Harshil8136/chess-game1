@@ -83,6 +83,14 @@ gave, from the company's sending address, with the person replying as the addres
 back to; it is kept beside the notes. The download (`GET /forms/:id/export`) is a CSV file of up
 to 5000 answers, oldest first, with formulas defused as in `@oltrem/records`.
 
+**Read and unread** (2026-11-21). An answer nobody has opened yet is unread for the whole team:
+the inbox shows it in bold, and its Unread view (`view=unread`) and count (`unread`, beside the
+count per status, from the same grouped read) find it. It turns read the first time someone opens
+it: the answer's page asks the browser to mark it once the page is shown (`data-seen`, the frame
+script's), so a page fetched ahead of a tap marks nothing. Mark unread puts it back. Neither is
+audited, as nothing about the answer changes; a later opening keeps the first time. The unread
+have an index of their own (migration `0071`), so the count and the view read them alone.
+
 The people a form names (up to five addresses) are told by email when an answer arrives: a link to
 the inbox, never what was sent, and at most one email per form in 15 minutes.
 
@@ -121,6 +129,7 @@ us", oldest waiting first, opening the form's inbox on its new answers.
 | `POST /forms`, `PATCH /forms/:id`, `DELETE /forms/:id`, `POST /forms/:id/key` | `forms.design` | make a form with its starting fields; change its name, line, place, whether it takes answers, the page after sending and who is told; remove it with its answers; give it a new address |
 | `POST /forms/:id/fields`, `DELETE /forms/:id/fields/:field`, `POST /forms/:id/fields/:field/move` | `forms.design` | add a field at the end; remove one; move one up or down |
 | `GET /forms/:id`, `GET /forms/:id/entries`, `GET /forms/:id/entries/:entry`, `GET /forms/:id/export` | `forms.read` | a form with its fields, address and what the person may do; its answers (`view`, `mine`, `q`, `limit`, `offset`) with the count per status; one answer with its notes; the CSV file |
+| `POST /forms/:id/entries/:entry/read` | `forms.read` | mark an answer read for the team (`{ read: true }`, or no body), or unread again (`{ read: false }`); answers 204 |
 | `PATCH /forms/:id/entries/:entry`, `POST /forms/:id/entries/:entry/notes` | `forms.handle` | mark an answer, take it or let it go; add a note, or a reply by email |
 | `DELETE /forms/:id/entries/:entry` | `forms.remove` | remove an answer with its notes |
 
@@ -142,7 +151,10 @@ takes answers, the page after sending, who is told and when they last were), `fo
 (each answer as the sender saw it, the address to reply to, its status, who took it, the
 sender's digest, its search text, when it came and changed) and `forms_notes` (each note or
 reply, who wrote it, when). Migration `0039_forms_reply_to.sql` adds an index on the address to
-reply to, in lower case, which a customer's account page reads by.
+reply to, in lower case, which a customer's account page reads by. Migration `0071_forms_read.sql`
+(2026-11-21) adds `forms_entries.read_at`, when the answer was first opened, and marks every answer
+already in as read, so an inbox looks as it did until a new answer arrives (one write for each
+answer, once), then indexes the unread ones (`forms_entries_unread`).
 
 ## Errors
 
@@ -165,6 +177,8 @@ script in JSON, slowing a sixth answer from one sender while another sender pass
 people to the website's own page; the people named told once, with a link and none of the
 answer; the inbox's views, counts, search, taking, a note, an email reply to the sender with the
 person's address to answer to, a reply refused when the answer has no email, removal by role;
+read and unread for the team, its view and count, refused to someone who cannot see the form, and
+migration `0071` counting the answers already in as read;
 fields added, moved and removed while an old answer keeps its field; the CSV with a formula
 defused; a new address stopping the old one; a form removed with its answers and notes; every
 change and every website answer audited without what was sent; a customer's messages with their

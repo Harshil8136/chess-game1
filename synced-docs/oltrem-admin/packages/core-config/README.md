@@ -159,15 +159,22 @@ it stops. The kit's: `audit.seal` (the daily seal, its recheck and its check), `
 (the emails about access ending), `iam.reviews` (the overdue-review warning), `backup.nightly`
 (the nightly copy's schedule, a new portal's first copy and the check of the newest copy's age; a
 copy by hand still runs), `backup.drill` (the restore-drill warning), and `settings.get-started`
-(Home's Get started card; it stops no job). An extra switched off is kept in
+(Home's Get started card; it stops no job), and since 2026-11-21 `iam.sign-in-alerts` (the email
+about a new or unusual sign-in), `iam.unusual` (the warning about unusual sign-ins), `audit.since`
+(Home's What changed card) and `health.status-pages` (Service status: the check that reads
+Cloudflare's and the email services' status pages). An extra switched off is kept in
 the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and
 checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
 part). Nothing they wrote is deleted. An extra marked `startsOff` (the daily seal, the nightly
 backup and the drill reminder, since 2026-11-12: work on the timer that costs database rows every
 day; Access's ending-access emails and access-review reminder, since 2026-11-21, the owner's pick:
-mail and warnings a new portal did not ask for) is off on a new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's
-default, so a portal whose list was already saved keeps what it saved. The others are on until
-switched off.
+mail and warnings a new portal did not ask for; the four extras added on 2026-11-21) is off on a
+new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's default, so a
+portal whose list was already saved keeps what it saved. The others are on until switched off.
+An extra added later that should start off on every portal also needs a migration that adds it to
+a saved list, as `0067_parts_quiet_extras.sql` does for the four of 2026-11-21: each one missing
+from a saved list is added, the configuration version moves and the change is written to the
+settings history, so a client sees nothing new until someone switches it on.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -182,7 +189,9 @@ part's data is never touched, so switching it back on restores everything.
 
 Migration `0001_settings.sql`: `oltrem_meta` (the configuration version and, later, the client
 id), `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; the ledger is
-`oltrem_migrations`.
+`oltrem_migrations`. Migration `0067_parts_quiet_extras.sql` (2026-11-21) adds the four extras of
+that day to a saved parts list as off (above); a portal that never saved the list keeps the
+default and gets no row.
 
 ## Tests
 
@@ -193,3 +202,6 @@ the fallbacks when KV or D1 fail, and read-your-writes. `test/module.test.ts` ca
 routes as the pipeline does: the list with each value's source and who may change it, a save seen
 at once with its history and audit rows, and the four refusals. `test/clock.test.ts` holds the clock to the days it moves
 (New York), a time skipped and a time repeated, the day after across a year and a leap day.
+`test/quiet-extras.test.ts` runs migration `0067` on a saved list: the four extras added as off,
+nothing else changed, the version moved and the history written once, a second run changing
+nothing, and a portal with no saved list given no row.

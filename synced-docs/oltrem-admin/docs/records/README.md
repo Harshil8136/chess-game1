@@ -2,7 +2,7 @@
 title: "Records: the index of dated records"
 status: living
 owner: vendor
-last_verified: 2026-11-20
+last_verified: 2026-11-21
 sources: [the records in this folder]
 ---
 
@@ -115,3 +115,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Four left items finished](2026-11-20-left-items-finished.md) | own request in For you; Alerts buttons; company clock; autoUpdate kept; P295-P298 |
 | [Security and access](2026-11-20-security-and-access.md) | company pages for the company alone; ended sign-ins stay ended; bodies read to their cap; time limits; P299-P301 |
 | [The full codebase review](2026-11-20-codebase-review.md) | the master audit, five batches, measurements, lines, proposals for a yes, directions to expand; P302-P307 |
+| [Safer and calmer](2026-11-21-safer-and-calmer.md) | sign-in alerts, Signed in today, file kinds and room, passcodes on links, the jobs' last day, What changed, read and unread, Service status; four extras off; P310-P320 |

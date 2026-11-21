@@ -6,8 +6,11 @@ happen, and the portal's API described from the code that runs it. Three parts b
 section of the sidebar, **Developer**:
 
 - **Jobs**: every job the mounted modules declare, with its schedule, its last run, how long it
-  took, how many database queries it made and what went wrong; **Run soon** makes one due now (the next tick, within a minute or two) and **Pause** keeps it off its
-  schedule until it is resumed. A job whose part is switched off in Settings, Modules shows
+  took, how many database queries it made, what it did in each of the last 24 hours (a strip of
+  bars, 2026-11-21) and what went wrong; **Run soon** makes one due now (the next tick, within a minute or two) and **Pause** keeps it off its
+  schedule until it is resumed. **Check for work** asks a job that declares a check what waits
+  for it, and runs nothing. While a budget of the free plan holds the jobs back, the page says
+  why, above them. A job whose part is switched off in Settings, Modules shows
   **Switched off** with no Run soon, and the API refuses to run it (`KIT-E-2605`). The flows of the client's one Workflow are listed beside them.
 - **Webhooks**: an https address of the company's is sent each change it asks for, signed as
   [Standard Webhooks](https://www.standardwebhooks.com/) sign them, tried again on a ladder when
@@ -64,7 +67,7 @@ works for the whole company.
 
 | Path | Shows |
 |---|---|
-| `/developer` | a row of **Jobs**, **Webhooks** and **API reference**; the jobs with their state (went through, failed last, running, paused, not run yet), schedule, last and next run, and for a manager **Run soon** and **Pause** or **Resume**; what the last failures said; the flows and when they start |
+| `/developer` | a row of **Jobs**, **Webhooks** and **API reference**; why the jobs wait, while a budget holds them; the jobs with their state (went through, failed last, running, paused, not run yet), schedule, last run with the last day's strip under it, and next run, and for a manager **Run soon**, **Check for work** where the job has a check, and **Pause** or **Resume**; what the last failures said; the flows and when they start |
 | `/developer?show=webhooks` | the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
 | `/developer?show=reference` | each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
 | `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again** |
@@ -73,7 +76,8 @@ works for the whole company.
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /jobs` | `developer.read` | the jobs and flows, and whether the person may manage them |
+| `GET /jobs` | `developer.read` | the jobs (each with its last day and whether it has a check) and flows, why the jobs wait (`standDown`, null while they run), and whether the person may manage them |
+| `GET /jobs/:id/check` | `developer.read` | what waits for a job that declares a check, as `waiting`; nothing is run; `KIT-E-0404` for a job with none |
 | `POST /jobs/:id/run`, `/pause`, `/resume` | `developer.manage` | made due now, paused, resumed |
 | `GET /webhooks`, `GET /webhooks/:id` | `developer.read` | the webhooks; one with its newest fifty deliveries |
 | `POST /webhooks` (`url`, `events`, `description`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
@@ -123,7 +127,8 @@ Inside the Workers runtime, through the pipeline beside the IAM module, with the
 `@oltrem/core-jobs` real and the network stood in for by a receiver that checks each signature:
 the manifest; addresses and event patterns; the signature against the Standard Webhooks published
 example; both capabilities read at the company; jobs listed, paused (the tick skips them),
-resumed and made due now, each audited; a webhook's secret answered once and stored sealed; a
+resumed and made due now, each audited; each job's last day, nothing holding them, and Check for
+work for a job with a check, refused for one without and for a place below; a webhook's secret answered once and stored sealed; a
 test; audit rows turned into deliveries for the webhooks that asked, from the first run on, a
 refused change not sent; the retry ladder with one message id, a failure for good, a retry by
 hand; ten failures switching a webhook off; a new secret; changes checked; pruning; no KEK; the
