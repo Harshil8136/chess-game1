@@ -59,6 +59,28 @@ Under `/api/data`; every change is audited by the providers registry (`providers
 | `DELETE /connections/:id` | `data.manage`, company | Remove the connection and its sealed key; the database is not touched |
 | `GET /connections/:id/tables` | `data.read`, company | The tables, views or key sets the key may read, at most 500, and whether that is all |
 | `GET /connections/:id/rows` | `data.read`, company | One page: `table`, `cursor`, `search`, `sort`, `desc` |
+| `GET /home` | `data.read` | Home's Databases line: how many connections answered their last kept check, of how many |
+
+## The timed check and Home
+
+`data.connections` (lane `data`, every hour, `WATCH_EVERY`) calls up to five connections at a time
+(`WATCH_MAX`, under the six calls a Worker may have open at once); past five, each hour takes the
+next five in turn (`watchTurn`), so each is called at least every ceil(count / 5) hours. A call
+has at most 5 s for opening the key and the answer (`WATCH_WAIT_MS`); one still running then is
+left to its own 4 s limit. Every outcome is a check kept like an answer, a key that would not open
+and a call that failed included, so the connection's page and Home say what Status says. It is
+kept only when it changed, or once a day, so a database that keeps answering costs one write a
+day; the timer's calls are not audited, as nobody pressed anything. A key that would not open (an
+audited failure in the providers registry) is tried again once a day, not every hour, or at once
+when someone changes it. Any connection that did not answer makes the check fail with its name and
+the service's words, and Status opens a problem after two failures in a row, as for any check. It
+is the part's one extra, Database checks (`data.watch`), off on a new portal and on a portal that
+saved its Modules switches before it existed (core-config migration `0077`).
+
+Home's Databases line reads the kept checks, for the whole portal like Home's other cards: "2 of
+3" answered, the failing count when a connection's last check failed, "not checked yet" for one
+with no check kept, "None" and Off when nothing is connected. Without Database checks it shows the
+checks people made, at connect, with Check now or with a new key.
 
 ## The services
 
@@ -200,12 +222,12 @@ the kit's `KIT-E-0422`.
 
 ## Not here yet
 
-Home cards; the usage count; the connections
-check on a timer with its alerts; the Data API's description and the last good page kept in
-Cloudflare's cache (today every page of a Supabase table reads the description again, which a
-large schema makes slow); AWS, Google Cloud, Azure and Snowflake through the portal's own
-identity (no key at all); sign-in through the connect relay for Airtable (Supabase signs in since 2026-11-22); Postgres and MySQL through
-Hyperdrive; edits with approvals and read-only SQL questions (phase 3).
+A count of reads per connection (it would cost a write on every page read); the Data API's
+description and the last good page kept in Cloudflare's cache (today every page of a Supabase table
+reads the description again, which a large schema makes slow); AWS, Google Cloud, Azure and
+Snowflake through the portal's own identity (no key at all); sign-in through the connect relay for
+Airtable (Supabase signs in since 2026-11-22); Postgres and MySQL through Hyperdrive; edits with
+approvals and read-only SQL questions (phase 3).
 
 Left on purpose, to come back to:
 
@@ -239,7 +261,11 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   checked at once and audited, the key never back; tables and rows; a sort or a page link that is
   not one refused; Check now's 30-second cooldown; a new address without its key refused and the
   same address alone keeping the key; a refused key kept as a failed check, then mended; an email
-  connection not there on any data route; removal.
+  connection not there on any data route; the timed check (an unchanged answer not written and
+  written again after a day, a refused key failing it and kept, no audit row, a key that will not
+  open kept as a failed check and tried again only after a day or a new key, a disabled one left
+  out, the turn past five) and Home's line (answered, failing, not checked yet, None), with the
+  Email services card no longer counting a database; removal.
 - `test/pages.test.ts`: every page against the API's answers: the list and its states; the paste
   box, a half paste, a refusal; a service's form, kept as typed but never its key; a reader's view
   of each page; a guide link only when it is `https://`; the connection page's failed check in
