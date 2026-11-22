@@ -6,8 +6,12 @@ again. In the quiet hours a warning is held and sent with the others in one mess
 end; a critical alert is sent at once. People see the open alerts and the recent ones on the
 Alerts page and say they are on one by acknowledging it; the check or the code that raised it
 resolves it, and a server error can be marked resolved by hand once it is fixed (2026-11-15).
-Every alert email ends with the address of the portal's Alerts page: `address` when given, else
-`https://` and the Worker's `PUBLIC_HOST`, else no address (a portal on its workers.dev name).
+Every alert email opens with "Hello," (2026-11-22), names each alert with its severity, its
+detail and when it opened ("Opened on 2026-11-22 at 06:00 UTC."), and ends with the address of the
+portal's Alerts page: `address` when given, else `https://` and the Worker's `PUBLIC_HOST`, else no
+address (a portal on its workers.dev name); then the main-inbox line of `@oltrem/iam`
+(`mainInbox`), which points to the Notifications page's step for keeping the portal's mail in
+Primary.
 
 ## Using it
 

@@ -381,7 +381,8 @@ and the last one stays.
 An invitation can be **emailed**. The client hands `createIam` a `mail(env, message)` (the client
 template sends it through the email module, as the plain template `iam.message`);
 when the inviter asks (`send: true`), the module writes the message, naming who invited, the
-company, the role, the place, the link and its last day, keyed `iam.invitation:<id>` so it goes
+company, the role, the place, the link and its last day, and ending with the main-inbox line
+below, keyed `iam.invitation:<id>` so it goes
 once (a link sent again is keyed `iam.invitation:<id>:<new last day>`, so it is not taken for the
 first). The link is then held by the email module's outbox until it is delivered, as any message
 is. Without a sender, or when it refuses (no sending address yet), the invitation stands, the
@@ -412,8 +413,17 @@ the two added that day are added to a saved list as off (migration `0067`, `@olt
 |---|---|---|
 | Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, with the count and the first cause in its words (since 2026-11-17; the count alone hid why), and the next run sends what is missing. Without `mail`, it does nothing. Its check (the jobs page's **Check for work**, 2026-11-21) counts the grants it would notice, by the same rule, and sends nothing. |
 | Health check, lane `access` | `iam.reviews` | Warns when an open access review is past its due date, or when none was opened for 90 days (`REVIEW_EVERY_DAYS`), counted from the company's creation until the first one. |
-| Email, at sign-in | `iam.sign-in-alerts` | Sign-in alerts (2026-11-21): a sign-in compared as new or unusual (above) emails the person, after the answer: the browser by name (`deviceName`, also its own entry `@oltrem/iam/device`, with no Workers type, which the customers' sign-ins read; the Users pages keep their own copy of the same names, the screens depending on core-ui alone), the country in English, the time in UTC, and "If it was not you, sign out everywhere" with the address of My access, its sign-ins (`MY_SIGN_INS`), then tell whoever looks after access, who can block the account. An unusual one says "two countries within an hour" in the subject. Keyed `iam.sign-in:<person>:<device>`, so once. Without `mail`, or while the extra is off, nothing is sent; the row is written either way. |
+| Email, at sign-in | `iam.sign-in-alerts` | Sign-in alerts (2026-11-21): a sign-in compared as new or unusual (above) emails the person, after the answer: the browser by name (`deviceName`, also its own entry `@oltrem/iam/device`, with no Workers type, which the customers' sign-ins read; the Users pages keep their own copy of the same names, the screens depending on core-ui alone), the country in English, the time in UTC, and "If it was not you, sign out everywhere" with the address of My access, its sign-ins (`MY_SIGN_INS`), then tell whoever looks after access, who can block the account. An unusual one says "two countries within an hour" in the subject. Since 2026-11-22 it opens with "Hello," and ends with the main-inbox line (`mainInbox(origin)`, below the table). Keyed `iam.sign-in:<person>:<device>`, so once. Without `mail`, or while the extra is off, nothing is sent; the row is written either way. |
 | Health check, lane `access`, hourly | `iam.unusual` | Unusual sign-ins (2026-11-21): over the last 7 days, warns when a sign-in came from two countries within the hour, or when 10 or more sign-ins were refused for addresses with no account (`REFUSED_WARN`); fewer refused ones are only counted in its words (someone who left, a mistyped address). One query on the audit log's action index. |
+
+**The main-inbox line** (2026-11-22). Gmail files a notice it sees as automatic (a sign-in alert,
+an invitation, an alert) under Updates whoever sends it; what keeps a sender in Primary for good is
+the reader's own filter or contact. So the portal's own notices end with one line, `mainInbox`:
+"If this email landed under Updates, Promotions or Other, the one-minute step at
+`<portal>/notifications#primary` keeps the portal's emails in your main inbox" (`MAIN_INBOX`; the
+Notifications page's name when the address is not known). The sign-in alert and the invitation
+carry it, the invitation after "Once you are in:"; the alerts module ends its emails with it too.
+The step itself is the Notifications page's (`@oltrem/screens`).
 
 The four only read the rows. The notices go through the same `mail` as an invitation, and the
 health page shows the checks' last results with the others. With `iam.expiring` and `iam.reviews` off,

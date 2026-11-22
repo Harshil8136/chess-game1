@@ -328,3 +328,27 @@ campaign then went out in. The card is gone and the page now names the rest befo
 goes ([the record](records/2026-11-15-campaigns-as-letters.md)). Nothing makes Gmail put a
 campaign in Primary: a letter that reads as one person writing to another has the best chance,
 and an offer belongs in Promotions by Gmail's own definition.
+
+### 6.1 The portal's own notices: Updates, and the one sure way to Primary
+
+Added 2026-11-22, after the owner found the portal's sign-in notices and alerts in Gmail's Updates
+tab once nothing in them read as an offer. Gmail's help describes Updates as "automated
+confirmations, notifications, statements, and reminders", which is what a sign-in notice is, from
+any provider and any setup. Google's own word on how its tabs learn (its Workspace blog, 2020) is
+that the reader's actions count most: moving a message to another tab, a filter, adding the sender
+to contacts, and replying.
+
+So the one way that holds for every message is the reader's own: a Gmail filter that says "mail
+from these domains: put it in Primary, never in Spam" beats Gmail's sorting each time, and it
+covers announcements to staff as well. The portal makes that one step for each person:
+
+- `GET /api/email/primary` names the main address and every sender address with their domains.
+- The Notifications page (the kit's screens) turns them into a Gmail filter file to import on a
+  computer (Settings, Filters and Blocked Addresses, Import filters) and a contact card to add on
+  a phone, with the steps for Gmail and Outlook, and a **Send me a test** button
+  (`POST /api/email/primary/test`, a plain test from the main address).
+- The kit's invitation, sign-in notice and alert emails each end with a line pointing to that
+  step, so a person who finds one under Updates sees where to fix it.
+
+What stays the client's: each person does the step once in their own mailbox; no sender can set a
+reader's filter, and a free account offers no way to set it for a whole company.

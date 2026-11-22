@@ -17,6 +17,12 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; the 
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P400 | Notifications, scroll past How you are told | Keep portal emails in your main inbox: Gmail filter, Add to contacts and Send me a test in one row (it slides sideways if narrow), four steps, and who portal emails come from | [record](records/2026-11-22-main-inbox-step.md) |
+| P401 | Press Send me a test | A notice that a test is on its way; within a minute an email "Is this email in your main inbox?", plain text, from the portal's address | [record](records/2026-11-22-main-inbox-step.md) |
+| P402 | On a computer: Gmail filter, then in Gmail Settings, See all settings, Filters and Blocked Addresses, Import filters, the file, Create filters | One filter, from the portal's domain, Categorize as Primary, Never send it to Spam; press Send me a test again and it lands in Primary | [record](records/2026-11-22-main-inbox-step.md) |
+| P403 | On the phone: Add to contacts | The phone offers to save one contact, named after the portal's mail, with its email addresses | [record](records/2026-11-22-main-inbox-step.md) |
+| P404 | Sign in from a new browser (Sign-in alerts on), then open the email | It starts with Hello, and its last line points to the one-minute step; tapping the address opens Notifications at that section | [record](records/2026-11-22-main-inbox-step.md) |
+| P405 | Users and access, invite one of your own other addresses, then open the email | It starts with Hello, and ends with Once you are in, and the same line | [record](records/2026-11-22-main-inbox-step.md) |
 | P299 | As someone whose role was given at one location only, open Settings or Integrations | Refused, saying it is needed for the whole company; as the Owner, the same page works | [record](records/2026-11-20-security-and-access.md) |
 | P300 | An invitation link, opened in two tabs: press Accept in both | One account and one role; the other tab says the invitation was used or withdrawn | [record](records/2026-11-20-security-and-access.md) |
 | P301 | Developer, make a webhook whose address has a path; then Activity log | The log names only the host of the address | [record](records/2026-11-20-security-and-access.md) |
