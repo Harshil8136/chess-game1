@@ -119,3 +119,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [A fuller audit log](2026-11-22-audit-log-fuller.md) | from where on every row; To what by name; from → to; Needs you for whoever looks after access; P321-P324 |
 | [Connect apps](2026-11-22-connect-apps.md) | chat alerts to Slack, Teams, Discord, Google Chat; a calendar link; live spreadsheet links; Make, Zapier, n8n; the services' logos; P325-P331 |
 | [A frame that never moves](2026-11-22-smooth-phone-frame.md) | tabs keep their place, buttons under the tabs, one quick fade, solid bars, a small title, no page wider than the phone; P332-P336 |
+| [Calm and modern](2026-11-22-calm-and-modern.md) | a plain page, flat buttons, quiet chips, status as a dot, plain figures, a set's buttons under its tabs; P337-P340 |

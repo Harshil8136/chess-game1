@@ -3,7 +3,7 @@ title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
 last_verified: 2026-11-21
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md]
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -170,3 +170,12 @@ None yet.
 | P334 | Modules: scroll to the foot and back, tick a few boxes, Save | Scrolling is smooth; the top bar is solid, nothing shows through it; after Save the page fades back once | [record](records/2026-11-22-smooth-phone-frame.md) |
 | P335 | Audit log: open a row's Details that shows an address | Everything stays inside the screen, the Done tag too; the page never slides sideways and its scroll does not jump | [record](records/2026-11-22-smooth-phone-frame.md) |
 | P336 | Any page on the phone | The title is small (the size of the top bar's name), the tabs and content start higher | [record](records/2026-11-22-smooth-phone-frame.md) |
+
+### Calm and modern, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P337 | Modules, light and dark | A plain page, no colour wash; the chips small rounded squares; Save a flat button; no coloured bar before Work | [record](records/2026-11-22-calm-and-modern.md) |
+| P338 | System status | Its figures as plain numbers in a row (16 Checks, 14 OK…), no boxes; a state a dot and a word | [record](records/2026-11-22-calm-and-modern.md) |
+| P339 | Email settings, Integrations, then Addresses | Find from a domain and Connect sit under the tabs; switching tabs never moves the title or the tabs | [record](records/2026-11-22-calm-and-modern.md) |
+| P340 | Audit log | Each row's Done is a green dot and the word; the marked tab is underlined with no box behind it | [record](records/2026-11-22-calm-and-modern.md) |
