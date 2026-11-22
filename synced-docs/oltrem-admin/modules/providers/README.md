@@ -75,6 +75,31 @@ its forwarding logs; nothing is sent through it, so it has no send, no reports a
 (a domain whose MX is ImprovMX's is never suggested as an email provider). Oltrem Mail's
 Forwarding page keeps the key here, sealed like any other, and speaks to ImprovMX itself.
 
+Since 2026-11-22 the kit also ships five definitions of the kind `data`, in
+`src/definitions/data.ts`: a client's own database or data service, read by the Connected data
+module ([`@oltrem/data`](../data/README.md)). Each names the dialect it is read with in its
+`data` block, and only a data definition has one: Turso (`libsql`), Neon (`neon`), Supabase
+(`postgrest`), Airtable (`airtable`) and Upstash Redis (`upstash-redis`). Each guide asks for the
+smallest key the service offers, read-only where there is one (Turso's `--read-only` token, a Neon
+role made with `--access read_only`, Upstash's Read Only token, an Airtable token with
+`data.records:read` and `schema.bases:read`); Supabase has no read-only key, so its guide says the
+secret key passes row level security and that the portal only reads with it. The steps were
+checked against each service's own documentation that day. The Email services page lists none of
+them: a database is connected under Connected data. The routes below, held by whoever runs email,
+refuse a connection of the kind `data` too: setting one up is refused as an unknown definition,
+the listing leaves them out, and every route on one instance answers as if it were not there
+(404), so `providers.manage` cannot replace or remove a client's database connection.
+
+A field may say what its whole value must look like (`pattern`, 2026-11-22): a regular
+expression and the problem to show. It is matched against the whole value whatever the
+definition wrote (wrapped as `^(?:…)$`), on a value of at most 500 characters
+(`PATTERN_VALUE_MAX`); a value that does not match is refused before any call. The data
+definitions use it so a database address ends in the service's own domain (`.turso.io`,
+`.neon.tech`, `.supabase.co`, `.upstash.io`) and Neon's connection string starts with
+`postgresql://`, and a key is never sent elsewhere; the host the key was saved for is pinned in
+its seal besides, as for every credential. A data definition must carry a pattern on its `host`
+field and on every field its base URL is built from, or the contract refuses it.
+
 Sender (2026-10-28) takes one recipient a message: its send says `oneRecipient`, and a message
 to more, or with a Cc or Bcc, is refused before any call (`KIT-E-1408`), so it goes through the failover, or through
 Sender's SMTP relay, which takes many. It has no reply-to field, so `{{message.headersWithReplyTo}}`
@@ -123,7 +148,8 @@ the check so a Worker's start does not repeat it; `test/definitions.test.ts` che
 instead (since 2026-11-03). The contract refuses an id or field name in
 the wrong shape, a base URL that is not `https`, a port other than 465 or 587, an SMTP transport
 with an HTTP auth scheme, `api-key-header` without its header, `sigv4` without its service, a
-repeated field name, an event mapped to an unknown kind, a webhook signature without the field it
+repeated field name, a `data` block on a definition of another kind or none on a `data` one, a
+`pattern` that is not a regular expression, a data definition whose address field has no pattern, an event mapped to an unknown kind, a webhook signature without the field it
 reads its key from, `hmac-body` without its header. A field marked `optional` may be left out of an instance: the webhook keys
 are, so a provider sends before its delivery reports are set up.
 
@@ -147,7 +173,7 @@ instances and pastes their keys.
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
 | `PUT /definitions/:id` | definitions, at the company | the client's own definition, or its change to the kit's; checked, then a row |
 | `DELETE /definitions/:id` | definitions, at the company | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
-| `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set |
+| `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set; never a data connection |
 | `GET /instances/:id` | read | one instance; never its credential |
 | `POST /instances` | manage, at the company | sets one up: the definition, a label, every field the definition lists; `201` |
 | `POST /instances/:id/credential` | manage, at the company | the fields again (a new key, a changed domain); a secret left out keeps the one stored, so a webhook secret is added without the key being pasted again; a suggestion becomes confirmed |
@@ -388,7 +414,11 @@ SendGrid, Mailgun and Amazon SES: until then they send campaigns one message a c
 Inside the Workers runtime, through the pipeline beside the IAM module: the seven definitions
 pass the contract and a bad one is refused with its path; an instance set up with its credential
 sealed to its row and the key nowhere in a response or the table; a missing, unknown or empty
-field refused; activation and the failover order, `pick`, the active instance not removable, a
+field refused; a pattern matched against the whole value only, and a value past 500 characters
+refused (2026-11-22); the five data definitions each naming its dialect, with a pattern that
+takes the service's own address and refuses another, Neon's connection string checked, a data
+definition without a pattern on its host refused; a data connection neither made, listed nor
+touched through these routes; activation and the failover order, `pick`, the active instance not removable, a
 suggestion not activatable; a client's definition added by the Vendor, replacing the kit's and
 removed, and refused to the Owner and to whoever sets up integrations; a stored key refused when
 its definition or its host field names another host, opened again when put back, bound to the
