@@ -2,8 +2,8 @@
 title: "Phone tests owed: Users and access"
 status: living
 owner: vendor
-last_verified: 2026-11-14
-sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; the records each line links]
+last_verified: 2026-11-22
+sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; docs/records/2026-11-22-email-settings-compose-role-editor.md; the records each line links]
 ---
 
 # Phone tests owed: Users and access
@@ -42,3 +42,14 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; the 
 | P11 | Users, Invite people | the form, the invitation made, its link copyable | [record](records/2026-10-27-access-screens.md) |
 | P12 | A person, View what they can do | the person's access by place, in words | [record](records/2026-10-21-see-it-as.md) |
 | P126 | As the Vendor, invite an Owner | Invited; no second person asked | [iam](../modules/iam/README.md) |
+
+### Email settings, Compose and the role editor, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P416 | Email, any folder | A gear in the top bar, beside Search (on a computer, at the head's right beside the bell); press it: Email settings. Back in Email, a Settings row at the foot of the sidebar (on a phone, in the menu) opens the same page | [record](records/2026-11-22-email-settings-compose-role-editor.md) |
+| P417 | Email, Compose | A plain head with New email and Close; at the foot one row: Send with an arrow beside it, Attach, Template, Preview, a green check mark when it is ready, and More | [record](records/2026-11-22-email-settings-compose-role-editor.md) |
+| P418 | The arrow beside Send; then More | Schedule send with a day and a time; then More opens Save draft and Save as template. The bold, italic and list buttons sit under the message | [record](records/2026-11-22-email-settings-compose-role-editor.md) |
+| P419 | Users, a user, Permissions, open a module | Each permission with Inherit, Allow and Deny as one even control, nothing cut off or faded, and its name such as `access.users.read` in small code type with a Copy button; Copy puts the name on the clipboard | [record](records/2026-11-22-email-settings-compose-role-editor.md) |
+| P420 | The same user: the Policy JSON tab at the top | Their access as Policy JSON with Copy, one tap from Permissions | [record](records/2026-11-22-email-settings-compose-role-editor.md) |
+| P421 | Users, Roles, a role | Three tabs: Permissions, Assigned to, Policy JSON. Permissions is one list of modules with None, View, Edit and Manage; a level a module has not shows a dash. Assigned to shows the users and groups, Move up and Move down, and Remove when the role was never given | [record](records/2026-11-22-email-settings-compose-role-editor.md) |

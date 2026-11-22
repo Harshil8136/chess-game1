@@ -106,7 +106,7 @@ the name, so a start after Workflows forgot it finds the run and stops; once any
 `backup_runs` the job reads one row and does nothing. Home's Get started step "Make the first
 backup copy" says it starts by itself, with a Make it now button (`POST /runs`) once backups are
 set up, and who it waits for before then. While no copy exists and the nightly backup is off, Get
-started shows one step instead, "Switch on backups", which opens the Backups page; the drill step
+started shows one step instead, "Switch on backups", which opens System's Settings tab, where the switch sits (2026-11-22); the drill step
 appears only once a copy exists, since there is nothing to bring back before.
 
 The object key is the run's start time, `backups/d1/2026-10-21T03-00-00Z.sql.age`, so a copy is

@@ -129,10 +129,10 @@ person writes, the way a mail app does, without a list, a template or a campaign
 With no address to send from, the page is the setup, in two steps: connect the email service
 (Email, Providers; connecting checks the key, makes it the one that sends when none does and reads
 its addresses, then comes back here), and read the addresses from it (`?intent=discover`, the
-route `POST /domains/discover`) or add one by hand. [Ready to send](#ready-to-send) is a chip in
-Compose's head (2026-11-11, core-ui's `ComposeSheet` `aside`): green while every check passes,
-amber while one is worth a look, red while one stops mail; it opens to every check with Check again
-(`?intent=recheck`). When a check stops every email, a problem card above the Compose window says
+route `POST /domains/discover`) or add one by hand. [Ready to send](#ready-to-send) sits in the
+Send bar (2026-11-22, the owner chose Gmail's calm look; before, a pill in a coloured head): a
+quiet green check mark while every check passes, amber or red words while one is worth a look or stops
+mail; it opens upward to every check with Check again (`?intent=recheck`). When a check stops every email, a problem card above the Compose window says
 so first, with a button to the page that fixes the first one, and lists what to do. Compose is one
 window as tall as the screen: the fields flush inside it, the message growing down to the Send
 bar, edge to edge on a phone.
@@ -197,18 +197,21 @@ From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, 
 suggestions; empty Cc and Bcc fold behind one **Cc/Bcc** button on the To line (since
 2026-11-12; a line of chips keeps room above and below, its label and buttons level with the first
 row of chips, and no arrow shows beside a box with suggestions). Since 2026-11-14 the message sits
-right under Subject and everything else is in the one bar at its foot: Send, a paper clip to attach
-(its tip says how much may go; a file dropped on the email or pasted into it is attached too, the
-kit's `data-drop-file`), the template picker (the kit's `Dropdown`: a card of templates, each with
-its kind, posted with its Use button, which the script presses for it), Send later, Preview, Save
-as template, and at its end a **More** menu (⋮, a card that opens over the message) with the Words
-or HTML choice (only for `email.write.code`; since 2026-11-12 it
-is no longer on the page itself, as code pasted anywhere is found by itself) and the marks. Beside the card on a wide page, under it on a phone, a
+right under Subject and everything else is at its foot. Since 2026-11-22 (the owner chose "Clean,
+like Gmail") Compose is one calm card with a plain head (no coloured band or pen), the formatting
+bar sits under the message by Send, and the bar holds: **Send** with its **Schedule send** arrow
+(one split button; the arrow opens the day, the time on the company's clock and Schedule), a paper
+clip to attach (its tip says how much may go; a file dropped on the email or pasted into it is
+attached too, the kit's `data-drop-file`), the template picker as its icon (the kit's `Dropdown`: a
+card of templates, each with its kind, posted with its Use button, which the script presses for
+it), Preview as an icon, Ready to send, and at its end a **More** menu (⋮, a card that opens over
+the message) with Save draft, Save as template, the Words or HTML choice (only for
+`email.write.code`; since 2026-11-12 it is no longer on the page itself, as code pasted anywhere is
+found by itself) and the marks. Beside the card on a wide page, under it on a phone, a
 preview draws the words with their marks as they are typed. Readiness folds to one line when every
 check passes. Send goes with Ctrl or Cmd with Enter; on a phone the bar is one row that fits
-(since 2026-11-14): Send takes the room left, the clip, the template and Send later are icons with
-their names, Preview and Save as template move into More, and each card rises from the foot of the
-screen; and the portal's own bar is
+(since 2026-11-14): Send and its arrow take the room left, the rest are icons, and each card rises
+from the foot of the screen; and the portal's own bar is
 hidden while an email is written, so the compose head is the screen's only bar. **Another
 address** in the From line opens a dialog to send from an address not added yet (see
 [Senders](#senders-and-sending-domains)), for someone who holds `email.senders.add` or

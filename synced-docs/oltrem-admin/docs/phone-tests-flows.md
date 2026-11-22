@@ -3,7 +3,7 @@ title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
 last_verified: 2026-11-22
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md; docs/records/2026-11-22-starting-setup-and-imports.md; docs/records/2026-11-22-connected-data-pages.md]
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-first-run-and-home.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md; docs/records/2026-11-22-starting-setup-and-imports.md; docs/records/2026-11-22-connected-data-pages.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -263,3 +263,16 @@ quickest.
 | P391 | Change key with the right token; then Check now twice quickly | "The new key is saved, and the database answered"; the second press answers at once without a new check | [record](records/2026-11-22-connected-data-pages.md) |
 | P392 | As a person with View access only: Data, and Admin, Integrations, Apps; then an Owner gives them See of Data (Manage level) at the company, and they open a database and a service card | First Data refuses and Apps shows no database cards. Then the database's page has no Change key or Remove, and a service's page shows its steps with "Ask an Owner", no form | [record](records/2026-11-22-connected-data-pages.md) |
 | P393 | Remove database; Keep database, then Remove database again | One confirm saying the database itself is not touched; Keep leaves it; Remove lands on Data with "The database is removed from the portal" | [record](records/2026-11-22-connected-data-pages.md) |
+### First run and Home, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P410 | A new portal, signed in as its first Owner: Home | At the top, "What kind of business do you run?" with the kinds of business as chips in one sideways row | [record](records/2026-11-22-first-run-and-home.md) |
+| P411 | Press Shop | Set up for your business with Shop picked, and "Which of these do you use?" with every feature as a chip: Bookings, Quotes and Approvals not selected, Invoices selected | [record](records/2026-11-22-first-run-and-home.md) |
+| P412 | Clear Tasks, press Set up the portal for this | Set up; Tasks is gone from the sidebar, the others as selected; Home no longer asks the question | [record](records/2026-11-22-first-run-and-home.md) |
+| P413 | Users, Invite | "Same access as" with a chip per user; press one: their role is picked and the location reads theirs, with a line saying it is copied | [record](records/2026-11-22-first-run-and-home.md) |
+| P414 | Home, Get started: Switch on backups (Nightly backup off) | System, Settings, with Nightly backup among the switches at the top | [record](records/2026-11-22-first-run-and-home.md) |
+| P415 | Home, Get started: Invite a second person; then Name who gets alerts by email | The Invite page; then System, Settings, scrolled to the Alerts card | [record](records/2026-11-22-first-run-and-home.md) |
+
+The tests of 22 November for Email settings, Compose and the role editor (P416-P421) are in
+[Phone tests owed: Users and access](phone-tests-users.md).
