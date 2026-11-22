@@ -255,9 +255,9 @@ trips before a page's own first read; now a page waits for its slowest read.
   breadcrumb back to the section above its title. The tabs are links on an underline, the marked
   one in the group's colour and never bold (no label moves), a count beside a tab when the page
   gives one (`counts` in a page's answer, by the tab's path). On a phone the row scrolls sideways
-  into the gutters, which fade, and the frame script scrolls the marked tab into view with the tab before it whole, so the row shows there is more to the left (2026-11-11); the arrow
+  into the gutters, which fade; since 2026-11-22 (the owner: the tabs jumped on every page) the frame script opens the same row scrolled where it was on the page before, and moves it only as far as shows the marked tab whole. A page's commands start its content, under the tabs, so the head and the tabs are the same on every page of a set; the arrow
   keys, Home and End move between tabs. From 1024 px the row stays at the top while a long page
-  scrolls, on glass once stuck, where the browser can tell (`scroll-state` queries; elsewhere it
+  scrolls, on the page's colour once stuck, where the browser can tell (`scroll-state` queries; elsewhere it
   scrolls with the page). The head and the tabs keep still in a page change; only the content
   below them fades. Users & access has no tabs since 2026-11-11: each of its pages is a section of
   the sidebar of its own, shown to whoever its `may` says yes for (`NavEntry.may`).
@@ -331,15 +331,10 @@ own address, which often answers nothing to a reload; and when the answer is a r
 problem notice's `data-refused`), the script gives the form back as it was sent, by field name
 (hidden, file and password fields as the page drew them), opens its dialog again and shows the
 reason at the top of the dialog, so no module redraws a refused form by hand.
-A page change fades the content in where the browser has view transitions and motion is on (Look 3,
-2026-11-08, the owner's timings: it rises 6 px out of a 4 px blur over 320 ms, then its parts
-rise one after another, 60 ms apart; a page that comes back to itself or follows something live
-stays still). **Which way it moves** (2026-11-13, the owner's ask for motion): to a later tab of the
-same row, or into a page inside the one on screen (a person, a role), the content slides in from
-the right as the old leaves to the left; to an earlier tab, or back up, the other way, Back and
-Forward included (`directionOf` in `frame.js` sets `data-dir` on the root for the move; Email's
-panes keep their own). The head and its tabs stay still, and a page that slides does not also
-rise (`data-arrive="slide"`). A sidebar group folds and opens by gliding, the phone's folders and
+A page change fades the content in where the browser has view transitions and motion is on: one
+fade of 150 ms since 2026-11-22 (the owner: page changes were a jerk, never subtle), with no rise,
+blur or slide and no part coming in after another; the head and its tabs stay still, and Email's
+panes keep their own moves. A sidebar group folds and opens by gliding, the phone's folders and
 section drawer slide out as they came, a dialog's shade fades both ways, a fold's contents drop in
 as it opens, and a sidebar row gives a little under a press (`theme.css`); a
 change that comes back to the same page keeps its scroll and brings its outcome (a `Done` notice

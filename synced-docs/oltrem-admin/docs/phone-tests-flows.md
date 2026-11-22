@@ -3,7 +3,7 @@ title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
 last_verified: 2026-11-21
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md]
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -160,3 +160,13 @@ None yet.
 | P329 | Spreadsheets, pick Invoices, Create a spreadsheet link; in a new Google Sheet paste the cell into A1 | The invoices fill the sheet; Your spreadsheet links shows it, Last used once the sheet read it | [record](records/2026-11-22-connect-apps.md) |
 | P330 | The same link, Delete link, then refresh the sheet | The dialog asks first; the sheet shows the link no longer works | [record](records/2026-11-22-connect-apps.md) |
 | P331 | As a person whose role lacks Share live spreadsheets, Spreadsheets | Ask an Owner, and no Create button; the Calendar tab still works for them | [record](records/2026-11-22-connect-apps.md) |
+
+### A frame that never moves, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P332 | Email settings: tap each tab in turn, then back | The title and the row of tabs never move; a tab's buttons sit under the tabs; the row does not scroll by itself while the tab you tapped is in view | [record](records/2026-11-22-smooth-phone-frame.md) |
+| P333 | Any two pages from the sidebar | The content fades in quickly; nothing slides, blurs or rises in one part after another | [record](records/2026-11-22-smooth-phone-frame.md) |
+| P334 | Modules: scroll to the foot and back, tick a few boxes, Save | Scrolling is smooth; the top bar is solid, nothing shows through it; after Save the page fades back once | [record](records/2026-11-22-smooth-phone-frame.md) |
+| P335 | Audit log: open a row's Details that shows an address | Everything stays inside the screen, the Done tag too; the page never slides sideways and its scroll does not jump | [record](records/2026-11-22-smooth-phone-frame.md) |
+| P336 | Any page on the phone | The title is small (the size of the top bar's name), the tabs and content start higher | [record](records/2026-11-22-smooth-phone-frame.md) |
