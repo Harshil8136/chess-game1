@@ -79,10 +79,10 @@ where parsing every default took a third of the start-up time.
 
 Two optional fields place a setting on the Settings page. `section` is one of `SETTING_SECTIONS`,
 shown in this fixed order with these names: `company` (Company), `email` (Email), `money`
-(Money), `people` (Users & access), `security` (Security) and `system` (System: the ids the
+(Money), `people` (Users and access), `security` (Security) and `system` (System: the ids the
 Vendor writes at setup, a section only the Vendor sees). Left out, a setting takes its module's
 section (`sectionOf`: email and campaigns in Email, invoices, quotes and expenses in Money, iam,
-users and time off in Users & access, alerts, audit and privacy in Security, backup, health
+users and time off in Users and access, alerts, audit and privacy in Security, backup, health
 and settings in System, anything else in Company); every kit setting names its own. `unit` says
 what a number counts (`days`, `MB`, `people`) and is shown beside its box. Settings that mean the
 same in several modules keep one key each (`invoices.currency`, `quotes.currency`,
@@ -182,7 +182,7 @@ settings history, so a client sees nothing new until someone switches it on.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off with what each stops (`skips`, so the screens can offer the switch beside a warning of one of them, 2026-11-14); the list off, extras included; the presets with the parts each switches off; the kind of business picked (`business`) and the kinds (`kinds`), each with the parts it switches off and the list it starts |
-| `PUT /api/settings/parts` | `settings.parts` at the company | `{ off, business?, reason? }` (parts and extras, and the kind of business below): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
+| `PUT /api/settings/parts` | `settings.parts` at the company | `{ off, business?, reason? }` (parts and extras, and the kind of business below): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes Status so a check switched off closes its alert within minutes |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
 health and the IAM module as their `off` option; each says what it does with it. A switched-off

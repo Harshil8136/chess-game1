@@ -288,7 +288,7 @@ The rules, each refused with its own code:
   (`KIT-E-2010`): change or end the one in force instead.
 - **A grant lasts until it is ended, unless an end is given** (since 2026-11-11, the owner's ask
   to make giving access simple; before, every grant but the Owner's ended after ninety days). The
-  setting `iam.grant_days` (`GRANT_DAYS_SETTING`, Settings, Users & access, an Owner's to change)
+  setting `iam.grant_days` (`GRANT_DAYS_SETTING`, Settings, Users and access, an Owner's to change)
   sets an end of its own, 1 to 366 days, for a grant or override given without one; 0, its
   default, sets none. An end that is given is at most a year away, and `expiresAt: null` asks for
   no end for any role; the grant may start later; an override has the same window. Access reviews
@@ -404,7 +404,7 @@ what the Vendor removed on purpose stays out.
 ## Care on the tick
 
 The module keeps four rules without anyone having to remember them (`src/care.ts`). Each is an
-extra of the Access part, switched on and off on the Modules page, and since 2026-11-21 (the
+extra of the Access part, switched on and off on the Features page, and since 2026-11-21 (the
 owner's pick) all start off on a new portal; a portal that already saved its list keeps it, and
 the two added that day are added to a saved list as off (migration `0067`, `@oltrem/core-config`):
 
@@ -561,7 +561,7 @@ handover and is. The registry `GET /capabilities` and "See it as" list is read o
 like the capability index, and again after the startup registers a changed module: it changes
 only with a deploy, so People and Access pages do not read its rows on every request.
 
-Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
+Given `off` (the parts switched off on the Features page, `@oltrem/core-config`), a switched-off
 module's capabilities stay registered and active, but `GET /capabilities` and "See it as" leave
 them out, so the role and exception forms do not show them; `PATCH /roles/:id` with a list of
 capabilities keeps the ones of a switched-off module the role already holds, so saving a role

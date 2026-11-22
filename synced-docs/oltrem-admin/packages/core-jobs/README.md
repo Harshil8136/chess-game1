@@ -80,7 +80,7 @@ tick that died before its last batch) is taken by the next tick.
 At most one daily job (an interval of a day or more) starts a tick; the others are `deferred` and
 go first on the next ticks, so the day's work is spread over a few ticks instead of landing on one.
 
-With `pause` (System status's, from `@oltrem/core-health`), a tick that has a due job asks it once
+With `pause` (Status's, from `@oltrem/core-health`), a tick that has a due job asks it once
 why jobs should wait. While it gives a reason, every due job but the `exempt` ones (System
 health's own, which measure and judge the budgets) is `paused`: it is not run and stays due, so it
 runs on the first tick after the reason is gone. A pause that cannot be read is reported through
@@ -166,7 +166,7 @@ state is kept three days.
 
 ## Parts switched off
 
-Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a due job of a
+Given `off` (the parts switched off on the Features page, `@oltrem/core-config`), a due job of a
 switched-off module waits untouched, still due, listed in the tick's `switchedOff`, and runs on
 the first tick after the module is back on; an instance of the Workflow skips that module's flows
 (a flow's module is its id's first segment), and `startDue(workflow, at, off)` starts no instance

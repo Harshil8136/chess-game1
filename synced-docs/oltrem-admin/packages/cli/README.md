@@ -316,7 +316,7 @@ not hand a Worker with static assets the Access sign-in:
 7. **The modules of the portal**: which modules are on, written to `settings.parts_off` as
    `parts set` does. The question (`parts` on the asker, `partsQuestion(off)` in `src/parts.ts`)
    carries every part with its one line, whether it is always on and what it needs, its group as
-   the portal's sidebar puts it (Work, Company, Users & access, Messages, System), the parts off now, and
+   the portal's sidebar puts it (Customers, Work, Team, Email, Admin), the parts off now, and
    three presets: Everything, Email only (Email, Integrations and Deployments on) and Only what's
    always on. Backups is always on, since 2026-11-01: no switch or preset pauses the nightly copy,
    and a list stored before that names it leaves it on. The answer is the parts
@@ -324,7 +324,7 @@ not hand a Worker with static assets the Access sign-in:
    the question. The setup page shows it as a dashboard (below); the terminal lists the parts
    numbered under their groups, on, off or always on, and takes numbers or names to switch (on
    with what a part needs, off with what needs it), a preset's name, and Enter to use them. The
-   portal's Modules page switches them later, with no deploy. New keys leave
+   portal's Features page switches them later, with no deploy. New keys leave
    `.oltrem/keys-reminder` (git ignores the folder), and while it is there each run, even after
    one that stopped, ends with "Have you put a copy of oltrem-keys.txt somewhere safe?": **I saved
    a copy** removes it, **Remind me next time** keeps it for the next run. Last, when the
@@ -873,7 +873,7 @@ the settings against SQLite holding the real settings migration.
 ## `oltrem parts list [dir]`, `set <ids...>`, `preset everything|email [dir]`
 
 Which parts of the portal (its modules) are switched off: the live setting `settings.parts_off`
-of `@oltrem/core-config`, which the Vendor also changes on the portal's Modules page. `list` prints
+of `@oltrem/core-config`, which the Vendor also changes on the portal's Features page. `list` prints
 each kit part `on`, `off` or `always on` with what it needs; `set` switches off exactly the parts
 named, every other one on, in the repository here; `preset email` keeps email, its integrations,
 Deployments and the core (Backups among it: always on), `preset everything` switches every part on. The deploy calls the same exports from
@@ -900,7 +900,7 @@ the rule refuses, a database wrangler cannot read).
 
 Oltrem Mail (the `@oltrem/mail` add-on: sending through Cloudflare, the Mail setup page, and the
 inbox for mail sent to the business's own addresses) put into a portal or taken out of it, in a client repository or in the kit's own template
-(`src/mail.ts`). A portal without it sends through its providers, with Write, Sent and Bulk mail:
+(`src/mail.ts`). A portal without it sends through its providers, with Write, Sent and Campaigns:
 today's email. The first deploy asks the same question (step 4 above).
 
 | Command | What it does |

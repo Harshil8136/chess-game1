@@ -170,7 +170,7 @@ capability at the place is `KIT-E-0403`; an invoice that is not there is `KIT-E-
 - More reminders: today one goes before the day and one the day after; after that the invoice waits
   in Needs you.
 
-## For Connect apps
+## For Apps
 
 `store.csv(env, session)` gives the invoices at the places the person may view, newest first, the newest 500, as CSV: number, customer, title, location, state (overdue when sent and past its day), total, currency, due, made, sent and paid. The spreadsheet link of `@oltrem/connect` reads it, so it holds the customers' addresses.
 

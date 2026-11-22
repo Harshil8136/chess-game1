@@ -1,10 +1,10 @@
 # @oltrem/core-health
 
-System status of a client Worker (plan sections 4.3 and 10): every module declares its checks on
+Status of a client Worker (plan sections 4.3 and 10): every module declares its checks on
 its manifest, one job on the tick runs them, each at its own pace, and one table keeps the last
 result per check.
 A problem opens only after two failures in a row (two-fails-open), so one bad minute never pages
-anyone. The System status page, acknowledging and snoozing come with the health module of phase 5; the
+anyone. The Status page, acknowledging and snoozing come with the health module of phase 5; the
 alerts with the providers of phase 4, through `onOpen` and `onClose`.
 
 ## Declaring a check
@@ -31,7 +31,7 @@ export const notes = defineModule({
 |---|---|
 | `id` | `<module>.<name>`, stable: the key of its row |
 | `lane` | the group the page shows it under, lower-case letters, digits and dashes: `storage`, `email`, `access` |
-| `summary` | a few words the System status page shows |
+| `summary` | a few words the Status page shows |
 | `every` | optional: how often it runs, as a job's interval (`5m`, `1h`); `15m` (`CHECK_EVERY`) when left out. A check that failed last time runs on every run of the job until it passes |
 | `run(env, ctx)` | answers `{ status: 'ok' \| 'warn' \| 'fail', message? }`; a throw, no answer within the timeout (five seconds) or an answer of another shape is a failure with the reason |
 
@@ -47,7 +47,7 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 ```
 
 `createHealth` returns the runner and the `health` module, with one job, `health.run`, every
-five minutes, and two routes for System status, each checked against `health.read` (bit plane 6,
+five minutes, and two routes for Status, each checked against `health.read` (bit plane 6,
 a read): `GET /api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each
 budget's reading as `items`, an empty list when the budgets are not measured, with the `plan`,
 what one run may do on it as `limits`, the events queue's backlog asked live as `queue`, and, while
@@ -85,7 +85,7 @@ returns the declared checks' rows by lane then id. The row of a check no mounted
 any more is kept in the table but left out of `list`, so of the page, the report and Home's card:
 before 2026-11-12 a check taken out of the kit (`iam.door`) showed its last answer for ever.
 
-Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
+Given `off` (the parts switched off on the Features page, `@oltrem/core-config`), a switched-off
 module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
 their counts; a problem of theirs that was open is closed through `onClose`, so its alert
 resolves, and so is one of a check no mounted module declares any more. Switched back on, its
@@ -193,7 +193,7 @@ stopped 3 requests today for going over a limit (CPU time or memory)".
   (Cloudflare's account-token form opened with `OPS_TOKEN_PERMISSIONS` and the client's
   `permissions` chosen, `opsTokenForm`, the URL the command-line tool's deploy prints),
   `workers` (the dashboard's Workers and Pages, `WORKERS_PAGE`) and `worker` (the name the client
-  gives). System status shows them above its checks as three steps: make the key, set it in the
+  gives). Status shows them above its checks as three steps: make the key, set it in the
   Worker's Variables and Secrets, press Check again now, which measures the budgets before it runs
   the checks. Once a measure succeeds, `key` is null and the steps go.
 
@@ -220,7 +220,7 @@ nothing until the next measure, fifteen minutes later at most.
 
 ### The events queue
 
-Given `queue`, System status asks Cloudflare for the queue's backlog when the page opens
+Given `queue`, Status asks Cloudflare for the queue's backlog when the page opens
 (`queue(env)`: how many events wait, their size, since when the oldest waits) and adds one check,
 **`health.queue`**, lane `budget`: it warns when the oldest event has waited 15 minutes and fails
 from an hour, since the consumer is then not taking them; a backlog that cannot be read warns.
@@ -265,13 +265,13 @@ status raises as an alert. An address that answers but takes longer than 2 secon
 (`WATCH_SLOW_MS`) only warns, and so does one that moves (3xx): a move is not followed, since it
 could lead anywhere, and the message names where it goes so the Owner watches that address. With
 no lines, the check is OK and asks nothing. The words name no times, so a quiet list writes its
-row only when what it found changes, as for every check; System status shows how long it took.
+row only when what it found changes, as for every check; Status shows how long it took.
 
 Only public addresses are taken (`publicAddress`, the same rule as a webhook's address in the
 developer module): `https://`, no user or password, a name with a dot, not a number and not a
 name kept for inside networks (`.local`, `.internal`, `.corp` and the like). The setting refuses
 the rest, and the check refuses again any line handed in another way. A message shows an
-address's host and path, never its query, which can carry a key: it reaches System status and
+address's host and path, never its query, which can carry a key: it reaches Status and
 the alert email.
 
 ## Table

@@ -147,14 +147,14 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account; account-owned, not tied to a person |
-| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for System status's budgets: the day's use of the free plan) |
-| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; System status's measure job: the day's use of the free plan, from the GraphQL Analytics API |
+| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for Status's budgets: the day's use of the free plan) |
+| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; Status's measure job: the day's use of the free plan, from the GraphQL Analytics API |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |
 | Created | not yet |
 | Expires | not set |
 | Rotation | make a new token with the same two scopes (the form npm run deploy shows), set it with wrangler secret put, delete the old one; yearly |
-| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for System status's budgets. The two Access groups added on 2026-10-31 for the door were taken out on 2026-11-05: the door is set once by the deploy and lets anyone ask for a code, and the portal's own list decides who gets in, so the Worker keeps nothing in step with Access. |
+| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for Status's budgets. The two Access groups added on 2026-10-31 for the door were taken out on 2026-11-05: the door is set once by the deploy and lets anyone ask for a code, and the portal's own list decides who gets in, so the Worker keeps nothing in step with Access. |
 | Plan section | 9.3 |
 
 ## OLTREM_FLEET_GITHUB_TOKEN

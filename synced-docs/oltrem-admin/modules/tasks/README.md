@@ -119,7 +119,7 @@ bounds is the core's `KIT-E-0422`; a person without the capability at the place 
 - A board view by state.
 - A task given to a group.
 
-## For Connect apps
+## For Apps
 
 `store.calendar(env, session, from, to)` gives the open tasks given to the person and due between the two days, at most 200, as all-day items titled `Due: <title>`, each one they may still read: the calendar link of `@oltrem/connect` reads it.
 

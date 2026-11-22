@@ -63,4 +63,19 @@ No route, table, setting or binding changes. Oltrem Mail's pages take the look f
   Email settings' Integrations, System status, Users.
 - The full `pnpm verify` before the push (summary in the commit).
 
-Not verified: any of this on a phone (P337 to P340 in [their list](../phone-tests-flows.md)).
+## Later the same night: the head on the page
+
+The owner's next screenshot (Forms, dark, his Aurora look) showed the head still on a strip of its
+own colour, and Create form, taller than the title, running past the strip's edge; the Aurora
+background showed as patches. Now:
+
+| Before | Now |
+|---|---|
+| The head sat on a band of the page's colour with a line under it, drawn over any picked background | No band and no line: the head sits on the page, and the tabs' own line marks the head off where there are tabs |
+| The head's button was 40 px under a finger, at the top of its line | 36 px (32 under a mouse), centred on the title's line; the same for a tab's commands |
+| Aurora and Sunrise drew the brand's colours at up to 20% | About half that: a faint glow |
+
+Checked: core-ui theme tests (no band, the command centred), screens (171), and the full verify
+before the push. Looked at in a headless phone browser, dark with Aurora and light.
+
+Not verified: any of this on a phone (P337 to P340, and P359 to P360, in [their list](../phone-tests-flows.md)).

@@ -87,7 +87,7 @@ isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
 of every row in the range and names the rows whose content no longer matches (it also returns
 the stored hashes it read, in order, for the seal's chain), so the seal job
-and the System status page can say "the log is intact" and mean it. The hash covers every field
+and the Status page can say "the log is intact" and mean it. The hash covers every field
 but the sequence number; details are stored as canonical JSON (keys sorted), so the same facts
 always hash the same.
 
@@ -113,7 +113,7 @@ const audit = createAuditModule<Env>({
 | `GET /export?since=&until=` | `audit.export` (admin class) at the company | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands; nothing about the seal when `sealing` answers false (the Daily seal switched off) |
 
-**The daily seal** is optional: the Modules page switches it (`audit.seal`, an extra of the
+**The daily seal** is optional: the Features page switches it (`audit.seal`, an extra of the
 audit part in `@oltrem/core-config`), and a new portal starts with it off (since 2026-11-12); off,
 `audit.seal`, `audit.recheck` and the check `audit.sealed` stop, and the log itself keeps every
 row. While on, the job `audit.seal` runs once a day. It closes the UTC day before today:
@@ -159,10 +159,10 @@ table's (who did what): they stay in the bucket, with the bucket's backups, unti
 hand, and the privacy search reads only the database's 90 days (privacy module, "Find their
 data"), so an older day is answered with this export.
 
-**The check.** `audit.sealed`, in the audit lane of System status: failing when a seal is
+**The check.** `audit.sealed`, in the audit lane of Status: failing when a seal is
 broken, a warning before the first seal and when the last seal is more than two days old (its
-message says where to switch Daily seal off, or to resume the job, and System status's Fix button
-opens Modules), ok otherwise.
+message says where to switch Daily seal off, or to resume the job, and Status's Fix button
+opens Features), ok otherwise.
 
 ## Tests
 

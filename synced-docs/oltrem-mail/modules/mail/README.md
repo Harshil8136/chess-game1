@@ -270,7 +270,7 @@ it all and nothing to change.
 Mail setup (`/email/mail`), in the Email settings tabs: the route's line, the steps as a checklist, the
 form that turns Email Routing on, the sending domains with records missing and **Write them**,
 the staff addresses with their state, the test, and Stop. A step that is not ready says whether
-Mail is to be ticked at setup or only turned on, on the Modules page.
+Mail is to be ticked at setup or only turned on, on the Features page.
 Someone who may only read sees the steps and nothing to change.
 
 ## The tables

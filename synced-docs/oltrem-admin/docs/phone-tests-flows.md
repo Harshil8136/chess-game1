@@ -189,5 +189,21 @@ None yet.
 | P343 | Pick a kind, press Set up the portal for this | "The portal is set up for your business"; Modules shows the ones switched off; Roles has Full admin above Standard user; Records has the starter list; Next steps offer Add your locations | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P344 | Customers, Import from a spreadsheet; choose a CSV file with Email and Name columns | How many customers were added and how many skipped as customers already; nobody gets an email | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P345 | Users, Invite people; leave the box empty, choose a CSV file of addresses, Send invitations | "N addresses found": the addresses fill the box and nobody is invited yet; pick the role and send again to invite them | [record](records/2026-11-22-starting-setup-and-imports.md) |
-| P346 | Modules, Analytics, switch on Monday summary | The switch stays on after the page reloads | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P346 | Admin, Settings, Features, Reports, switch on Monday summary | The switch stays on after the page reloads | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P347 | Your inbox on the Monday after, from 01:00 UTC, on a portal with work done in the last two weeks | "Last week at" the company: the work done last week against the week before, and how to switch it off | [record](records/2026-11-22-starting-setup-and-imports.md) |
+
+### Five groups and plain names, 22 November
+
+The rows above this section use the names of their day: Records is now Lists, Modules Features,
+Bulk mail Campaigns, Analytics Reports, System status Status, Connect apps Apps, and
+Integrations (the email keys) Email services, under Admin, Integrations.
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P354 | The sidebar | Home, then Customers, Work, Team, Email and Admin, Admin last; each group in its own colour | [record](records/2026-11-22-five-groups-and-names.md) |
+| P355 | Admin, Integrations | Three tabs: Apps, Email services, Developer; each opens its page | [record](records/2026-11-22-five-groups-and-names.md) |
+| P356 | Admin, System | Five tabs: Status, Alerts, Backups, Deployments, Audit log | [record](records/2026-11-22-five-groups-and-names.md) |
+| P357 | Admin, Settings | Three tabs: Settings, Features, Set up for your business; Features lists the modules under the five groups | [record](records/2026-11-22-five-groups-and-names.md) |
+| P358 | An old bookmark (/records, /settings/parts, /providers) | Each opens, under its new name: Lists, Features, Email services | [record](records/2026-11-22-five-groups-and-names.md) |
+| P359 | Forms (or Users and access, Roles) on the phone, dark, with your Aurora look | No darker strip behind the title; Create form is a compact button beside the title, nothing past an edge | [record](records/2026-11-22-calm-and-modern.md) |
+| P360 | Look, Aurora, then any page | The background is a faint glow, no patches or blotches behind the content | [record](records/2026-11-22-calm-and-modern.md) |

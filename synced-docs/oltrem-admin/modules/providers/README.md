@@ -177,7 +177,7 @@ email module never names a provider.
   URL or a header with a missing value is refused, naming the field (`KIT-E-1403`). In a form
   body, an object under a key that ends in `*` is one field for each entry (`'h:*'` gives
   Mailgun its `h:<header>` fields).
-- **The message's own headers** (the unsubscribe pair of bulk mail, a reply's `In-Reply-To` and
+- **The message's own headers** (the unsubscribe pair of campaigns, a reply's `In-Reply-To` and
   `References`) are named by every HTTP definition that sends, and a test refuses one that
   forgets them. Mailgun and Amazon SES left them out until 2026-11-17, so a campaign through
   either went without one-click unsubscribe: Mailgun now gets `h:<name>` fields and SES
@@ -193,10 +193,10 @@ email module never names a provider.
   SMTP, 2026-11-11): Gmail reads an open pixel and links sent through the provider's own address
   as signs of marketing mail, so the email module sends everyday mail through another route first
   when there is one. `bulk: true` sends
-  bulk mail the provider's bulk way: Postmark's broadcast stream, the instance's
+  campaigns the provider's bulk way: Postmark's broadcast stream, the instance's
   `broadcastStream` field, read in the template as `{{bulk.broadcastStream}}` (the `bulk` scope is
   the config, present only for a bulk message). A definition's `send.bulkNeeds` lists the config
-  fields bulk mail needs; while one is empty a bulk message is refused before any call
+  fields campaigns needs; while one is empty a bulk message is refused before any call
   (`KIT-E-1408`), so it never goes out the everyday way.
 - **Files sent with a message** (2026-11-08): `attachments`, at most `ATTACHMENTS_MAX` (10), each
   a one-line `name`, an `https` `url` and its `size` in bytes. The provider downloads each file
@@ -325,7 +325,7 @@ suggestion is never activated by itself (plan 8.3).
 
 ## The connections check
 
-`providers.connections`, in the email lane of System status, every hour (`CONNECTIONS_EVERY`,
+`providers.connections`, in the email lane of Status, every hour (`CONNECTIONS_EVERY`,
 2026-11-22, the owner's health watch): it probes each email instance set to send (the active one
 and its failovers, 5 at most, `CONNECTIONS_MAX`) through the adapter's `probe`, side by side,
 each within 4 seconds (`CONNECTION_WAIT_MS`, opening the key included), keeps each result on the
@@ -381,7 +381,7 @@ cannot do, a delivery report that failed its check, a provider that refused a do
 
 The Integrations page exists and live portals send through it; a definition no portal has sent
 through yet stands on the provider's public reference. A batch for Postmark (500 a call, on a broadcast message stream),
-SendGrid, Mailgun and Amazon SES: until then they send bulk mail one message a call.
+SendGrid, Mailgun and Amazon SES: until then they send campaigns one message a call.
 
 ## Tests
 

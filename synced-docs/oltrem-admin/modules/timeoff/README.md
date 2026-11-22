@@ -131,7 +131,7 @@ at the place is `KIT-E-0403`.
 - Days a year by person or role, and days carried over into the next year.
 - A shared calendar feed of who is off.
 
-## For Connect apps
+## For Apps
 
 `store.calendar(env, session, from, to)` gives the person's own approved time off on the days between the two times, at most 200, as all-day items titled `Time off: <kind>`, each at a place where they may still ask or decide: the calendar link of `@oltrem/connect` reads it.
 

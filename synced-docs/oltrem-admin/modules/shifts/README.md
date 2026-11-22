@@ -127,7 +127,7 @@ that is not there is `KIT-E-0404`; a place the person does not plan is `KIT-E-04
 - Shifts beside time off: a person away that day is not yet warned about.
 - Breaks and the hours planned against the hours clocked.
 
-## For Connect apps
+## For Apps
 
 `store.calendar(env, session, from, to)` gives the person's own published shifts between the two times, at most 200, each at a place where they may still see shifts, titled `Shift: <label>`: the calendar link of `@oltrem/connect` reads it.
 

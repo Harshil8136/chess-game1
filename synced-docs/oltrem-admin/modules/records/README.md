@@ -26,7 +26,7 @@ const app = createApp<Env>({
 
 `createRecords` returns the `store` functions and the module manifest. It stands on the IAM
 module: the same sessions and authorizer, the same audit wrapper. The client template mounts it
-after the users module, and the screens give it a **Records** section (`@oltrem/screens`).
+after the users module, and the screens give it a **Lists** section (named Records before 2026-11-22) (`@oltrem/screens`).
 
 ## Who may do what: the place of a list
 
@@ -85,7 +85,7 @@ by its first field.
 
 For a privacy request (`personal`, read by the privacy module) the module answers every record
 whose text names the address, newest change first, with its list and its values by field label.
-The Records page is linked; a record is corrected or removed from its list. A removed record
+The Lists page is linked; a record is corrected or removed from its list. A removed record
 waits in `records_trash` for a day, for its Undo, then the daily job deletes it for good.
 
 ## The routes

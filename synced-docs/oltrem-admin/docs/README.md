@@ -57,7 +57,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Phone tests owed](phone-tests.md) | every phone test still owed, by page, with what to see; passed and failed ones | living |
 | [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
 | [Phone tests owed: Users and access](phone-tests-users.md) | the phone tests owed on the Users and access pages, split from the list above | living |
-| [Phone tests owed: Backups and System status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and System status, split from the list above | living |
+| [Phone tests owed: Backups and Status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and Status, split from the list above | living |
 | [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
@@ -89,7 +89,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
 | [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, routes, table | written, beside the code |
 | [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
-| [@oltrem/connect](../modules/connect/README.md) | Connect apps: chat alerts, the calendar link and live spreadsheet links, who may make them, when a link stops working, the logos, the routes and the table | written, beside the code |
+| [@oltrem/connect](../modules/connect/README.md) | Apps: chat alerts, the calendar link and live spreadsheet links, who may make them, when a link stops working, the logos, the routes and the table | written, beside the code |
 | [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
 | [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, vacation days a year, the reason kept private, the routes and the table | written, beside the code |
@@ -103,7 +103,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
-| [@oltrem/email, campaigns and mail](../vendor/mail/README.md) | email, bulk mail and the Oltrem Mail add-on, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
+| [@oltrem/email, campaigns and mail](../vendor/mail/README.md) | email, campaigns and the Oltrem Mail add-on, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |

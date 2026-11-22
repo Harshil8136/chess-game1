@@ -1,6 +1,6 @@
 # @oltrem/connect
 
-Connect apps: the portal's work in the apps people already use, set up by someone with no
+Apps: the portal's work in the apps people already use, set up by someone with no
 technical background. One page, four tabs in a sideways row:
 
 - **Chat alerts.** A short line in a Slack, Microsoft Teams, Discord or Google Chat channel each
@@ -28,7 +28,7 @@ const connect = createConnect<Env>({
   index: iam.index,
   bindings: (env) => ({ db: env.DB }),
   calendars: [{ id: 'bookings', label: 'Bookings', entries: (env, s, from, to) => bookings.store.calendar(env, s, from, to) }],
-  sheets: [{ id: 'records', label: 'Records', choices: /* … */, csv: /* … */ }],
+  sheets: [{ id: 'records', label: 'Lists', choices: /* … */, csv: /* … */ }],
   off: partsOff,
 });
 const modules = [iam.module, /* ... */ withPages(connect.module, connectPages)];
@@ -37,7 +37,7 @@ const modules = [iam.module, /* ... */ withPages(connect.module, connectPages)];
 The client template wires four calendar sources (bookings, shifts, time off, tasks, each through
 its store's `calendar()`) and three spreadsheet sources (records' lists and forms through their
 `exportCsv`, the invoices through `store.csv()`). A source whose module is switched off on the
-Modules page offers nothing and opens nothing. It adds no binding, secret or variable.
+Features page offers nothing and opens nothing. It adds no binding, secret or variable.
 
 ## Who may do what
 
@@ -98,7 +98,7 @@ link is made.
 | `GET /hooks/connect/calendar/<secret>.ics` | none: the secret is the check | the calendar file (`text/calendar`, RFC 5545: CRLF, folded at 75 octets, text escaped, timed items in UTC, all-day items as days) |
 | `GET /hooks/connect/sheet/<secret>.csv` | none: the secret is the check | the CSV, cells that could start a formula quoted with `'` |
 
-A link that opens nothing answers 404 with one plain sentence: make a new one on the Connect apps
+A link that opens nothing answers 404 with one plain sentence: make a new one on the Apps
 page. Making a link is audited as `connect.calendar` or `connect.sheet` with its name, deleting it
 as `connect.end`; reading one is not, but the link keeps when an app last read it.
 

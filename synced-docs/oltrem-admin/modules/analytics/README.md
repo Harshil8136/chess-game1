@@ -54,7 +54,7 @@ it by removing the cursor and the two tables' rows.
 
 An extra of Analytics, **Monday summary** (`analytics.summary`), off on a new portal and on every
 portal that had saved its modules before it (migration `0074_parts_summary_off.sql`); the Owner
-switches it on under Analytics on the Modules page. While it is on, the daily job
+switches it on under Reports on the Features page. While it is on, the daily job
 `analytics.summary` counts the last full week, Monday to Sunday (UTC), against the week before,
 from the daily counts of successful audit rows, and emails each Owner (an active person holding
 the top role at the company, themselves or through a group, not blocked, five at most) one plain

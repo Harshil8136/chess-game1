@@ -62,7 +62,7 @@ works for the whole company.
 | Retries | After 5 minutes, 30 minutes, 2, 8 and 24 hours; after the sixth attempt it has failed for good. **Try again** on the page sends one now, its attempts counted afresh. |
 | Switched off | Ten deliveries in a row that failed for good switch the webhook off, audited as the system's `developer.webhook-off`; switching it on starts the count again. A switched-off webhook is sent nothing. |
 | Kept | Deliveries thirty days, removed daily by `developer.prune`; one still waiting is kept. |
-| Chat alerts | A `format` of `slack`, `teams`, `discord` or `google-chat` (2026-11-22, for the Connect apps page) instead of `standard`. The address must be the service's own (Slack's `hooks.slack.com/services/`, a Teams workflow on `logic.azure.com` or `powerplatform.com`, Discord's `/api/webhooks/`, Google Chat's `chat.googleapis.com/v1/spaces/`), and may change only to the same service's. Each event is sent as one plain line in the service's own body, made from the envelope just before the request, so the delivery log and a retry read the same: named events in words ("A website form was answered: Contact (by ann@example.com)"), others as the module and action. Unsigned, so the signing secret never reaches the chat service. Nothing typed may ping a channel: Slack's and Google Chat's angle brackets are replaced, Discord is told to parse no mention, and Discord's and Teams' Markdown links are kept apart so no address hides behind words. The test button posts one line saying alerts reach the channel. |
+| Chat alerts | A `format` of `slack`, `teams`, `discord` or `google-chat` (2026-11-22, for the Apps page) instead of `standard`. The address must be the service's own (Slack's `hooks.slack.com/services/`, a Teams workflow on `logic.azure.com` or `powerplatform.com`, Discord's `/api/webhooks/`, Google Chat's `chat.googleapis.com/v1/spaces/`), and may change only to the same service's. Each event is sent as one plain line in the service's own body, made from the envelope just before the request, so the delivery log and a retry read the same: named events in words ("A website form was answered: Contact (by ann@example.com)"), others as the module and action. Unsigned, so the signing secret never reaches the chat service. Nothing typed may ping a channel: Slack's and Google Chat's angle brackets are replaced, Discord is told to parse no mention, and Discord's and Teams' Markdown links are kept apart so no address hides behind words. The test button posts one line saying alerts reach the channel. |
 
 ## The pages
 
@@ -94,7 +94,7 @@ address is kept by its host alone, never its path, which can carry the receiving
 ## Health
 
 In the `jobs` lane: `developer.jobs` **warns** naming the jobs whose last run failed and the ones
-paused by hand, passing by a job the Modules page switched off (the `off` option, since
+paused by hand, passing by a job the Features page switched off (the `off` option, since
 2026-11-12), which does not run anyway; `developer.webhooks` **warns** while a webhook fails or
 was switched off by its failures.
 

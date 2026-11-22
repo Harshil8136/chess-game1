@@ -21,7 +21,7 @@ every ten seconds.
 
 Since the same day (stage 6) a sending campaign watches itself: above 0.3% spam reports or 5%
 bounces over its latest messages it pauses itself to protect the sender's name; a run that fails
-is said on its page and tried again, and the third failure in a row pauses it; System status
+is said on its page and tried again, and the third failure in a row pauses it; Status
 says when the timer stops running the campaigns or the provider's reports stop arriving. Once it
 is done, the person who started it is emailed how it went, and its page shows the results by
 mailbox provider with a download of every person and what became of their message.
@@ -40,7 +40,7 @@ const campaigns = createCampaigns<Env>({
   // (optional) lets the From step name the addresses that wait for their domain's check.
   email,
   config: settingsFor, // where the five settings below are read
-  // What the Cloudflare plan allows now, from System status (optional: the free plan's run without).
+  // What the Cloudflare plan allows now, from Status (optional: the free plan's run without).
   capacity: async (env) => ({ plan, external, writesLeft, queue }),
   alerts: { raise, resolve }, // the alerts module's, for waits, pauses and approvals (optional)
   timeZone: async (env) => 'Europe/Madrid', // sending hours are read in it (optional: UTC)
@@ -54,7 +54,7 @@ through the email module: the client adds `CAMPAIGN_TEMPLATE` to the email modul
 Since 2026-11-20 each of its audit rows names the campaign (`name`), so the Audit log's To what
 reads it after the campaign is gone, and says from where (the kit's audit writer adds it).
 Its pages come from `@oltrem/campaigns/pages`, type-checked against the DOM like the files
-module's, and give it a **Campaigns** entry in the sidebar's Messages group, after Email, with the email module's Templates and Lists as its tabs (2026-10-29).
+module's, and give it a **Campaigns** entry in the sidebar's Email group, after Email, with the email module's Mailing lists as its tab (2026-10-29; the Email group and the name Mailing lists since 2026-11-22).
 
 ## Who may do what
 
@@ -107,7 +107,7 @@ campaign waits and its page says why; it goes on once one is.
 
 ## The Cloudflare plan
 
-The client's plan is the setting `health.cloudflare_plan` of System status (free or Workers
+The client's plan is the setting `health.cloudflare_plan` of Status (free or Workers
 Paid), and the run follows it: on the free plan a run hands out 50 messages at most and makes at
 most 40 calls to the provider (50 outside calls a run, 10 kept for the rest), and it stops before
 the database writes left today run out (about ten rows written a message, measured by System
@@ -344,5 +344,5 @@ writer, its file and its audit; the reports check ok and then warning, and the t
 failing while nothing ran and ok after a run. `steps.test.ts` holds a draft's four steps: a ready draft, what is missing sorted into its step with its link, and people without their own file. The client template's screens test runs the pages: a campaign written, its list
 uploaded, a sender address added and picked, a test, the run waiting with no provider and saying
 so, then a provider connected and the run sending in one batch call, the live figures, the
-results by mailbox provider and the download, the summary waiting in the outbox, **Bulk mail
+results by mailbox provider and the download, the summary waiting in the outbox, **Campaigns
 today** on the Email home, and an unsubscribe.

@@ -353,7 +353,7 @@ is a personal mail service such as Gmail, else the portal's address without its 
 else example.com), shown as the field's placeholder and as a chip in its hint that a tap puts in
 the field (the kit's `data-fill`). Each field has a round info button (core-ui `FormField`
 `info`) whose tinted note says what it is and where to find it. When a provider can send but no
-domain is added yet (one added on Integrations), opening the page takes in the domains and
+domain is added yet (one added on Email services), opening the page takes in the domains and
 addresses the provider lists (`POST /domains/discover`), else adds the From address's domain
 (`POST /domains`), and checks it at once; the page says what it added, and nothing happens for
 a person who may not add domains. Each line of the result arrives a little after the one above.
@@ -371,7 +371,7 @@ sealed on the instance), Brevo's transactional webhooks, and Mailjet's event cal
 event, leaving alone an event another address already gets. Registering again changes nothing
 that is right. `DELETE /instances/:id/reports` (`email.reports-remove`) takes away only this
 instance's addresses. Another provider answers that it is set up by hand, with the address shown
-on Integrations. A key that may not register is told so in words. These two, the hook address,
+on Email services. A key that may not register is told so in words. These two, the hook address,
 `/release` and `/canary` act on every place's mail, so since 2026-11-20 they ask for
 `email.manage` at the company itself, not only somewhere (marked `company`, the kit's check).
 
@@ -410,7 +410,7 @@ over them were taken out the same night, the owner: boxes that waste the page go
 | **Kinds of mail** | Which address each kind of mail comes from; its line says how many kinds have an address of their own, and the main address, so its chip is only **Main address** |
 
 What an address sends is a tag in its colour on every row and in the dialogs: **Everyday mail**
-green, **Bulk mail** purple, **Bulk and everyday** amber (one address for both is what put a test
+green, **Campaigns** purple, **Bulk and everyday** amber (one address for both is what put a test
 letter in Gmail's Promotions tab, `docs/records/2026-11-12-promotions-tab-cause.md`), and the
 default it is in blue. **Edit** opens on a card of the address in its avatar's colour (its name,
 address and tags), then three parts each with its icon: **Who it is from** (the name people see,
@@ -516,7 +516,7 @@ portal's own count of what it sent through each instance today, this week and th
 Every condition an email needs to leave, from what the portal already knows (`src/ready.ts`),
 each with what was found and what to do; added on 2026-10-31 after a day of email refused by a
 Brevo account Brevo had not switched on. `GET /ready` answers it, the Write page and the Providers
-pages show it first, and `email.ready` raises it in System status.
+pages show it first, and `email.ready` raises it in Status.
 
 | Check | Stops mail when | May cost mail when |
 |---|---|---|
@@ -584,7 +584,7 @@ too (`holdsAnywhere`): code is how an email looks, not whose data it reaches.
 | `GET /connect` | `email.manage` | What Email settings starts from: `{ from, name, example, providers, domains }`, the From address and name as set, a full example address on the company's own domain, how many providers can send and how many sending domains are added |
 | `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href, read? }], checkedAt, checking? }`, read from what the portal knows; while a check has not passed and its facts are over two minutes old, the services and the domain are asked again after the answer (`checking: true`) |
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
-| `POST /release` | `email.manage` at the company | The messages held because no provider was ready, released and the first ten sent now that one is, without waiting for `email.release` (which sends the rest); the Integrations page calls it when a provider is made the one that sends |
+| `POST /release` | `email.manage` at the company | The messages held because no provider was ready, released and the first ten sent now that one is, without waiting for `email.release` (which sends the rest); the Email services page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` at the company | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed; read through `email_messages_created` (migration `1018`), so only the day's rows |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |

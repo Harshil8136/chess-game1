@@ -93,7 +93,7 @@ capability at the place is `KIT-E-0403`.
 - A week or month view across every resource of a place.
 - A reminder before a booking starts.
 
-## For Connect apps
+## For Apps
 
 `store.calendar(env, session, from, to)` gives the person's own bookings that are not cancelled and overlap the two times, at most 200, each at a place where they may still book, titled `<title> (<what was booked>)`: the calendar link of `@oltrem/connect` reads it.
 
