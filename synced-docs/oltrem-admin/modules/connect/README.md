@@ -9,7 +9,9 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
 - **The catalogue.** Every app as a card in one grid, with a sideways row of filters: All, Chat,
   Calendar, Spreadsheets, Automation, and Data where the data part is mounted and the person may
   read it (its `/api/data/services` answers): a card for each database service and "Any other
-  database", which open the data part's own pages under `/data/connect/`. A card
+  database", which open the data part's own pages under `/data/connect/`. Each card shows the
+  service's logo and how it connects, as the data part answers them; Supabase's says "Sign in"
+  once the connect relay is set. A card
   says on its right whether it is connected and how it is doing, or "Ask an Owner" (greyed, still
   there) when it is not the person's to connect.
 - **Chat.** A short line in a Slack, Microsoft Teams, Discord or Google Chat channel each time

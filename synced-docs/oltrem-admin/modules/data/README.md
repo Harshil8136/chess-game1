@@ -74,6 +74,22 @@ dialect. The kit's five, with the smallest key each service offers:
 | Airtable | `airtable` | the metadata API, then list records | a personal access token with `data.records:read` and `schema.bases:read` |
 | Upstash Redis | `upstash-redis` | REST `POST /pipeline`, read commands only | the Read Only token |
 
+**How each connects (the owner's ask of 2026-11-22: the safest way that is also the easiest).**
+Sign-in where the service offers it to any app, otherwise the read-only key above, made in the
+service's own dashboard with the steps on its page:
+
+| Service | How it connects | Why |
+|---|---|---|
+| Supabase | Sign in with Supabase (the Apps part's connect relay), or its key | Supabase offers OAuth to any app; its key is a full secret key, so sign-in saves copying it |
+| Airtable | its read-only token; sign-in next | Airtable offers OAuth, with a token that lasts an hour and a refresh token that rotates: it needs that token kept with the connection first |
+| Neon | the connection string of a read-only role | Neon's OAuth is for approved partners only; a read-only role is narrower than any sign-in |
+| Turso | the address and a read-only token | Turso offers no sign-in to other apps |
+| Upstash Redis | the REST address and the Read Only token | Upstash offers no sign-in to other apps |
+
+`src/brands.ts` holds each service's logo (Simple Icons, CC0, in its brand colour) and its card's
+line; `GET /services` answers them (`mark`, `line`, `signIn`) so the Apps page draws the same
+cards, and a service with none keeps its initials.
+
 ## What a dialect does
 
 Every dialect gives the same three things (`DataSource`):
