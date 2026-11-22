@@ -34,7 +34,7 @@ that reads only what those people may see.
 | `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
 | `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
 | `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's page also offers "Sign in with Supabase" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and says in fixed words why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part", has the journey |
-| `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Change key and Remove (one confirm). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
+| `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
 | `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. Saved views keep the table, its search and its sort |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
@@ -53,7 +53,8 @@ Under `/api/data`; every change is audited by the providers registry (`providers
 | `GET /services` | `data.read`, company | The data services a database can be connected from: fields (never a pattern or a value), steps, help; and whether this person may connect one |
 | `GET /connections` | `data.read`, company | The connections and whether this person may manage them |
 | `GET /connections/:id` | `data.read`, company | One connection, never its key, and whether this person may change it |
-| `POST /connections` | `data.manage`, company | Connect: definition, label, fields; tidied by `prepare`, sealed, checked at once; `201 {id, check}` |
+| `POST /connections` | `data.manage`, company | Connect: definition, label, fields; tidied by `prepare`, sealed, checked at once; `201 {id, check}`. The same service at the same address already connected is refused (`KIT-E-4104`, its name in the detail), so a Connect pressed twice or a sign-in come back twice makes one; the pages then open that connection with "This database was already connected". Not Neon: one endpoint serves several databases and roles, which only the secret connection string names |
+| `POST /connections/:id/label` | `data.manage`, company | Rename it (`label`, 1 to 60 characters); its key and address stay; audited as `providers.rename` |
 | `POST /connections/:id/credential` | `data.manage`, company | A new key or address, checked at once |
 | `POST /connections/:id/check` | `data.read`, company | Reach the database with its sealed key; a refusal is a failed check kept on the connection, never an error. Within 30 s of the last check it answers that one instead (`CHECK_AGAIN_MS`) |
 | `DELETE /connections/:id` | `data.manage`, company | Remove the connection and its sealed key; the database is not touched |
@@ -216,6 +217,7 @@ The 41xx block of the kit's range (`src/errors.ts`):
 | `KIT-E-4101` | 502 | The service refused the request, answered with an error, an answer of the wrong shape or over 2 MB, or not within 4 s |
 | `KIT-E-4102` | 404 | The table, view or collection is not there, or the key may not read it |
 | `KIT-E-4103` | 409 | That is not a database: the connection, or the service asked for, is not a data service |
+| `KIT-E-4104` | 409 | That database is already connected: the same service at the same address (never Neon); the detail says the name it is saved as |
 
 A request the page made that cannot be met as asked (the sort, search, cursor or key set above) is
 the kit's `KIT-E-0422`.
@@ -265,10 +267,12 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   written again after a day, a refused key failing it and kept, no audit row, a key that will not
   open kept as a failed check and tried again only after a day or a new key, a disabled one left
   out, the turn past five) and Home's line (answered, failing, not checked yet, None), with the
-  Email services card no longer counting a database; removal.
+  Email services card no longer counting a database; a second connection to the same address
+  refused before any call; a rename, audited, refused to a reader and to an empty name; removal.
 - `test/pages.test.ts`: every page against the API's answers: the list and its states; the paste
   box, a half paste, a refusal; a service's form, kept as typed but never its key; a reader's view
   of each page; a guide link only when it is `https://`; the connection page's failed check in
   plain words and hidden when the tables load; saved-but-not-answering after a connect or a new
-  key; each failure path staying on its page; Change key with and without a key to keep; a sunset
-  date; rows sorted, searched, empty, refused, paged, with Back at the top.
+  key; each failure path staying on its page; Change key with and without a key to keep; Rename
+  and its refusal; Open a table by its name only when the list is cut, never for Redis keys; a
+  sunset date; rows sorted, searched, empty, refused, paged, with Back at the top.

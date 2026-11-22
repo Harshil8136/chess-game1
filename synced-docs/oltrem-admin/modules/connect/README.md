@@ -180,7 +180,9 @@ the project's secret key with Supabase's token, used once there and never sent o
   saves it through the data part's own
   `POST /api/data/connections`, which checks `data.manage` and a fresh sign-in as always. So a way
   back someone else hands the person cannot connect that someone's database (the security
-  review). A refusal there is shown on the same page, the project still held. Cancel, also a
+  review). A refusal there is shown on the same page, the project still held; when the data part
+  answers that the project is already connected (`KIT-E-4104`: Connect pressed twice, or the Back
+  button), that connection's page opens instead, saying so, and the held answer is let go. Cancel, also a
   form post, clears the held cookie at once.
 - **Several projects:** a page with one button each; pressing one signs in again with that
   project's ref sent sealed to the relay's key.

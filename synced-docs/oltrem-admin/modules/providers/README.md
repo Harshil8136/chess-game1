@@ -388,7 +388,8 @@ key is then saved for the new host. A key sealed before hosts were recorded open
 kit's own definition of that id sends; for a client's own definition it is pasted again. `registry.instance(db, id)`
 finds an instance by its id alone, for that public address. Every write is audited under the person who
 made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
-`remove` and `rewrap`, with the field names and never a value.
+`rename` (the new name, since 2026-11-22, for the data part), `remove` and `rewrap`, with the
+field names and never a value.
 
 ## Tables and errors
 

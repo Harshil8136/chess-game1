@@ -3,7 +3,7 @@ title: "Phone tests owed: Connected data"
 status: living
 owner: vendor
 last_verified: 2026-11-22
-sources: [docs/records/2026-11-22-supabase-one-click.md; modules/data/README.md; the records each line links]
+sources: [docs/records/2026-11-22-supabase-one-click.md; docs/records/2026-11-22-database-checks-and-rename.md; modules/data/README.md; the records each line links]
 ---
 
 # Phone tests owed: Connected data
@@ -26,3 +26,6 @@ sources: [docs/records/2026-11-22-supabase-one-click.md; modules/data/README.md;
 | P424 | Work, Data, Connect a database | The same logos on the service cards, each with its line; a database under Data shows its service's logo | [the data README](../modules/data/README.md) |
 | P425 | Home, At a glance, with one database connected | A Databases line: "1 of 1" and OK; with nothing connected it says "None" and Off, at the bottom of the list | [the data README](../modules/data/README.md) |
 | P426 | Admin, Features, Data: switch Database checks on; an hour later open Status | Database checks is off until switched on; Status lists the database check with "Shop cache: answers" (your connection's name), or the service's words when it stopped answering | [the data README](../modules/data/README.md) |
+| P427 | Work, Data, a database, Rename: type a new name, Save name | "Renamed.", the new name at the top and on the Data list; its tables open as before | [the data README](../modules/data/README.md) |
+| P428 | Sign in with Supabase and Connect a project already on the Data page (or press Connect twice) | That database's page opens with "This database was already connected, so nothing new was added."; the Data list still shows it once | [the data README](../modules/data/README.md) |
+| P429 | A database with more than 500 tables (or an Airtable account with more than 10 bases): its page | Under "Only part of the list is shown", Open a table by its name; a name not in the list opens its rows | [the data README](../modules/data/README.md) |
