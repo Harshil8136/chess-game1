@@ -323,6 +323,23 @@ order; `disabled` is out. `registry.pick(db, tenant, kind)` is what the email mo
 the active instance, else the first failover. Activating an instance needs its credential, and a
 suggestion is never activated by itself (plan 8.3).
 
+## The connections check
+
+`providers.connections`, in the email lane of System status, every hour (`CONNECTIONS_EVERY`,
+2026-11-22, the owner's health watch): it probes each email instance set to send (the active one
+and its failovers, 5 at most, `CONNECTIONS_MAX`) through the adapter's `probe`, side by side,
+each within 4 seconds (`CONNECTION_WAIT_MS`, opening the key included), keeps each result on the
+instance as the probe route does (`last_probe`, without an audit row, since the system asked;
+no answer in time is kept as a failed probe), and says what it found
+in words (`connectionSaid`). A 401 or 403 is a refused key, with what to do: make a new key and
+paste it on Integrations. A 429 is a service asking the portal to wait, and only warns. Anything
+else, or no answer in time, did not work, with the provider's words. The active instance failing
+fails the check, so two hours in a row open a problem and an alert; a failover one only warns.
+A key that can no longer be opened fails, named. The result is written to the instance only when
+it changed, or once a day: one row a day for a service that keeps working. A write that fails
+turns an OK into a warning that says the answer could not be kept, so a database fault is never
+blamed on the service.
+
 ## Credentials
 
 The secret fields are sealed together under the tenant's data key to the instance's row, so a

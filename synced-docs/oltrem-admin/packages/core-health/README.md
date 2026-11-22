@@ -248,6 +248,32 @@ kept to letters, digits and plain punctuation, 80 characters each. It is an extr
 status part that starts off (`health.status-pages`, `@oltrem/core-config`): off, it is neither
 run nor listed, and no page is asked.
 
+## Web addresses to watch
+
+Given `watched`, an `addresses(env)` function and, for tests, a `fetch`, the health module declares
+the check `health.addresses` (2026-11-22, the owner's health watch), lane `services`, every 15
+minutes (`WATCHED_EVERY`), and the setting `health.watched_addresses` (`WATCHED_SETTING`, Settings,
+Company, editable by an Owner). The setting holds up to 10 lines (`WATCHED_MAX`), each an
+`https://` address, optionally followed by ` | ` and a few words its page must hold
+(`https://shop.example.com | Add to cart`). The client template hands the setting's lines in.
+
+Every address is read side by side, each within 4 seconds (`WATCH_WAIT_MS`, inside the check's
+own 5). An answer outside 2xx, no answer in time, an address that cannot be reached (the cause is
+named) or the words not found in the first 64 KB of the page (`WATCH_BYTES_MAX`, case ignored)
+fails, naming each address that failed first. Two runs in a row open one problem, which System
+status raises as an alert. An address that answers but takes longer than 2 seconds
+(`WATCH_SLOW_MS`) only warns, and so does one that moves (3xx): a move is not followed, since it
+could lead anywhere, and the message names where it goes so the Owner watches that address. With
+no lines, the check is OK and asks nothing. The words name no times, so a quiet list writes its
+row only when what it found changes, as for every check; System status shows how long it took.
+
+Only public addresses are taken (`publicAddress`, the same rule as a webhook's address in the
+developer module): `https://`, no user or password, a name with a dot, not a number and not a
+name kept for inside networks (`.local`, `.internal`, `.corp` and the like). The setting refuses
+the rest, and the check refuses again any line handed in another way. A message shows an
+address's host and path, never its query, which can carry a key: it reaches System status and
+the alert email.
+
 ## Table
 
 Migration `0009`, `oltrem_health`: `id`, `module_id`, `lane`, `status`, `message`, `checked_at`,

@@ -86,6 +86,7 @@ The module adds one template of its own, `email.canary`, the test message the ca
 |---|---|
 | `send` | The template is found and rendered, the message checked (addresses, header lines, one to fifty recipients in To, with `cc` and `bcc` fifty in all and none named twice) and queued through the outbox under its message key; the caller's own key makes a message asked for twice queued once |
 | A reply | `thread: { inReplyTo, references }` puts `In-Reply-To` and `References` on the message (RFC 5322), on every route; each id must be one `<...>` on one line (`KIT-E-0422` otherwise), repeats are dropped and the newest 20 kept (`THREAD_IDS`) |
+| History kept | Every message's row is kept (2026-11-22, the owner's choice on the database review): it holds no text, and it is what lists a spam report or an unsubscribe that arrives months later (`email_donotmail`), what stops a second send under the same key, and what Sent shows as the delivery line. The `email.outbox` job removes the outbox's finished sends after 7 days (`OUTBOX_DONE_DAYS`), at most 2,000 a run (`OUTBOX_PRUNE_RUN`), hourly while more wait and daily once none do: only a receipt, since a key asked for again is answered as a duplicate from the message's own row |
 | No instance ready | The outbox row is held and the message's row says `waiting`; the job `email.release`, every five minutes while a message is held, releases the held messages once a tenant that waits has an active or failover instance, and sends them. With none held it sleeps (an hour a run), and holding a message wakes it (2026-11-12) |
 | What did not land | The same job replays the outbox, ten rows a run (`REPLAY_ROWS`), since nothing else does (2026-11-17: until then a released message stayed `pending` for ever): a released row, a row the queue refused (it wakes the job for a minute later, and the outbox tries again after 1, 5, 30 and 120 minutes), and a row no delivery confirmed, an hour later and then further apart. A row the queue refused five times, or that no delivery confirmed in eight sends (about two days), is `dead` and reported, so nothing is sent for ever |
 | The provider went away | A message queued while a provider was ready, whose delivery then finds no route: the row says `waiting` again and its outbox row is held (`outbox.hold`), as if it had been queued with none, and the job sends it once a provider is ready. Until 2026-11-17 the delivery threw instead, the queue brought the message back five more times to the same answer, and nothing sent it afterwards |
@@ -773,7 +774,11 @@ queued; see Write). Migration `0053_email_signatures.sql` adds each sender addre
 `signature`. Migration `1017_email_code_for_senders.sql` gives `email.write.code` to every role
 that may send (2026-11-12) and bumps each company's access version. Migration
 `1018_email_messages_recent.sql` (2026-11-13) indexes `email_messages` by `created_at` and
-`status`, for Home's card. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
+`status`, for Home's card. Migration `1021_email_lighter.sql` (2026-11-22) puts
+`email_messages_moving` in place of the index by status: only the messages still on their way
+(`leased`, `retrying`, `waiting`), which the two readers that look for them read (`MOVING`, the
+same words in the index and in each query, so SQLite uses it), so a message that went out writes
+its row and four index entries, not five. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
 route a message with no clear answer stays on. Migration `1003_email_consent.sql` makes
 `email_list_left` (who left which saved list from an unsubscribe link, the message and when) and
 adds `email_domains.bulk_since`, the first day a domain sent bulk mail, which `@oltrem/campaigns`

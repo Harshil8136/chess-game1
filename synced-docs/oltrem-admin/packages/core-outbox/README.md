@@ -46,6 +46,7 @@ createWorker({ ..., onHandled: (event) => outbox.complete(event.idempotencyKey) 
 | `replay({ limit })` | sends what is due: pending rows whose time has come, and sent rows an hour old with no confirmation, no sooner than their own next time (a delayed event is not sent again before its wait ends, and each send again waits one step longer on the ladder, twelve hours at most). A row sent `maxSends` times (8, about two days) that no consumer confirmed goes dead instead of being sent once more. Returns how many were sent, failed, went dead, or were claimed by another replay first |
 | `stats()` | a count per status, for the health card |
 | `get(key)` | one row |
+| `prune(before, limit)` | removes `done` rows last changed before `before`, at most `limit` (1,000 unless given), and returns how many (2026-11-22). Pending, sent, held and dead rows are never removed. A removed row's key can be enqueued again, so a caller that must never send twice keeps its own journal longer: the email module calls it daily for rows older than 7 days and keeps its messages 90 |
 
 Consumers are idempotent by the envelope's key, so a replay that overlaps a live send, or a
 confirmation that did not land, costs one duplicate delivery and nothing else. A consumer quicker

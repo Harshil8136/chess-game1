@@ -301,4 +301,6 @@ gains `stored_bytes`, the running total of its stored copies, started from what 
 Migration `1019_mail_unread_and_age.sql` (2026-11-13) adds two indexes: `mail_threads_unread`,
 only the unread conversations of the inbox, which Home's Unread mail card counts, and
 `mail_messages_received`, the messages by arrival, through which the hourly removal finds the
-oldest. Never KV (mail law M-3).
+oldest. Migration `1022_mail_lighter.sql` (2026-11-22) drops `mail_messages_age`, an index on
+the same messages by company and arrival that no query read since `1019`: one write fewer for
+every message that arrives. Never KV (mail law M-3).

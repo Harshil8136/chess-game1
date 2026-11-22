@@ -76,10 +76,9 @@ person and those groups, the bound roles' capabilities and the person's override
 then ORs each role's bits into `allow` or `deny` per scope and module. The map holds the tree
 (`parent`), the bits per scope, whether the person holds the Owner role at the root, the
 tenant's policy version and Vendor setting, `refreshAt` (when the next grant starts or ends), and
-a `sha256-` hash of all of it. Every compile for a session is recorded in `iam_policy_compiles`
-with that hash, so a decision can be replayed; "See it as" compiles a person's map only to show
-it and records nothing (`record: false`), so the page writes no row. A map is a few hundred bytes
-to a few kilobytes.
+a `sha256-` hash of all of it. A compile only reads: it writes no row (since 2026-11-22; its old
+record in `iam_policy_compiles` was never read, and the table goes in a later release). A map is
+a few hundred bytes to a few kilobytes.
 
 `can` decides in this order, and refuses when in doubt (R-10):
 

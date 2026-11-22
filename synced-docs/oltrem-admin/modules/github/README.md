@@ -60,6 +60,10 @@ version and the commit (or, for a deploy from a computer or the fleet, the way i
 A newer kit says how it arrives: the fleet brings it, or `pnpm exec oltrem upgrade` and
 `npm run deploy` in the repository of a portal kept out of the fleet.
 
+The daily job `github.prune` (2026-11-22) removes the reports older than a year
+(`RUNS_KEPT_DAYS`); the newest report of each repository stays whatever its age, so the check always
+has one to read.
+
 ## Not here yet
 
 - The docs mirror's status, for a client that keeps a mirror.

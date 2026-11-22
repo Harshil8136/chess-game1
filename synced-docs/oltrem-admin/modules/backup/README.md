@@ -136,6 +136,12 @@ is looked at before the next night.
 **warn** when there is none yet or the last one passed longer ago, **fail** when the last one
 failed.
 
+The daily job `backup.prune` (2026-11-22) removes the records of runs older than a year
+(`RUNS_KEPT_DAYS`); a run still running stays, and so does the newest of each kind and outcome, so a
+failed run never removes the last good one, and both
+checks always have one to read. The copies themselves go after 90 days by the bucket's own
+lifecycle rule, set by `oltrem backup setup`.
+
 ## The restore drill
 
 A copy is only proven by opening it. Once a month the vendor runs `oltrem backup drill --key

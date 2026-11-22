@@ -55,7 +55,9 @@ law was not checked. Sources: [GDPR deadlines](https://gdprlocal.com/dsar-rules-
    due day is set from the setting.
 2. **Find their data**: every mounted module that declares `personal` (core-module, "Personal
    data") is asked for its rows under the address, at most `PERSONAL_ROWS` (200) each, and the
-   audit log for what the address did in the portal. The page shows each part with its row count
+   audit log for what the address did in the portal in its last 90 days (older rows are moved to
+   the bucket, core-audit "Ninety days in the database", and are read with the audit log's export
+   of those days). The page shows each part with its row count
    and a link to its page; the quotes and invoices link their lists filtered to the address, the
    customers module the customer's own page. The search is audited with the parts it found.
 3. **Check who asks**: their data goes only to them. Whoever answers writes down how the identity
@@ -81,7 +83,7 @@ The modules that declare `personal` in the kit:
 | records | Records in lists | every record whose text names the address, its values by field label |
 | campaigns | Campaigns they were sent | whether they are never mailed, and each campaign sent to them |
 | email | Emails sent to them | each message sent to the address and what became of it (the text is not kept) |
-| (the audit log) | What they did in the portal | the actions they made: when, what, on what, the outcome |
+| (the audit log) | What they did in the portal, last 90 days | the actions they made: when, what, on what, the outcome |
 
 ## The pages
 

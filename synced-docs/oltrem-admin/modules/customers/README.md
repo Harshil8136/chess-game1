@@ -220,7 +220,9 @@ token: how, the browser, when it was made, last used, expires and ended). Migrat
 client id, its secret sealed with its own wrapped data key, on or off, and when it was last used.
 Migration `0061_customers_by_name.sql` (2026-11-13) indexes the customers by name whatever its
 case, the order the page lists them in, so a page of them stops at its last row instead of
-sorting every customer.
+sorting every customer. The daily job `customers.prune` (2026-11-22) removes a sign-in 30 days
+after it ended or ran out (`SESSIONS_KEPT_DAYS`), with the browser it names, at most 1,000 a run
+(`SESSIONS_PRUNE_RUN`); a sign-in still live stays however old.
 
 ## Errors
 

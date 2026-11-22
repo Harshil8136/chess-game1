@@ -242,8 +242,13 @@ link secret, who and when), `campaigns_recipients` (each person: the row of the 
 name, merge fields, state and reason, message key, when it was handed out) and
 `campaigns_suppressed` (the company's addresses never mailed, until 2026-10-28). Migration
 `0044_campaigns_donotmail.sql` copies its rows into the email module's `email_donotmail`
-(bounces and complaints stop every message, the rest bulk mail only); the table is no longer read
-or written, and dropping it is a later step with the owner's yes. The figures read the email
+(bounces and complaints stop every message, the rest bulk mail only); the table was no longer read
+or written, and migration `1020_campaigns_lighter.sql` (2026-11-22, the owner's yes on the
+database review) drops it, after copying its addresses to the do-not-mail list once more in a
+way that only ever widens (one on the list for bulk mail only whose row here says spam report or
+bounce now stops all mail). The same migration puts
+`campaigns_recipients_waiting` (only the people still to be sent, by row) in place of the index
+by state, so sending a person writes two rows of theirs, not three. The figures read the email
 module's `email_messages` by message key: its outcome and its first open, click, spam report and
 unsubscribe. Migration `0046_campaigns_sender.sql` adds the campaign's `sender_id`, one of the
 email module's `email_senders`. Migration `0049_campaigns_engine.sql`, additive, adds to

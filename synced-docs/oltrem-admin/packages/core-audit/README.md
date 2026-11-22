@@ -140,6 +140,25 @@ checked over more than a day, never skipped. The daily seal no longer rechecks: 
 change it rechecked all 7 seals in one run, which took most of a tick's CPU on its own
 (`docs/records/2026-11-01-cpu-budget.md`).
 
+**Ninety days in the database (2026-11-22).** The log keeps its last 90 days in D1
+(`KEEP_DAYS`, the owner's database review). The job `audit.archive` moves older rows into the
+bucket, oldest first, at most 1,000 a run (`ARCHIVE_ROWS`), one UTC day at a time: each slice
+is written whole, with its hashes, to `logs/audit/rows/<day>/<first seq>.json` (`ARCHIVE_PREFIX`),
+and only then removed from the table, so a failed write removes nothing. The removal uses the
+same day and time bounds as the read, so a row written across midnight by another request, whose
+number falls among the slice's, stays for its own day's run. The job runs hourly while rows wait
+and daily once none do (it answers idle), so a portal behind by months, or one logging more than
+1,000 rows a day, catches up at up to 24,000 rows a day. The export reads those files for the
+days older than the database holds, and refuses an export that would need more than 40 of them
+(`ARCHIVE_FILES`) rather than run past a request's limits; a file listed but gone, or one that is
+not rows, fails the export by its name (`KIT-E-0500`) instead of leaving a day out. The page and
+Home read only the database. Only the newest 7 seals are rechecked, so moving older rows breaks
+no check; the files keep each row's hash, so the chain of a moved day can still be checked by
+hand, sealed or not (Daily seal is off by default). The moved rows are personal data like the
+table's (who did what): they stay in the bucket, with the bucket's backups, until removed by
+hand, and the privacy search reads only the database's 90 days (privacy module, "Find their
+data"), so an older day is answered with this export.
+
 **The check.** `audit.sealed`, in the audit lane of System status: failing when a seal is
 broken, a warning before the first seal and when the last seal is more than two days old (its
 message says where to switch Daily seal off, or to resume the job, and System status's Fix button
