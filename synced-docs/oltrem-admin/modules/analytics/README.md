@@ -21,6 +21,10 @@ const modules = [iam.module, /* ... */ withPages(analytics.module, analyticsPage
 stands on the IAM module (sessions, the authorizer) and the audit log, and adds no binding, secret
 or variable.
 
+With `send`, a function that emails one message (the client template passes the portal's email
+module, with the template `analytics.message`), the module also has the Monday summary below.
+Without it there is no summary and no job for it.
+
 ## Who may do what
 
 One capability on bit plane `16`: `analytics.read` sees the counts. It is read at the company
@@ -45,6 +49,26 @@ mounted. Each statement and the cursor move in one transaction, so a row is coun
 The job `analytics.prune` removes the counts older than 455 days: a year, and a period of ninety
 days before it to compare with. The audit log itself is untouched; the counts can be rebuilt from
 it by removing the cursor and the two tables' rows.
+
+## The Monday summary
+
+An extra of Analytics, **Monday summary** (`analytics.summary`), off on a new portal and on every
+portal that had saved its modules before it (migration `0074_parts_summary_off.sql`); the Owner
+switches it on under Analytics on the Modules page. While it is on, the daily job
+`analytics.summary` counts the last full week, Monday to Sunday (UTC), against the week before,
+from the daily counts of successful audit rows, and emails each Owner (an active person holding
+the top role at the company, themselves or through a group, not blocked, five at most) one plain
+message, "Last week at" the company: a line for each named piece of work done in either week
+(answers to the website forms, customers added and customer imports, quotes sent and accepted,
+invoices sent and paid, bookings, tasks done, records added, time off and expenses asked for,
+approvals asked for), the changes people made (the portal's own work left out), the people who
+used it, and how to switch it off. It sends from Monday 01:00 UTC, once Sunday's last changes are
+counted, on the first run that finds the week not sent (`oltrem_meta` key
+`analytics.summary_week`), so a run that drifted past Monday, waited for the free plan's budget or
+failed is made up the day after. Each message carries the week and the Owner's id as its key, so
+a retry sends nobody theirs twice; the week is marked sent only once every Owner's went. A week
+with nothing done in either week sends nothing. A send that fails is counted and the job fails
+with the first cause, so the Jobs page shows it.
 
 ## The page
 
@@ -90,4 +114,9 @@ areas and the most frequent actions, the rows waiting and then counted; the capa
 company and another period refused; pruning. The client template's screens test opens the page
 before any count, then after a tick reads its figures, charts and areas, and downloads the CSV.
 The page, against answers of the API (`test/pages.test.ts`): every area and action in words, and
-the refused or failed figure linked to the audit log.
+the refused or failed figure linked to the audit log. The Monday summary
+(`test/analytics.test.ts`): nothing before Monday 01:00 or on a quiet week, the last full week
+against the week before with its named lines and the portal's own work left out, the Owners
+(through a group too; not switched off, blocked, ended, not started, at a place only or a
+service account), nothing twice later that day or on Tuesday, and a failed send failing the job
+and made up the next day with the same keys.

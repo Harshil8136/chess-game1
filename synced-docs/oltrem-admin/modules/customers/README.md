@@ -168,7 +168,7 @@ A customer holds no capability: the door is the only place they reach.
 
 | Path | Shows |
 |---|---|
-| `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in. An address that is a customer already is refused with a link to open that customer |
+| `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in. An address that is a customer already is refused with a link to open that customer. Beside it, to whoever manages them, "Import from a spreadsheet" in a dialog: a CSV file with Email and Name columns (Note if wanted, in any order); the notice after says how many were added and how many skipped as customers already, and nobody is emailed |
 | `/customers/sign-in` | how customers sign in: the emailed code always; the sign-in services with their state, issuer and last use; to whoever may set them up "Connect a service" in a dialog (the name on the button, the issuer address, the client id, the client secret) and, in each row, "Stop offering" or "Offer again" and "Remove", confirmed in a dialog; the return address to give the service |
 | `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; a row with "Make a quote for them" and "Make an invoice" (to whoever makes them somewhere, while the customer is on, with the address filled in), and to whoever manages them "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; their quotes and their invoices, the newest five of each with "All of them" (read through those modules' own APIs, so a portal without one, or a person who does not see them, gets no section); the sign-ins, the newest first, with the browser, how and when. The notice after an add or an email of the link says the email is queued; one that no email service took links Email settings |
 | `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
@@ -186,6 +186,7 @@ The door's pages use the portal's look, without the staff sidebar; the mark at t
 |---|---|---|
 | `GET /people` (`q` words) | `customers.view` | the customers by name, or those whose name or address holds the words, 200 at most, with the counts and whether the reader may manage them |
 | `POST /people` | `customers.manage` | adds a customer by address and name, with a note; `invite: true` emails them the link, and the answer says whether it went (`invited`) |
+| `POST /import` (the CSV file as the body, 128 KB at most) | `customers.manage` | adds a customer for each row of the file, 1,000 rows at most: the Email and Name columns needed, Note kept when there; all or none, so a bad row (with its number) adds nobody; an address that is a customer already, or twice in the file, is skipped; nobody is emailed; answers `added` and `skipped` |
 | `GET /people/:id` | `customers.view` | one customer with their last 20 sign-ins |
 | `POST /people/:id` | `customers.manage` | changes the name and the note; the address stays |
 | `POST /people/:id/off` | `customers.manage` | switches them off and ends every sign-in |
@@ -199,7 +200,8 @@ The door's pages use the portal's look, without the staff sidebar; the mark at t
 | `POST /services/:id/remove` | `customers.services` at the company | removes it and its sealed secret |
 | `GET /search?q=` | `customers.view` | the portal's search: customers by name or address |
 
-Every change is audited: `customers.add` (with whether the link went), `customers.change`,
+Every change is audited: `customers.add` (with whether the link went), `customers.import` (the
+counts only, never the addresses), `customers.change`,
 `customers.off`, `customers.on`, `customers.end-sign-ins` (with how many), `customers.invite`,
 `customers.service-add`, `customers.service-on`, `customers.service-off` and
 `customers.service-remove`, refusals included.
@@ -257,7 +259,11 @@ address only, at most twenty with "more", and a part that fails shown as not rea
 page opens and the error is reported; an item opened under the door for its customer only and
 uncached, and another id, another module, a broken path or a failing module returning to the
 account, a visitor with no sign-in sent to sign in; an action posted by its customer done once and
-thanked, one the module refuses or a broken path returned with "no longer open". The client template's screens journey adds a customer on the page, signs them
+thanked, one the module refuses or a broken path returned with "no longer open". The import (2026-11-22): the rows added with a header in any order and case and quoted fields,
+an address already a customer or repeated in the file skipped, nobody emailed; a file with a bad
+row, without the Email or Name column, empty, over 1,000 rows or over 128 KB adding nobody and
+naming the row;
+refused without the capability; the audit rows with the counts only. The client template's screens journey adds a customer on the page, signs them
 in at `/account` with the code from the outbox, and shows their account with "Your messages", the
 file shared with them and a quote, which they accept there, then the invoice made from it, owed and
 then paid. The page tests (`test/pages.test.ts`) render a customer's quotes and invoices with

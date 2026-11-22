@@ -162,28 +162,45 @@ copy by hand still runs), `backup.drill` (the restore-drill warning), and `setti
 (Home's Get started card; it stops no job), and since 2026-11-21 `iam.sign-in-alerts` (the email
 about a new or unusual sign-in), `iam.unusual` (the warning about unusual sign-ins), `audit.since`
 (Home's What changed card) and `health.status-pages` (Service status: the check that reads
-Cloudflare's and the email services' status pages). An extra switched off is kept in
+Cloudflare's and the email services' status pages), and since 2026-11-22 `analytics.summary` (the
+Monday summary email to the Owners). An extra switched off is kept in
 the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and
 checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
 part). Nothing they wrote is deleted. An extra marked `startsOff` (the daily seal, the nightly
 backup and the drill reminder, since 2026-11-12: work on the timer that costs database rows every
 day; Access's ending-access emails and access-review reminder, since 2026-11-21, the owner's pick:
-mail and warnings a new portal did not ask for; the four extras added on 2026-11-21) is off on a
+mail and warnings a new portal did not ask for; the four extras added on 2026-11-21; the Monday
+summary, 2026-11-22) is off on a
 new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's default, so a
 portal whose list was already saved keeps what it saved. The others are on until switched off.
 An extra added later that should start off on every portal also needs a migration that adds it to
-a saved list, as `0067_parts_quiet_extras.sql` does for the four of 2026-11-21: each one missing
+a saved list, as `0067_parts_quiet_extras.sql` does for the four of 2026-11-21 and
+`0074_parts_summary_off.sql` for the Monday summary: each one missing
 from a saved list is added, the configuration version moves and the change is written to the
 settings history, so a client sees nothing new until someone switches it on.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off with what each stops (`skips`, so the screens can offer the switch beside a warning of one of them, 2026-11-14); the list off, extras included; the presets with the parts each switches off |
-| `PUT /api/settings/parts` | `settings.parts` at the company | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
+| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off with what each stops (`skips`, so the screens can offer the switch beside a warning of one of them, 2026-11-14); the list off, extras included; the presets with the parts each switches off; the kind of business picked (`business`) and the kinds (`kinds`), each with the parts it switches off and the list it starts |
+| `PUT /api/settings/parts` | `settings.parts` at the company | `{ off, business?, reason? }` (parts and extras, and the kind of business below): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
 health and the IAM module as their `off` option; each says what it does with it. A switched-off
 part's data is never touched, so switching it back on restores everything.
+
+**The kind of business** (since 2026-11-22, the owner's pick "Starting setup"): `src/parts.ts`
+holds `BUSINESS_KINDS`, five kinds in today's words (Services by appointment, Shop, Office, Field
+team, Something else), each with the optional parts it does not use and one starter list for the
+Records part (its name and columns: Services, Products, Projects or Sites; none for Something
+else). `kindOff(kind, mounted)` gives the parts list a kind saves, through `partsOff`, so it never
+switches a core part or Records off; Something else answers null and leaves the parts as they
+are. The kind picked is one live setting, `settings.business` (`BUSINESS_SETTING`, empty until
+picked), saved only with the parts on `PUT /api/settings/parts` and refused on the Settings
+page's free edit (editable by whoever may switch the modules). While parts are on, the module adds
+a Get started step, "Set up for your business" (`/start`), done once a kind is picked or once the
+modules were ever saved: a portal already in use chose its modules, and a kind could switch off
+ones it uses. The page that picks it, makes the roles and
+places and starts the list is the screens' `/start`.
 
 ## Storage this package owns
 
@@ -191,7 +208,8 @@ Migration `0001_settings.sql`: `oltrem_meta` (the configuration version and, lat
 id), `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; the ledger is
 `oltrem_migrations`. Migration `0067_parts_quiet_extras.sql` (2026-11-21) adds the four extras of
 that day to a saved parts list as off (above); a portal that never saved the list keeps the
-default and gets no row.
+default and gets no row. Migration `0074_parts_summary_off.sql` (2026-11-22) does the same for
+the Monday summary.
 
 ## Tests
 
@@ -204,4 +222,8 @@ at once with its history and audit rows, and the four refusals. `test/clock.test
 (New York), a time skipped and a time repeated, the day after across a year and a leap day.
 `test/quiet-extras.test.ts` runs migration `0067` on a saved list: the four extras added as off,
 nothing else changed, the version moved and the history written once, a second run changing
-nothing, and a portal with no saved list given no row.
+nothing, and a portal with no saved list given no row; the same for `0074`. `test/parts.test.ts` holds the
+kinds to the catalogue (each kind's parts switchable, Records never off), and saves a kind with the
+parts: the setting, the audit row, the Get started step done (and done once modules were saved
+with no kind), a kind that is not one refused by the route's schema, and the Settings page's edit
+refused.

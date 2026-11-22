@@ -2,8 +2,8 @@
 title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
-last_verified: 2026-11-21
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md]
+last_verified: 2026-11-22
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md; docs/records/2026-11-22-starting-setup-and-imports.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -179,3 +179,15 @@ None yet.
 | P338 | System status | Its figures as plain numbers in a row (16 Checks, 14 OK…), no boxes; a state a dot and a word | [record](records/2026-11-22-calm-and-modern.md) |
 | P339 | Email settings, Integrations, then Addresses | Find from a domain and Connect sit under the tabs; switching tabs never moves the title or the tabs | [record](records/2026-11-22-calm-and-modern.md) |
 | P340 | Audit log | Each row's Done is a green dot and the word; the marked tab is underlined with no box behind it | [record](records/2026-11-22-calm-and-modern.md) |
+
+### Starting setup and imports, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P341 | As the Owner of a new portal, Home | Get started's first step is Set up for your business; it opens the page (on a portal whose modules were saved before, the step is already ticked) | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P342 | Set up for your business; tap Shop, then Office | The kinds in one sideways row; each tap shows in words the modules it switches off, the roles and the list it makes | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P343 | Pick a kind, press Set up the portal for this | "The portal is set up for your business"; Modules shows the ones switched off; Roles has Full admin above Standard user; Records has the starter list; Next steps offer Add your locations | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P344 | Customers, Import from a spreadsheet; choose a CSV file with Email and Name columns | How many customers were added and how many skipped as customers already; nobody gets an email | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P345 | Users, Invite people; leave the box empty, choose a CSV file of addresses, Send invitations | "N addresses found": the addresses fill the box and nobody is invited yet; pick the role and send again to invite them | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P346 | Modules, Analytics, switch on Monday summary | The switch stays on after the page reloads | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P347 | Your inbox on the Monday after, from 01:00 UTC, on a portal with work done in the last two weeks | "Last week at" the company: the work done last week against the week before, and how to switch it off | [record](records/2026-11-22-starting-setup-and-imports.md) |
