@@ -74,6 +74,25 @@ runtime's native cipher through `node:crypto`: a Worker that imports this entry 
 need no flag. No package is added: the age library for JavaScript would bring five, and its
 cipher in plain JavaScript would spend far more of a request's CPU time than the native one.
 
+## A seal for one trip
+
+`oneTimeKey()`, `sealTo()` and `openSealed()` (2026-11-22, one-click connect): the portal makes a
+P-256 key pair for one sign-in trip and keeps the private half in a short cookie, sealed under the
+KEK; the connect relay, which stores nothing, seals what the service answered to the public half
+with its own long-term key pair; only the portal that started the trip, in the same browser, opens
+it, and only when the relay's key sealed it.
+
+| Call | What it does |
+|---|---|
+| `oneTimeKey()` | `{ publicKey, privateKey }`: the raw public point, base64url (87 characters), and the private half as a JWK in JSON |
+| `sealTo(publicKey, plaintext, aad, from?)` | ECDH with the sender's key pair `from` (a fresh one when left out), HKDF-SHA-256 (the two public points as salt) to an AES-256-GCM key, `aad` as additional data: `s1.<sender's public key>.<iv>.<ciphertext>` |
+| `openSealed(key, sealed, aad, from?)` | the plaintext, when it was sealed to this key's public half with the same `aad` and, given `from`, by that sender's key; anything else is `KIT-E-1305` |
+
+The connect relay uses `<service>:<nonce>` as `aad`, so an answer moved to another trip or another
+service does not open, and seals with its own key, which the portal names when it opens: someone
+who knows the trip's public key cannot seal an answer that opens, since only the sender's private
+half reaches the same AES key (the security review of 2026-11-22).
+
 ## Errors
 
 `KIT-E-1301` no `KEK` secret (503); `1302` the secret is malformed; `1303` a data key wrapped by

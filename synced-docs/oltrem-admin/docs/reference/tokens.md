@@ -12,7 +12,7 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 1 active, 10 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 1 active, 18 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
@@ -20,14 +20,22 @@ sources: [tokens.registry.json]
 | BACKUP_PUBLIC_KEY | planned | none: a key pair generated offline by the vendor | a Worker secret, set with wrangler secret put |
 | CLOUDFLARE_ACCOUNT_ID | planned | Cloudflare | a GitHub repository secret in the client repository |
 | CLOUDFLARE_API_TOKEN | planned | Cloudflare | a GitHub repository secret in the client repository |
+| DISCORD_CLIENT_ID | planned | Discord | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| DISCORD_CLIENT_SECRET | planned | Discord | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
 | GITHUB_PACKAGES_READ_TOKEN | planned | GitHub | that machine's npm configuration, or that environment's own secret store; never a repository or a workflow |
 | GITHUB_TOKEN | provided | GitHub | nowhere: GitHub issues it for each run and expires it after |
+| GOOGLE_CLIENT_ID | planned | Google | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| GOOGLE_CLIENT_SECRET | planned | Google | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
 | KEK | planned | none: generated locally | a Worker secret, set with wrangler secret put |
 | KIT_OPS_TOKEN | planned | Cloudflare | a Worker secret, set with wrangler secret put |
 | OLTREM_FLEET_GITHUB_TOKEN | planned | GitHub | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account; optional |
 | OLTREM_FLEET_TOKEN | planned | Cloudflare | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account (Settings, Build, Variables and secrets) |
 | PERSONAL_PAT | active | GitHub | an Actions secret of this repository (Settings, Secrets and variables, Actions) |
+| RELAY_PORTALS | planned | none: a list the Vendor writes | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| RELAY_SEAL_KEY | planned | none: a key pair the Vendor makes with packages/relay/scripts/seal-key.mjs | a Worker secret of the relay, piped from the script into wrangler secret put so it never shows |
 | SESSION_KEY | planned | none: generated locally | a Worker secret, set with wrangler secret put |
+| SLACK_CLIENT_ID | planned | Slack | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| SLACK_CLIENT_SECRET | planned | Slack | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
 
 ## ACCESS_AUD
 
@@ -93,6 +101,38 @@ sources: [tokens.registry.json]
 | Why it exists | GitHub Actions runs the gate and then the deploy, so it needs a token for that one account. A token cannot be created without a token, so this one is made by hand at setup. Phase 0 checks whether GitHub's short-lived identity (OIDC) can replace it; if so this row is retired. |
 | Plan section | 9.2 and 14.1 |
 
+## DISCORD_CLIENT_ID
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Discord; the Vendor's Discord application |
+| What it may do | none: the app's public id; it asks for webhook.incoming only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | changes only when the app is made again; set the new id |
+| Why it exists | Discord exchanges the sign-in code for the channel's webhook only with the application's id and secret. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
+## DISCORD_CLIENT_SECRET
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Discord; the Vendor's Discord application |
+| What it may do | exchanges a sign-in code for what webhook.incoming gives, for this app only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new secret in Discord's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
+| Why it exists | Discord exchanges the sign-in code for the channel's webhook only with the application's id and secret. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
 ## GITHUB_PACKAGES_READ_TOKEN
 
 | Field | Value |
@@ -125,6 +165,38 @@ sources: [tokens.registry.json]
 | Why it exists | Using the run's own token means no stored token for checkout, package installs or publishing. |
 | Plan section | 9.2 and 15.7 |
 
+## GOOGLE_CLIENT_ID
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Google; the Vendor's Google Cloud OAuth client (a Web application) |
+| What it may do | none: the app's public id; it asks for https://www.googleapis.com/auth/drive.file only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | changes only when the app is made again; set the new id |
+| Why it exists | Google exchanges the sign-in code for a one-time access token, used once by the portal to create the sheet, only with the client's id and secret. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
+## GOOGLE_CLIENT_SECRET
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Google; the Vendor's Google Cloud OAuth client (a Web application) |
+| What it may do | exchanges a sign-in code for what https://www.googleapis.com/auth/drive.file gives, for this app only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new secret in Google's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
+| Why it exists | Google exchanges the sign-in code for a one-time access token, used once by the portal to create the sheet, only with the client's id and secret. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
 ## KEK
 
 | Field | Value |
@@ -132,7 +204,7 @@ sources: [tokens.registry.json]
 | Status | planned |
 | Provider and account | none: generated locally; the client's Worker |
 | What it may do | none: a random key that wraps the provider credentials stored encrypted in the database |
-| Used by | the providers core package (envelope encryption) |
+| Used by | the providers core package (envelope encryption); the connect module's one-click sign-in (the ten-minute trip cookie is sealed under it) |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |
 | Created | not yet |
@@ -205,6 +277,38 @@ sources: [tokens.registry.json]
 | Why it exists | The run's own token cannot write to another repository, and the mirror is another repository. A token with the needed access already existed, so it was reused; added to this repository as a secret by the vendor on 2026-10-19. |
 | Plan section | 15.5 |
 
+## RELAY_PORTALS
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | none: a list the Vendor writes; the relay Worker in the Vendor's own Cloudflare account |
+| What it may do | none: the portal addresses the relay may send a person back to, separated by spaces or commas; kept as a secret so no portal's address appears in a file |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | add or remove a portal's address and set it again; no other step |
+| Why it exists | The relay sends a sealed answer back only to a portal on this list, so nobody can start a sign-in that lands on a site of their own. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
+## RELAY_SEAL_KEY
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | none: a key pair the Vendor makes with packages/relay/scripts/seal-key.mjs; the relay Worker in the Vendor's own Cloudflare account |
+| What it may do | none: the relay's P-256 key pair; every answer is sealed with it and a portal opens only what it sealed, reading the public half from the relay's /key |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, piped from the script into wrangler secret put so it never shows |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | run the script again into wrangler secret put; trips on their way at that moment come back as failed and the person presses again |
+| Why it exists | Added after the security review of 2026-11-22: a trip's state travels in addresses others can see, and without the relay's own key anyone who read it could seal an answer of their own to it. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
 ## SESSION_KEY
 
 | Field | Value |
@@ -220,3 +324,35 @@ sources: [tokens.registry.json]
 | Rotation | generate a new value and set it; sessions signed with the old one end |
 | Why it exists | Sessions must be signed, and the key must live nowhere but the Worker. |
 | Plan section | 9.1 |
+
+## SLACK_CLIENT_ID
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Slack; the Vendor's Slack app, distributed to any workspace |
+| What it may do | none: the app's public id; it asks for incoming-webhook only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | changes only when the app is made again; set the new id |
+| Why it exists | Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
+## SLACK_CLIENT_SECRET
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Slack; the Vendor's Slack app, distributed to any workspace |
+| What it may do | exchanges a sign-in code for what incoming-webhook gives, for this app only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new secret in Slack's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
+| Why it exists | Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold. |
+| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |

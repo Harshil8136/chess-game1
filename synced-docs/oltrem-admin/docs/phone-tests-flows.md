@@ -232,3 +232,18 @@ Integrations (the email keys) Email services, under Admin, Integrations.
 | P373 | Roles, any role but the Owner | Rank "N of M, the Owner first" with Move up and Move down; Move up says the rank was changed and the role moves up the list | [record](records/2026-11-22-permissions.md) |
 | P374 | A role, Policy JSON at the foot; Copy; paste `{"Version":"oltrem-2026-11","Statement":[{"Effect":"Allow","Action":"lists.*","Resource":"loc:*"}]}`, Import | The JSON lists names like `lists.read`; Copy copies it; after Import, "The policy was imported" and only Lists' permissions are ticked | [record](records/2026-11-22-permissions.md) |
 | P375 | The same box with `"Effect":"Deny"`; then a user's Permissions, See their access as Policy JSON | Refused: a role only allows, deny on their Permissions page; your text stays in the box. The user's JSON lists each role and their own Allow or Deny with its location | [record](records/2026-11-22-permissions.md) |
+
+### The Apps page and one-click connect, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P376 | Admin, Integrations, Apps | Connected on top when anything is; then All, Chat, Calendar, Spreadsheets, Automation in a sideways row; every app a card with its state on the right (Connect, Add, Create, or how it is doing) | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P377 | Slack, after the relay is set up: Continue to Slack, pick a channel, Allow | Back on Apps, "Slack is connected. A test was sent"; the row is marked for a moment; the test line is in the channel | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P378 | Discord the same way; then press Cancel on Discord's page instead of Authorize | First: connected, the test arrives. Then: "You cancelled on the app’s page, so nothing was connected" | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P379 | Spreadsheets, Google Sheets, pick a list, Create the sheet in Google | Google asks for your account; a new Google Sheet opens with the list filling in; Connected lists it | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P380 | Any other app; paste a Zapier, Make or n8n link (or a Slack Incoming Webhook) | Connected names the app it worked out (Zapier automation, Slack alerts); a Slack Workflow link is refused with what to paste instead | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P381 | A row under Connected: Send test, Pause, Turn on, Delete | Each says what it did; Paused shows a grey dot; Delete asks first | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P382 | Calendar, Outlook, Create my link; then Google Calendar | Outlook's panel offers Outlook.com and work or school; Google's link is a second one, and both rows are listed | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P383 | As a person without the Developer permission | The chat and automation cards are greyed with "Ask an Owner"; Calendar still works | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P384 | Apps, tap Chat, then Calendar | The filter row is near the top; Connected shows only that filter's rows | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+| P385 | Any other app; paste the address of a Slack channel page (app.slack.com/…) | Refused: it says this is a Slack page and where the webhook link is | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
