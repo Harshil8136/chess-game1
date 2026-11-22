@@ -469,9 +469,10 @@ it names, with what they are, to `iam.setup_people` (`SETUP_PEOPLE_SETTING`: lin
 `address owner|staff|team|vendor`, lower case, set by the Vendor). Since 2026-11-08 (the owner's
 decision) each one **gets in at their first sign-in**, with nothing pressed: the session hook asks
 `handover.admitNamed` when a signed-in address has no account at all, and it makes the account at
-the whole company with the role setup gave: the Owner as Owner, Staff as Standard user, Your team
-as Full admin (each made from its ready set when missing: View and Edit, or View, Edit and Admin,
-special permissions left out). Another Vendor gets a Vendor account, with no role and no company
+the whole company with the role setup gave: the Owner as Owner, Staff as Member, Your team
+as Admin (each made from its ready set when missing: View and Edit, or View, Edit and Manage,
+the Owner's and the Vendor's own left out; until 2026-11-22 Standard user and Full admin, still
+found by those names). Another Vendor gets a Vendor account, with no role and no company
 needed; the Users page offers nothing to invite for it. The binding is the Vendor's (`granted_by`), its reason "named at
 setup", and the audit row `iam.setup-admit`. Its limits, each refused with "No account here" and
 why in words (`modules/iam/test/setup-admit.test.ts`):
@@ -578,6 +579,16 @@ capabilities keeps the ones of a switched-off module the role already holds, so 
 from a form that does not show them never takes them away. Back on, they show again with every
 grant where it was (`test/parts.test.ts`).
 
+## Permission names
+
+Since 2026-11-22 (the access review, the owner's yes) every permission reads
+`<area>.<thing>.<verb>`: its area named like its sidebar section, its verb one of ten (`read`,
+`edit`, `delete`, `manage`, `request`, `approve`, `send`, `export`, `share`, `run`). The ids stored
+before never change: `src/aliases.ts` gives each that does not fit its new name (`ALIASES`,
+`nameOf`, `idOf`), `GET /capabilities` carries it as `name`, and the screens' Policy JSON reads
+and accepts either. A permission added later is named this way from the start: the client
+template's screens test refuses any other (`NAME_PATTERN`). Tests: `test/aliases.test.ts`.
+
 ## Tables
 
 Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
@@ -588,7 +599,10 @@ the migration), `iam_modules`, `iam_capabilities`, `iam_scopes`, `iam_groups`,
 `activated_from` to `iam_bindings` (the eligible grant an activation came from) and the tables
 `iam_access_requests`, `iam_approvals`, `iam_reviews` and `iam_review_items`. Migration
 `0006_iam_handover.sql` adds `handed_over_at`, `vendor_window_until` and `vendor_window_reason`
-to `iam_tenants` and the table `iam_invitations`. Ids are text.
+to `iam_tenants` and the table `iam_invitations`. Ids are text. Migration
+`0076_iam_ready_role_names.sql` (2026-11-22) renames the ready-made roles Full admin, Standard
+user and View only to Admin, Member and Viewer, each only where no role of the new name exists
+in that company, so it runs twice the same.
 
 ## Errors
 

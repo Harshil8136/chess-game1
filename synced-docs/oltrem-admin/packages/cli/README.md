@@ -228,7 +228,7 @@ not hand a Worker with static assets the Access sign-in:
    is Staff, the least power. A whole domain (`@example.com`) is refused: the door lets anyone ask
    for a code, and the portal lets in only its own people. Once the Vendor has made the company,
    each one gets in the first time they sign in at the door, with that role (Owner as Owner, Staff
-   as Standard user, Your team as Full admin, Another Vendor as a Vendor account holding everything
+   as Member, Your team as Admin, Another Vendor as a Vendor account holding everything
    the Vendor holds; `@oltrem/iam`, "The people named at setup"). The
    run's last lines say who signs in first.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When

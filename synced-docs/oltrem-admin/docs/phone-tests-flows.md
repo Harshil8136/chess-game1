@@ -186,7 +186,7 @@ None yet.
 |---|---|---|---|
 | P341 | As the Owner of a new portal, Home | Get started's first step is Set up for your business; it opens the page (on a portal whose modules were saved before, the step is already ticked) | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P342 | Set up for your business; tap Shop, then Office | The kinds in one sideways row; each tap shows in words the modules it switches off, the roles and the list it makes | [record](records/2026-11-22-starting-setup-and-imports.md) |
-| P343 | Pick a kind, press Set up the portal for this | "The portal is set up for your business"; Modules shows the ones switched off; Roles has Full admin above Standard user; Records has the starter list; Next steps offer Add your locations | [record](records/2026-11-22-starting-setup-and-imports.md) |
+| P343 | Pick a kind, press Set up the portal for this | "The portal is set up for your business"; Modules shows the ones switched off; Roles has Admin above Member; Records has the starter list; Next steps offer Add your locations | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P344 | Customers, Import from a spreadsheet; choose a CSV file with Email and Name columns | How many customers were added and how many skipped as customers already; nobody gets an email | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P345 | Users, Invite people; leave the box empty, choose a CSV file of addresses, Send invitations | "N addresses found": the addresses fill the box and nobody is invited yet; pick the role and send again to invite them | [record](records/2026-11-22-starting-setup-and-imports.md) |
 | P346 | Admin, Settings, Features, Reports, switch on Monday summary | The switch stays on after the page reloads | [record](records/2026-11-22-starting-setup-and-imports.md) |
@@ -220,3 +220,15 @@ Integrations (the email keys) Email services, under Admin, Integrations.
 | P366 | Users and access, Settings | The two job switches at the top, then Set up: Access reviews, Vendor access; opening one keeps Settings marked | [record](records/2026-11-22-section-settings.md) |
 | P367 | Your name at the foot of the sidebar, My access | Your own page, no Users and access tabs; as an Owner, no Ask for access | [record](records/2026-11-22-section-settings.md) |
 | P368 | Users and access, Groups, a group; Users, someone with a role at a location | The group's page is titled with its name; the badge reads "Role at Location"; a grant without an end reads "No end date" | [record](records/2026-11-22-section-settings.md) |
+
+### Permissions anyone can follow, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P369 | Users and access, Roles; then Create role | The ready-made roles read Admin, Member, Viewer; Start from offers Viewer, Member, Admin; each module's levels read None, View, Edit, Manage, and a fresh sign-in is a small tag beside its permission | [record](records/2026-11-22-permissions.md) |
+| P370 | Users, someone, Permissions | One row per module with its level and "N of M"; opening one lists its permissions with Yes or No, where it comes from, and Inherit, Allow, Deny | [record](records/2026-11-22-permissions.md) |
+| P371 | On that page pick Deny on one permission, Save without the box; then tick "Yes, deny what I picked", Save | First "Confirm the deny" with your pick kept; then saved, and that row reads No, denied for them | [record](records/2026-11-22-permissions.md) |
+| P372 | An old link to someone's Overrides page | It opens their Permissions page | [record](records/2026-11-22-permissions.md) |
+| P373 | Roles, any role but the Owner | Rank "N of M, the Owner first" with Move up and Move down; Move up says the rank was changed and the role moves up the list | [record](records/2026-11-22-permissions.md) |
+| P374 | A role, Policy JSON at the foot; Copy; paste `{"Version":"oltrem-2026-11","Statement":[{"Effect":"Allow","Action":"lists.*","Resource":"loc:*"}]}`, Import | The JSON lists names like `lists.read`; Copy copies it; after Import, "The policy was imported" and only Lists' permissions are ticked | [record](records/2026-11-22-permissions.md) |
+| P375 | The same box with `"Effect":"Deny"`; then a user's Permissions, See their access as Policy JSON | Refused: a role only allows, deny on their Permissions page; your text stays in the box. The user's JSON lists each role and their own Allow or Deny with its location | [record](records/2026-11-22-permissions.md) |
