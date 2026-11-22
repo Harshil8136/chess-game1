@@ -5,12 +5,60 @@ keeps their data where it is; the portal adds the screens, the permissions, the 
 the checks their database lacks. The plan is the owner's of 2026-11-22 (phases 2 and 3 of the
 database review, "Connected data").
 
-This package is the first part, built 2026-11-22: the **dialects** that read each service over
-its own web API, and the **detector** that tells which service a pasted value belongs to. The
-routes, the Data page, saved views, the usage count and the connections check come next, with the
-capability names of the permissions rework; until then no portal mounts it and nothing here is
-reachable from a page. The providers routes, held by whoever runs email, refuse a connection of
-the kind `data` already: they neither make, list nor touch one.
+Built 2026-11-22 in two parts: the **dialects** that read each service over its own web API and
+the **detector** that tells which service a pasted value belongs to; then the module itself, its
+two permissions, its routes under `/api/data` and the **Data** pages, mounted in the client
+template beside the providers module. The providers routes, held by whoever runs email, refuse a
+connection of the kind `data`: they neither make, list nor touch one, and the Data routes treat
+any other kind as not there.
+
+## Permissions
+
+Bit plane 32 ([architecture](../../docs/architecture.md) lists every plane):
+
+| Permission | Level | What it allows |
+|---|---|---|
+| `data.read` | Manage | See the connected databases, read their tables and rows, check a connection now |
+| `data.manage` | Manage | Connect a database, change its key or remove it; asks for a fresh sign-in, like an email service's key |
+
+Both are held at the company itself: a grant at one place gives neither. Reading a table runs with
+the connection's own key, which reads every row that key may read, whatever place a person works
+at, so `data.read` sits in the Manage level (class `admin`) and no ready-made everyday role hands
+it out: an Owner gives it to the people who should read the company's own databases. Connect a key
+that reads only what those people may see.
+
+## The pages
+
+| Page | What it shows |
+|---|---|
+| `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
+| `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
+| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form |
+| `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Change key and Remove (one confirm). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
+| `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. Saved views keep the table, its search and its sort |
+
+A connection made from the paste box or a card is checked at once, and the connection page opens
+either way: "Connected" when the database answered, "Saved, but the database did not answer yet"
+when it did not, with the reason under it. A new key says the same two ways. Check now pressed
+again within 30 seconds answers the last check without calling the service. Nothing read from a
+client's database is kept: each page is read when it is opened.
+
+## The routes
+
+Under `/api/data`; every change is audited by the providers registry (`providers.create`,
+`providers.credential`, `providers.probe`, `providers.remove`, the target the connection).
+
+| Route | Permission | What it does |
+|---|---|---|
+| `GET /services` | `data.read`, company | The data services a database can be connected from: fields (never a pattern or a value), steps, help; and whether this person may connect one |
+| `GET /connections` | `data.read`, company | The connections and whether this person may manage them |
+| `GET /connections/:id` | `data.read`, company | One connection, never its key, and whether this person may change it |
+| `POST /connections` | `data.manage`, company | Connect: definition, label, fields; tidied by `prepare`, sealed, checked at once; `201 {id, check}` |
+| `POST /connections/:id/credential` | `data.manage`, company | A new key or address, checked at once |
+| `POST /connections/:id/check` | `data.read`, company | Reach the database with its sealed key; a refusal is a failed check kept on the connection, never an error. Within 30 s of the last check it answers that one instead (`CHECK_AGAIN_MS`) |
+| `DELETE /connections/:id` | `data.manage`, company | Remove the connection and its sealed key; the database is not touched |
+| `GET /connections/:id/tables` | `data.read`, company | The tables, views or key sets the key may read, at most 500, and whether that is all |
+| `GET /connections/:id/rows` | `data.read`, company | One page: `table`, `cursor`, `search`, `sort`, `desc` |
 
 ## The services
 
@@ -88,10 +136,27 @@ How it stays safe and inside the free plan:
 it fills: an Airtable token (`pat…`), a Supabase secret key (`sb_secret_…`) or project address, a
 Neon or Supabase connection string, a Turso `libsql://` address, an Upstash address. A Supabase
 publishable key, a MongoDB string, or a Postgres or MySQL server elsewhere is answered with what
-to paste instead. `prepare(definitionId, fields)` tidies the fields before they are saved (a
-host without its `https://` or path, Neon's host read from its connection string). The value it
-reads can be a secret: the page that calls it must post it, keep it out of any log or audit row,
-and answer with `Cache-Control: no-store`.
+to paste instead.
+
+`detectPasted(pasted)` is what the paste box calls: several lines at once, up to 8, read one by
+one and put together when they all belong to one service. An `.env` file's `NAME=`, `export` and
+quotes are dropped and its `#` comments skipped, so a service's own block of settings can be
+pasted as it is. A line no rule places that looks like a key fills the key of a service whose
+keys have no telling start (Turso, Upstash), only when there is exactly one such line. What is
+still missing is named; lines of two services are refused. A line with a name is taken for the key
+only when its name says it is a token (`…_TOKEN`, `…_AUTH_…`), so a session secret or a payment key
+in the same block is never sent to the service; of several tokens, the one named read-only is taken
+(Vercel KV gives both). What each service shows in its own words is read too: Neon's
+`psql '…'` line, Neon's parameters one by one (which open Neon's form asking for the whole
+string), a Supabase dashboard address and a Supabase pooler string, both of which name the project.
+`prepare(definitionId, fields)` tidies
+the fields before they are saved (a host without its `https://` or path, Neon's host read from its
+connection string; `DERIVED` names the fields filled in this way).
+
+The pasted value can be a secret. The page reads it from a form post, sends it only to the
+module's own route, and never writes it to a log or an audit row (the registry audits the field
+names only). A key is never shown back: when the form comes back, half filled in or refused, the
+other fields keep their values and the notice asks for the key again.
 
 ## Using it
 
@@ -112,18 +177,18 @@ The 41xx block of the kit's range (`src/errors.ts`):
 |---|---|---|
 | `KIT-E-4101` | 502 | The service refused the request, answered with an error, an answer of the wrong shape or over 2 MB, or not within 4 s |
 | `KIT-E-4102` | 404 | The table, view or collection is not there, or the key may not read it |
-| `KIT-E-4103` | 409 | The connection is not a data service |
+| `KIT-E-4103` | 409 | That is not a database: the connection, or the service asked for, is not a data service |
 
 A request the page made that cannot be met as asked (the sort, search, cursor or key set above) is
 the kit's `KIT-E-0422`.
 
 ## Not here yet
 
-The routes and the Data page; saved views and Home cards; the usage count; the connections
+Home cards; the usage count; the connections
 check on a timer with its alerts; the Data API's description and the last good page kept in
 Cloudflare's cache (today every page of a Supabase table reads the description again, which a
 large schema makes slow); AWS, Google Cloud, Azure and Snowflake through the portal's own
-identity (no key at all); sign-in through the connect relay; Postgres and MySQL through
+identity (no key at all); sign-in through the connect relay (Supabase and Airtable, next); Postgres and MySQL through
 Hyperdrive; edits with approvals and read-only SQL questions (phase 3).
 
 Left on purpose, to come back to:
@@ -151,4 +216,17 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   `localhost` never called, the key never in the address, and every kit data definition with a
   dialect behind it.
 - `test/detect.test.ts`: each service told from what was pasted, and the refusals that say what to
-  paste instead.
+  paste instead; several lines put together; another secret in the block never taken for the key;
+  the read-only token of two; Neon's psql line and parameters; Supabase's dashboard and pooler.
+- `test/module.test.ts`: the routes through the pipeline beside IAM and providers: the two
+  permissions; every route held at the company (a manager of one place reads nothing); connecting,
+  checked at once and audited, the key never back; tables and rows; a sort or a page link that is
+  not one refused; Check now's 30-second cooldown; a new address without its key refused and the
+  same address alone keeping the key; a refused key kept as a failed check, then mended; an email
+  connection not there on any data route; removal.
+- `test/pages.test.ts`: every page against the API's answers: the list and its states; the paste
+  box, a half paste, a refusal; a service's form, kept as typed but never its key; a reader's view
+  of each page; a guide link only when it is `https://`; the connection page's failed check in
+  plain words and hidden when the tables load; saved-but-not-answering after a connect or a new
+  key; each failure path staying on its page; Change key with and without a key to keep; a sunset
+  date; rows sorted, searched, empty, refused, paged, with Back at the top.

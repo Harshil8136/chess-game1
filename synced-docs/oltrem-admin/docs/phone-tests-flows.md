@@ -3,7 +3,7 @@ title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
 last_verified: 2026-11-22
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md; docs/records/2026-11-22-starting-setup-and-imports.md]
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md; docs/records/2026-11-22-smooth-phone-frame.md; docs/records/2026-11-22-calm-and-modern.md; docs/records/2026-11-22-starting-setup-and-imports.md; docs/records/2026-11-22-connected-data-pages.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -247,3 +247,19 @@ Integrations (the email keys) Email services, under Admin, Integrations.
 | P383 | As a person without the Developer permission | The chat and automation cards are greyed with "Ask an Owner"; Calendar still works | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
 | P384 | Apps, tap Chat, then Calendar | The filter row is near the top; Connected shows only that filter's rows | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
 | P385 | Any other app; paste the address of a Slack channel page (app.slack.com/…) | Refused: it says this is a Slack page and where the webhook link is | [record](records/2026-11-22-apps-page-and-one-click-connect.md) |
+
+### Connected data, the Data pages, 22 November
+
+You need a database to read: an Upstash Redis database (free) with its Read Only token is the
+quickest.
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P386 | Work, Data | "No database connected yet" with Connect a database; Admin, Features lists Data under Work with its words | [record](records/2026-11-22-connected-data-pages.md) |
+| P387 | Connect a database; paste the two lines Upstash shows under REST API (the URL and the Read Only token), Find my database | The database's page opens with "Connected. The database answered the first check.", its key groups under Tables | [record](records/2026-11-22-connected-data-pages.md) |
+| P388 | A key group, then All keys; tap a column chip, Next page, then search for part of a key | Back at the top; the sort chips above the rows, one card per key with its value; the search keeps the sort and starts at page one; First page and Clear the search work | [record](records/2026-11-22-connected-data-pages.md) |
+| P389 | Connect a database; paste only the Upstash URL | "This is Upstash Redis" with the address filled in, the form first, asking for the Read Only token; no key is ever shown back | [record](records/2026-11-22-connected-data-pages.md) |
+| P390 | Change key; paste a wrong token, Save and check | "The new key is saved, but the database did not answer", then "The service refused the key" with what to press, the service's own words in small type | [record](records/2026-11-22-connected-data-pages.md) |
+| P391 | Change key with the right token; then Check now twice quickly | "The new key is saved, and the database answered"; the second press answers at once without a new check | [record](records/2026-11-22-connected-data-pages.md) |
+| P392 | As a person with View access only: Data, and Admin, Integrations, Apps; then an Owner gives them See of Data (Manage level) at the company, and they open a database and a service card | First Data refuses and Apps shows no database cards. Then the database's page has no Change key or Remove, and a service's page shows its steps with "Ask an Owner", no form | [record](records/2026-11-22-connected-data-pages.md) |
+| P393 | Remove database; Keep database, then Remove database again | One confirm saying the database itself is not touched; Keep leaves it; Remove lands on Data with "The database is removed from the portal" | [record](records/2026-11-22-connected-data-pages.md) |
