@@ -170,6 +170,10 @@ capability at the place is `KIT-E-0403`; an invoice that is not there is `KIT-E-
 - More reminders: today one goes before the day and one the day after; after that the invoice waits
   in Needs you.
 
+## For Connect apps
+
+`store.csv(env, session)` gives the invoices at the places the person may view, newest first, the newest 500, as CSV: number, customer, title, location, state (overdue when sent and past its day), total, currency, due, made, sent and paid. The spreadsheet link of `@oltrem/connect` reads it, so it holds the customers' addresses.
+
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; a draft made
@@ -187,4 +191,4 @@ invoices. The page tests (`test/pages.test.ts`) render the pages: Email it again
 not-a-customer notice, the queued, waiting and no-email words, and an accepted quote billed already
 left out of the new invoice's choices and named when opened. The client template's screens journey
 makes an invoice from the quote the customer accepted, sends it, finds it on their account page
-and opens it to print, and marks it paid.
+and opens it to print, and marks it paid. The CSV: the places the person may view only, in plain amounts, and none once their role is taken away.

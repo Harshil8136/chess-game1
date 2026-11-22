@@ -62,6 +62,7 @@ works for the whole company.
 | Retries | After 5 minutes, 30 minutes, 2, 8 and 24 hours; after the sixth attempt it has failed for good. **Try again** on the page sends one now, its attempts counted afresh. |
 | Switched off | Ten deliveries in a row that failed for good switch the webhook off, audited as the system's `developer.webhook-off`; switching it on starts the count again. A switched-off webhook is sent nothing. |
 | Kept | Deliveries thirty days, removed daily by `developer.prune`; one still waiting is kept. |
+| Chat alerts | A `format` of `slack`, `teams`, `discord` or `google-chat` (2026-11-22, for the Connect apps page) instead of `standard`. The address must be the service's own (Slack's `hooks.slack.com/services/`, a Teams workflow on `logic.azure.com` or `powerplatform.com`, Discord's `/api/webhooks/`, Google Chat's `chat.googleapis.com/v1/spaces/`), and may change only to the same service's. Each event is sent as one plain line in the service's own body, made from the envelope just before the request, so the delivery log and a retry read the same: named events in words ("A website form was answered: Contact (by ann@example.com)"), others as the module and action. Unsigned, so the signing secret never reaches the chat service. Nothing typed may ping a channel: Slack's and Google Chat's angle brackets are replaced, Discord is told to parse no mention, and Discord's and Teams' Markdown links are kept apart so no address hides behind words. The test button posts one line saying alerts reach the channel. |
 
 ## The pages
 
@@ -80,7 +81,7 @@ works for the whole company.
 | `GET /jobs/:id/check` | `developer.read` | what waits for a job that declares a check, as `waiting`; nothing is run; `KIT-E-0404` for a job with none |
 | `POST /jobs/:id/run`, `/pause`, `/resume` | `developer.manage` | made due now, paused, resumed |
 | `GET /webhooks`, `GET /webhooks/:id` | `developer.read` | the webhooks; one with its newest fifty deliveries |
-| `POST /webhooks` (`url`, `events`, `description`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
+| `POST /webhooks` (`url`, `events`, `description`, `format`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
 | `GET /reference` | `developer.read` | the API as the mounted modules declare it |
 
 Every change is audited by the module: `developer.job-run`, `.job-pause`, `.job-resume`,
@@ -103,7 +104,8 @@ Migration `0022_developer.sql`, additive and idempotent: `developer_webhooks` (t
 description and events, on or off, the sealed secret and its wrapped data key, the failures in a
 row, the last delivery and its answer, who and when) and `developer_deliveries` (one event for
 one webhook: the audit row it came from, the body, the state, attempts, the next attempt, the last
-answer, its error and time). The jobs' pause is two columns of `@oltrem/core-jobs`'s table,
+answer, its error and time). Migration `0072_developer_chat.sql` adds `developer_webhooks.format`
+(`standard` unless a chat format). The jobs' pause is two columns of `@oltrem/core-jobs`'s table,
 migration `0021_jobs_pause.sql`.
 
 ## Errors
@@ -132,5 +134,6 @@ resumed and made due now, each audited; each job's last day, nothing holding the
 work for a job with a check, refused for one without and for a place below; a webhook's secret answered once and stored sealed; a
 test; audit rows turned into deliveries for the webhooks that asked, from the first run on, a
 refused change not sent; the retry ladder with one message id, a failure for good, a retry by
-hand; ten failures switching a webhook off; a new secret; changes checked; pruning; no KEK; the
-reference. The client template's screens test opens the pages.
+hand; ten failures switching a webhook off; a new secret; changes checked; pruning; no KEK; chat
+alerts (the service's own address only, one plain line an event in each service's body, unsigned,
+mentioning nobody, no hidden links); the reference. The client template's screens test opens the pages.

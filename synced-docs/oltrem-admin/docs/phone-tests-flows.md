@@ -3,7 +3,7 @@ title: "Phone tests owed: the flows fixed on 15 November"
 status: living
 owner: vendor
 last_verified: 2026-11-21
-sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md]
+sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-and-calmer.md; docs/records/2026-11-22-audit-log-fuller.md; docs/records/2026-11-22-connect-apps.md]
 ---
 
 # Phone tests owed: the flows fixed on 15 November
@@ -148,3 +148,15 @@ None yet.
 | P322 | Change a customer's name and note, then Audit log | To what is Customer and the start of their id, never their name; Details shows Name and Note: Changed (the value is not kept) | [record](records/2026-11-22-audit-log-fuller.md) |
 | P323 | Edit a role (rename it, add a permission), then Audit log | To what is the role's old name; Details shows Name: old → new and Added: the permission | [record](records/2026-11-22-audit-log-fuller.md) |
 | P324 | On a new portal, as an Owner, with a grant of someone else ending this week, open Home | Needs you says 1 person's access ends this week; a review is due after 90 days without one | [record](records/2026-11-22-audit-log-fuller.md) |
+
+### Connect apps, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P325 | The sidebar, Work, Connect apps | Four tabs in one sideways row: Chat alerts, Calendar, Spreadsheets, and “Make, Zapier, n8n”; each service a card with its logo (Teams, Outlook and Excel a plain icon) | [record](records/2026-11-22-connect-apps.md) |
+| P326 | Chat alerts, Slack; paste a link from Slack (Incoming Webhooks), Connect Slack | Slack is connected; a test line arrives in the channel; Your chat alerts lists it as Working | [record](records/2026-11-22-connect-apps.md) |
+| P327 | Chat alerts, Discord; paste any web address that is not Discord's | Refused: that is not a Discord address, with the start of the right one | [record](records/2026-11-22-connect-apps.md) |
+| P328 | Calendar, Create my calendar link, then Add to Google Calendar (or Apple Calendar on an iPhone) | The calendar app asks to add it; your bookings, shifts, days off and due tasks show there within a day | [record](records/2026-11-22-connect-apps.md) |
+| P329 | Spreadsheets, pick Invoices, Create a spreadsheet link; in a new Google Sheet paste the cell into A1 | The invoices fill the sheet; Your spreadsheet links shows it, Last used once the sheet read it | [record](records/2026-11-22-connect-apps.md) |
+| P330 | The same link, Delete link, then refresh the sheet | The dialog asks first; the sheet shows the link no longer works | [record](records/2026-11-22-connect-apps.md) |
+| P331 | As a person whose role lacks Share live spreadsheets, Spreadsheets | Ask an Owner, and no Create button; the Calendar tab still works for them | [record](records/2026-11-22-connect-apps.md) |

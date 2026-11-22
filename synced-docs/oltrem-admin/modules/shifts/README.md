@@ -127,6 +127,10 @@ that is not there is `KIT-E-0404`; a place the person does not plan is `KIT-E-04
 - Shifts beside time off: a person away that day is not yet warned about.
 - Breaks and the hours planned against the hours clocked.
 
+## For Connect apps
+
+`store.calendar(env, session, from, to)` gives the person's own published shifts between the two times, at most 200, each at a place where they may still see shifts, titled `Shift: <label>`: the calendar link of `@oltrem/connect` reads it.
+
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module, on the Mexico City clock:
@@ -142,4 +146,4 @@ nothing, and the times kept across New York's change of daylight saving; the pla
 and a publish at another place publishing none; the people offered to a planner, the planner's own
 shift planned; the privacy answer; each step audited. The client template's
 screens journey plans a shift on the page, is refused a second at the same time, publishes the
-week, finds the shift and the email, and copies the week into the next.
+week, finds the shift and the email, and copies the week into the next. The calendar items: only the person's own published shifts in the range, and none once their role is taken away.

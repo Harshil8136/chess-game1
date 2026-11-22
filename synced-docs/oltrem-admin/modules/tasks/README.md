@@ -119,6 +119,10 @@ bounds is the core's `KIT-E-0422`; a person without the capability at the place 
 - A board view by state.
 - A task given to a group.
 
+## For Connect apps
+
+`store.calendar(env, session, from, to)` gives the open tasks given to the person and due between the two days, at most 200, as all-day items titled `Due: <title>`, each one they may still read: the calendar link of `@oltrem/connect` reads it.
+
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; a task made
@@ -129,4 +133,4 @@ by nobody else; comments by anyone who may see it, with the people on it told an
 writer; changed, given to another (who is told) and to nobody, removed with its title kept
 in the log; many at once, each by its one-task rule, the refused ones named and every row audited in one batch; the automations' task made once per key; the search; a task given to oneself, the Vendor included, and never to the Vendor by someone else. The pages, against answers of the API (`test/pages.test.ts`): New task on Mine, with the place to choose, and Me first in "Given to". The automations tests cover the
 task action's fields. The client template's screens test makes a task for today, sees it on Home,
-marks it done, opens it again, comments on it, changes it and removes it.
+marks it done, opens it again, comments on it, changes it and removes it. The calendar items: only the open tasks given to the person and due in the range, and none once their role is taken away.

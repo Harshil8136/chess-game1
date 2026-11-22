@@ -131,6 +131,10 @@ at the place is `KIT-E-0403`.
 - Days a year by person or role, and days carried over into the next year.
 - A shared calendar feed of who is off.
 
+## For Connect apps
+
+`store.calendar(env, session, from, to)` gives the person's own approved time off on the days between the two times, at most 200, as all-day items titled `Time off: <kind>`, each at a place where they may still ask or decide: the calendar link of `@oltrem/connect` reads it.
+
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; time off
@@ -143,4 +147,4 @@ only by the person who asked, until it begins; the privacy answer; an Owner answ
 nobody else decides, recorded with `self: true` and not emailed, and is refused where someone else
 does. The days are tested on their
 own: real dates only, Monday to Friday whatever the week's start, and split by year. The client
-template's screens test asks for time off as the Owner and withdraws it.
+template's screens test asks for time off as the Owner and withdraws it. The calendar items: only the person's own approved days in the range, and none once their role is taken away.

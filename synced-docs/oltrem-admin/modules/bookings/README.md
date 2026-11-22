@@ -93,6 +93,10 @@ capability at the place is `KIT-E-0403`.
 - A week or month view across every resource of a place.
 - A reminder before a booking starts.
 
+## For Connect apps
+
+`store.calendar(env, session, from, to)` gives the person's own bookings that are not cancelled and overlap the two times, at most 200, each at a place where they may still book, titled `<title> (<what was booked>)`: the calendar link of `@oltrem/connect` reads it.
+
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module, on the Mexico City clock:
@@ -104,4 +108,4 @@ days, who may cancel which, and the person's own bookings; cancelled by the pers
 manager and by nobody else, once; a resource with a booking to come kept, then removed with its
 past bookings kept; the search. The pages, against answers of the API (`test/pages.test.ts`): a
 refused booking draws its own day again, and a day past the week is asked for with a date. The client template's screens test adds a room, books it tomorrow,
-is refused the same time again, cancels the booking and removes the room.
+is refused the same time again, cancels the booking and removes the room. The calendar items: only the person's own, not cancelled, in the range, and none once their role is taken away.

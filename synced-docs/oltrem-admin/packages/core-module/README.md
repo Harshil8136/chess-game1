@@ -400,6 +400,14 @@ and the time clock's hours. `csvResponse(csv, fileName)` sends one as a download
 keeps, and `fileNameOf(name, fallback, suffix?)` names it from what a person typed, kept to
 letters, digits, dashes and 60 characters.
 
+## Calendar items
+
+`CalendarEntry` (`{ id, title, place, allDay, starts, ends }`) is one item of a person's calendar:
+a timed one with `starts` and `ends` as ISO times, an all-day one with both as days (`YYYY-MM-DD`,
+`ends` the last day). A module that keeps dated work gives its store a `calendar(env, session,
+from, to)` that answers the person's own items, each one they may still see; `@oltrem/connect`
+reads them into the person's calendar link (bookings, shifts, time off and tasks today).
+
 ## Pages to print
 
 `paperHtml(paper)` writes a document a module hands someone as one plain page to print, or to save
