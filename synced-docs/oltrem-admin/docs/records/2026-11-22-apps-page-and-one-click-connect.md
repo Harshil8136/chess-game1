@@ -82,7 +82,7 @@ sign-in", lists each check and why it is there.
 
 | Part | Impact |
 |---|---|
-| A client's portal | The Apps page changes for everyone; one-click appears only once the Vendor sets `connect.relay`. Uses the existing `KEK`. `/connect` makes 9 database queries, up from 2, since it now reads the alerts, the links and the provider list together (its pin in the screens test was raised for that reason) |
+| A client's portal | The Apps page changes for everyone; one-click appears only once the Vendor sets `connect.relay`. Uses the existing `KEK`. `/connect` makes 8 database queries, up from 2, since it now reads the alerts and the links together (its pin in the screens test was raised for that reason; 9 in the first push, which also read the provider list) |
 | The Vendor | Runs one more Worker (the relay) and makes three apps once (Slack, Discord, Google), steps in `packages/relay/README.md` |
 | Developer module | Unchanged: alerts are still its webhooks, made through its API as the person, and it checks each chat's address again |
 | Oltrem Mail | Unchanged |
@@ -94,10 +94,11 @@ sign-in", lists each check and why it is there.
   offer one-click only to apps in their stores (the owner's pick, "Smart Custom card now, Teams
   later").
 - Data services (Supabase, Neon, Upstash and others) are the database thread's: they show in this
-  catalogue under Data and open that thread's page; the relay is the one place for their sign-in
+  catalogue under Data, only where the data part is mounted (it answers `/api/data/services`),
+  with "Any other database" beside them, and open that thread's pages; the relay is the one place for their sign-in
   entries too.
 - Google's `drive.file` with online access: Google's lowest level, no verification, no refresh
-  token; the token is used once.
+  token; the token is used once, inside the relay, and never reaches a portal (second push).
 
 ## What the reviews changed
 
@@ -108,10 +109,11 @@ the change before the push. What they caught and what was done:
   what that key sealed: a trip's state travels in addresses others can see, and anyone who read
   it could otherwise have answered it with a channel of their own. The relay's logs no longer keep
   request addresses, and one-click start and finish have audit actions of their own instead of
-  `make`. Left for the owner: a Google token reaches the files the Vendor's one Google app created
-  in that person's Drive from any portal; the fix (the relay makes the sheet itself) waits on his
-  pick. Accepted: a trip can be finished twice within its ten minutes by the same person, which
-  gains them nothing.
+  `make`. A Google token reached the portal, and with it the files the Vendor's one Google app
+  had made in that person's Drive from any portal: the owner picked "the relay makes the sheet",
+  done in the second push below. Accepted: a chat trip can be finished twice within its ten
+  minutes by the same person, which gains them nothing (a sheet's second finish is refused, its
+  link's secret being already taken).
 - **Flows.** A failed test is a notice that stays, not a toast that fades; a link pasted on Any
   other app lands on the filter that lists it; an app's own page pasted instead of its webhook
   link is refused with where the right link is; deleting something already gone counts as done; a
@@ -133,22 +135,58 @@ the change before the push. What they caught and what was done:
   test; the relay's 405, a state dated too far ahead, an unreachable token endpoint and the PKCE
   pairing are tested; tests that changed shared state put it back even when they fail.
 
+## The second push: the relay makes the sheet
+
+Later the same day, the owner's pick on the review's Google finding ("Relay makes the sheet"):
+
+```mermaid
+flowchart LR
+  A[Portal: link secret chosen, address sealed to the relay's key] --> B[Relay: code exchanged for Google's token]
+  B --> C[Relay: sheet created with =IMPORTDATA of that address, token used once]
+  C -->|only the sheet's address, sealed| D[Portal: link written now, person sent to the sheet]
+```
+
+- The portal no longer calls Google at all. It sends the spreadsheet link's address and title in
+  the state, sealed to the relay's own key; the relay writes only an address of that portal's own
+  spreadsheet links into the new sheet, and sends back only the sheet's `docs.google.com` address.
+- The link is written in the portal only once that address comes back, with the secret chosen at
+  the start: a trip that is cancelled, expires or fails leaves no link behind (before, a link was
+  made and ended again).
+- The Data filter and its cards show only where the data part is mounted and the person may read
+  it, drawn from that part's `/api/data/services`, with "Any other database" opening
+  `/data/connect/custom` (the database thread's ask). The page reads that list instead of the
+  provider list, so `/connect` makes one query fewer.
+- Reviewed by the security and tests reviewers. Their catches, done: the same way back replayed
+  within the ten minutes is refused instead of failing with an error (its secret is taken); the
+  Data cards have a test of their own, shown and hidden; the longest state a portal sends is
+  tested against the relay's cap. Left, and named for the owner: someone who reads a person's
+  trip state within its ten minutes can sign in with their own Google account and, if the person
+  then opens the way back the stranger hands them, the stranger's sheet reads that person's list
+  (carried over from the first push, where the stranger's token did the same). The fix is a
+  confirm step on the way back naming the Google account the sheet was made in. Also left: a link
+  deleted within those ten minutes comes back if the same person replays its way back by hand.
+
 ## How it was verified
 
 - `modules/connect`: 23 tests in the Workers runtime, among them one-click start and finish, a
   trip refused for another person, nonce, service or after ten minutes, a seal for another trip,
   an address of another service or a seal not made by the relay's key, the relay's key
-  unreadable, who may start, the Google Sheet created with the token used once and the link ended
-  again when Google refuses; the Any other app guesses and refusals, an app's own page among them;
+  unreadable, who may start, a sheet's address sealed so only the relay opens it and its link
+  written only once the sheet comes back, none when the relay failed or named another address
+  (second push); the Any other app guesses and refusals, an app's own page among them;
   a calendar link for each app.
-- `packages/relay`: 9 tests, among them an unknown portal refused without a redirect or a setting's
-  name, only GET, Slack's access token dropped, the answer sealed with the relay's key, the public
-  key at `/key`, Google's PKCE verifier paired with its challenge, and each failure said so.
+- `packages/relay`: 11 tests, among them an unknown portal refused without a redirect or a
+  setting's name, only GET, Slack's access token dropped, the answer sealed with the relay's key,
+  the public key at `/key`, Google's PKCE verifier paired with its challenge, each failure said
+  so, and (second push) the sheet made by the relay with only its address sealed back, refused
+  without the portal's own link sealed to the relay, for another portal's address, a formula with
+  more than the link, and when Google refuses, answers elsewhere or cannot be reached.
 - `packages/core-crypto`: the one-time seal, sealed and opened, refused for another trip or key,
   and refused when another sender sealed it or posed as the relay.
 - The client template's screens test: every page, the calendar and spreadsheet links, a filter
   listing only its rows, the chat and Any other app refusals, one-click's way back without its
-  trip clearing the cookie, and with the relay set the whole page half of one-click.
+  trip clearing the cookie, and with the relay set the whole page half of one-click; no Data
+  filter or card where the data part is not mounted, and `/connect` pinned at 8 queries.
 - On the local portal at phone and computer widths, light and dark: the catalogue, a dialog, Any
   other app recognising a Zapier link, a calendar link made for Google Calendar, and, with a relay
   address set, Continue to Slack sending the browser to the relay with an HttpOnly cookie on

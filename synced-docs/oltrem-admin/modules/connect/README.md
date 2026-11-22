@@ -7,7 +7,9 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
   health (Working, Waiting, Trying again, Failing, Paused, Not checked lately) and what can be
   done there: Send test, Pause or Turn on, Delete. The row just made is marked for a moment.
 - **The catalogue.** Every app as a card in one grid, with a sideways row of filters: All, Chat,
-  Calendar, Spreadsheets, Automation, and Data once the providers part lists data services. A card
+  Calendar, Spreadsheets, Automation, and Data where the data part is mounted and the person may
+  read it (its `/api/data/services` answers): a card for each database service and "Any other
+  database", which open the data part's own pages under `/data/connect/`. A card
   says on its right whether it is connected and how it is doing, or "Ask an Owner" (greyed, still
   there) when it is not the person's to connect.
 - **Chat.** A short line in a Slack, Microsoft Teams, Discord or Google Chat channel each time
@@ -16,7 +18,7 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
 - **Calendar.** The person's own bookings, shifts, days off and tasks' due days in Google
   Calendar, Apple Calendar, Outlook or any other calendar app, each with a link of its own.
 - **Spreadsheets.** A list, a form's answers or the invoices in Google Sheets or Excel. With
-  one-click, the portal creates the Google Sheet in the person's Drive itself.
+  one-click, the Google Sheet is created in the person's Drive for them.
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
@@ -116,12 +118,12 @@ sequenceDiagram
   P->>S: picks the channel or account, Allow
   S-->>P: 302 to the relay with a code
   P->>R: /back/slack?code&state
-  R->>S: exchanges the code with the app's secret
+  R->>S: exchanges the code with the app's secret (Google: then creates the sheet with the token)
   R-->>P: 302 to /connect/back with only the named fields, sealed with the relay's key to the one-time key
   P->>W: /connect/back (through Access, with the trip cookie)
   W->>R: /key (the relay's public seal key)
   W->>W: trip opened: same person, same company, same nonce, same service, in time; seal opened, from the relay's key only
-  W-->>P: 303 to the alert row (test sent) or to the new Google Sheet; cookie cleared
+  W-->>P: 303 to the alert row (test sent) or to the new Google Sheet (link written now); cookie cleared
 ```
 
 What keeps it safe:
@@ -147,9 +149,11 @@ What keeps it safe:
   address again before the Developer module checks it a third time.
 - **The same permissions.** Starting a chat needs `developer.manage`, a sheet `connect.share`;
   the alert is made through the Developer API as the person.
-- **Least scope.** Google's `drive.file` lets the portal see only the files it created; the access
-  token is used once, to create the sheet, and forgotten. If Google refuses, the link is ended
-  again, so nothing is left half made.
+- **No Google token in a portal.** For a sheet, the portal chooses the link's secret at the start
+  and sends its address to the relay sealed to the relay's key; the relay creates the sheet with
+  Google's token (`drive.file`, used once) and sends back only the sheet's address. The link is
+  written only then, so a trip that ends any other way leaves no link behind (the owner's pick of
+  2026-11-22).
 - **Cloudflare Access.** The way back is a top-level GET from the person's own browser to
   `/connect/back`, behind the portal's Access door like every page.
 
@@ -216,8 +220,11 @@ search; the audit rows; folding and entries that do not read; a calendar link fo
 app. One-click: set up or not, the relay sent this portal, a key and a nonce, a sealed answer made
 into the alert, a trip refused for another person, nonce, service or after ten minutes, a seal for
 another trip, an address of another service or a seal not made by the relay's key refused, the
-relay's key unreadable said as not available, who may start, the Google Sheet created with the
-token used once and the link ended again when Google refuses. The Custom card's guess from each
+relay's key unreadable said as not available, who may start, a sheet's address sealed so only the
+relay opens it, the link written only once the sheet's address comes back, none when the relay
+could not make the sheet or names another address, and no second one when the way back is
+replayed. The Data filter's cards, drawn where the data part answers and absent where it does not
+(`test/pages.test.ts`). The Custom card's guess from each
 app's address, the links it refuses and an app's own page pasted by mistake
 (`test/detect.test.ts`). Each store's `calendar()` and the invoices' `csv()` have their own tests
 in their modules. The client template's screens test makes a calendar and a spreadsheet link as

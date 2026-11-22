@@ -30,9 +30,18 @@ must be true of the answer and the fields that go back, each with the start it m
 |---|---|---|
 | Slack | `incoming-webhook` | the webhook address of the channel the person picked, its name, the workspace's name (Slack's access token is dropped) |
 | Discord | `webhook.incoming` | the webhook address of the channel the person picked (no bot joins the server; the webhook's own name is not the channel's, so it is not sent) |
-| Google | `https://www.googleapis.com/auth/drive.file`, online access, PKCE | a one-time access token, which the portal uses once to create the sheet; no refresh token is asked for |
+| Google | `https://www.googleapis.com/auth/drive.file`, online access, PKCE | only the new sheet's address: the relay creates the Google Sheet itself, with the access token used once and never sent on; no refresh token is asked for |
 
 A new service is one more entry with its two secrets (and their rows in `tokens.registry.json`).
+
+**The sheet.** For Google the portal puts the spreadsheet link's address and the sheet's title in
+the state, sealed to the relay's own key (they open the portal's list to whoever reads them, and
+the state passes through addresses others can see). After the code exchange the relay opens them,
+writes only an address of that portal's own spreadsheet links (`<portal>/hooks/connect/sheet/<32
+letters>.csv`) into `=IMPORTDATA("…")` in the new sheet's first cell, and seals back only the
+sheet's `https://docs.google.com/` address. A state without that sealed address is refused before
+anyone signs in. The owner's pick of 2026-11-22: a Google token never reaches a portal, so no
+portal can reach the files the Vendor's one Google app made for that person from another portal.
 
 ## Its secrets
 
@@ -98,7 +107,10 @@ entries and their scopes; the portals it reads and the states it accepts; a know
 Slack with its scope and to Google with a PKCE challenge; an unknown portal refused without a
 redirect, at the start and the return; Slack's code exchanged with the app's secret and only the
 channel's address sealed back with the relay's key, the access token dropped; Discord's webhook
-and Google's token the same way, Google's verifier the one whose challenge went out at the start;
+the same way; Google's sheet made by the relay with the token, only its address sealed back, the
+verifier the one whose challenge went out at the start, and no sheet without the portal's own link
+sealed to this relay, for another portal's address, a formula with more than the link, or when
+Google refuses, answers elsewhere or cannot be reached;
 refused, expired (also a state dated too far ahead), not set up (no app secrets, or no seal key)
 and failed trips (a refusal, an unreachable token endpoint) said so; only GET; the public seal key
 at `/key`; a refusal page that names no setting; a field kept only when the entry names it and it
