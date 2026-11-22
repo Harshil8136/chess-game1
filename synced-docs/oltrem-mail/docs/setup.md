@@ -178,7 +178,7 @@ instead of trusting this list):
 ## 5. Forwarding, as ImprovMX does it
 
 Built in bundle F ([its record](records/2026-11-02-forwarding.md)), on its own page, Forwarding
-(`/email/forwarding`), in the Email settings tabs. Since 2026-11-12
+(`/email/forwarding`), under Email's Settings tab (since 2026-11-22). Since 2026-11-12
 ([its record](records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
 **ImprovMX** and **Cloudflare**. A visit opens on ImprovMX, unless Cloudflare already forwards a
 domain and ImprovMX is not connected.

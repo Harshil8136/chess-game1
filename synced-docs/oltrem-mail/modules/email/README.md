@@ -394,9 +394,11 @@ keeps only **Check again** beside the name; an address is its name and address, 
 sends and what it is the default for as tags (**Default for all mail** when both); **Add an
 address** sits under the list; **Gmail, Yahoo and Outlook rules** is a labelled line with its own
 tag; the checks' count is in **Checks and DNS records: 2 of 3 pass**. The head's two actions,
-**Sync with provider** and **Add a domain**, are the same kind of button. The set's first tab is
-**Setup** (`/email/connect`), so the heading Email settings is not said twice; it still opens
-first.
+**Sync with provider** and **Add a domain**, are the same kind of button. Since 2026-11-22 (the
+owner's "a design anyone can follow") Setup and Addresses, with the Mail add-on's Mail setup and
+Forwarding, are no sidebar entry of their own: they open under the Email set's **Settings** tab
+(`/settings/section/email`, `nav.under`), which lists them under **Set up** after Email's own
+settings, so Email has one place for its setup.
 
 Since 2026-11-12 (the owner: hard to find a way around, and the Edit dialog hard to read) the page
 is a sideways row of three views, `?view=` in the address, each with its count: the addresses, and

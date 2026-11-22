@@ -250,7 +250,7 @@ weight at once; the star fills at once. The portal's answer then replaces the li
 it refused comes back as it was; with no answer at all the row comes back and the page says so.
 Starred and All mail, which an archived conversation does not leave, wait for the answer.
 
-Forwarding (`/email/forwarding`), in the Email settings tabs, in two views since 2026-11-12:
+Forwarding (`/email/forwarding`), under Email's Settings tab (since 2026-11-22; before, in the Email settings tabs), in two views since 2026-11-12:
 **ImprovMX** (first) and **Cloudflare**. ImprovMX shows Connect ImprovMX with its one field until a
 key is kept, then the account with Disconnect and Add a domain, and a pane for each domain with its
 state, its aliases (Change, Delete), Add the alias, Check its records and Recent mail
@@ -267,7 +267,7 @@ Mailboxes also show **Send a test** (`src/try-here.tsx`): a message to an alias 
 handed to the Worker as Email Routing would, and what became of it. Someone who may only read sees
 it all and nothing to change.
 
-Mail setup (`/email/mail`), in the Email settings tabs: the route's line, the steps as a checklist, the
+Mail setup (`/email/mail`), under Email's Settings tab (since 2026-11-22): the route's line, the steps as a checklist, the
 form that turns Email Routing on, the sending domains with records missing and **Write them**,
 the staff addresses with their state, the test, and Stop. A step that is not ready says whether
 Mail is to be ticked at setup or only turned on, on the Features page.

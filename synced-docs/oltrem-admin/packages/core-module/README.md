@@ -351,7 +351,8 @@ that answer a page (a title and a body; optionally the line under the title, `su
 on the head's right, `tools`, a count beside a tab of its set by the tab's path, `counts`, and
 `kind: 'form'` for a form that keeps a readable width), a redirect or a plain response, and an optional `nav`
 (a label, a group, a summary, and optionally `before`: the path of the section it goes just
-before) that gives it a section in the sidebar. A page reads and writes
+before; `tabs`, the set of tabs it joins; and `under`, since 2026-11-22, the tab it opens under
+when it is no tab of its own, such as Email's setup pages under `/settings/section/email`) that gives it a section in the sidebar. A page reads and writes
 only through `api`, the portal's own API called inside the same request, so it can never show
 or change more than its routes allow. A path under `/api`, `/hooks`, `/ui`, `/do` or `/local`, a path
 taken twice, a page with no `get` and a sidebar entry missing a word are refused when the module

@@ -207,3 +207,16 @@ Integrations (the email keys) Email services, under Admin, Integrations.
 | P358 | An old bookmark (/records, /settings/parts, /providers) | Each opens, under its new name: Lists, Features, Email services | [record](records/2026-11-22-five-groups-and-names.md) |
 | P359 | Forms (or Users and access, Roles) on the phone, dark, with your Aurora look | No darker strip behind the title; Create form is a compact button beside the title, nothing past an edge | [record](records/2026-11-22-calm-and-modern.md) |
 | P360 | Look, Aurora, then any page | The background is a faint glow, no patches or blotches behind the content | [record](records/2026-11-22-calm-and-modern.md) |
+
+### Each section's own Settings tab, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P361 | Admin, Settings, Settings | Name and icon, Colours for everyone, then Each section's settings: a row per section with how many settings it holds; no currencies, no trash days | [record](records/2026-11-22-section-settings.md) |
+| P362 | Customers, Sales | Three tabs: Quotes, Invoices, Settings; Settings holds both currencies and One currency for all | [record](records/2026-11-22-section-settings.md) |
+| P363 | Work, Files, Settings tab: change Time in the trash, Save | "Saved", and you stay on Files' Settings tab | [record](records/2026-11-22-section-settings.md) |
+| P364 | Email, Settings | The sending settings, then Set up: Setup, Addresses, Mail setup, Forwarding; no Email settings row in the sidebar | [record](records/2026-11-22-section-settings.md) |
+| P365 | Admin, Users and access | Five tabs: Users, Roles, Groups, Locations, Settings; Users shows Signed in today and Access requests as chips under the tabs | [record](records/2026-11-22-section-settings.md) |
+| P366 | Users and access, Settings | The two job switches at the top, then Set up: Access reviews, Vendor access; opening one keeps Settings marked | [record](records/2026-11-22-section-settings.md) |
+| P367 | Your name at the foot of the sidebar, My access | Your own page, no Users and access tabs; as an Owner, no Ask for access | [record](records/2026-11-22-section-settings.md) |
+| P368 | Users and access, Groups, a group; Users, someone with a role at a location | The group's page is titled with its name; the badge reads "Role at Location"; a grant without an end reads "No end date" | [record](records/2026-11-22-section-settings.md) |
