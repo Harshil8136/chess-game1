@@ -51,6 +51,8 @@ const modules = [iam.module, email.module, withPages(campaigns.module, campaigns
 `createCampaigns` returns the `store` (every function the routes and jobs call) and the module
 manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper) and sends
 through the email module: the client adds `CAMPAIGN_TEMPLATE` to the email module's templates.
+Since 2026-11-20 each of its audit rows names the campaign (`name`), so the Audit log's To what
+reads it after the campaign is gone, and says from where (the kit's audit writer adds it).
 Its pages come from `@oltrem/campaigns/pages`, type-checked against the DOM like the files
 module's, and give it a **Campaigns** entry in the sidebar's Messages group, after Email, with the email module's Templates and Lists as its tabs (2026-10-29).
 

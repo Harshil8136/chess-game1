@@ -85,9 +85,10 @@ works for the whole company.
 
 Every change is audited by the module: `developer.job-run`, `.job-pause`, `.job-resume`,
 `.webhook-create` (with its address's host only: a path or query often carries the receiver's own
-secret, 2026-11-20), `.webhook-update` (the fields changed), `.webhook-delete`,
+secret, 2026-11-20), `.webhook-update` (what changed, from what to what), `.webhook-delete`,
 `.webhook-rotate`, `.webhook-test` (what came back) and `.delivery-retry`; the system's
-`developer.webhook-off`.
+`developer.webhook-off`. Each row names the webhook by its description, or the host it calls; the
+address is kept by its host alone, never its path, which can carry the receiving service's key.
 
 ## Health
 

@@ -481,7 +481,8 @@ The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk s
 `createEmail(...).lists.people` hands a send its people a page at a time, in address order. Every
 change is audited: `email.list-add`, `email.list-update`, `email.list-import`,
 `email.list-remove-person`, `email.list-forget`, `email.list-archive`, `email.list-restore`,
-`email.list-remove`, `email.list-export`.
+`email.list-remove`, `email.list-export`. Since 2026-11-20 each row of one list names it (`name`), and
+`email.list-update` says what changed, from what to what (`changes`).
 
 ## Bulk mail's pipe
 

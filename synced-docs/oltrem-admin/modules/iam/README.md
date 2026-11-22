@@ -252,6 +252,17 @@ requests, approvals and reviews. Each one reads the actor's standing from the co
 their session, writes the rows, refreshes the sessions that carry the old answer (`invalidate`
 for one person; `invalidateTenant` after a change to a group, a role or the tree) and records
 itself in the audit log, refusals included, with the policy hash the actor was decided under.
+Each row names what it touched, by name and not only by id: the role (`role`), the person
+(`person`, their address), the group (`group`), the grant as `Clerk for ann@example.com`
+(`name`), a role's changes from what to what and the permissions `added` and `removed`.
+
+Every module writes its audit rows through `recorded(options, actor, action, target, details,
+work, outcome?)`: it runs the work, then writes the row, the refusal as much as the success. The
+work is handed `note(facts)`, for what it learns as it runs: the record's `name` and, on a change,
+its `changes` from `changesOf` (re-exported here from `@oltrem/core-audit`, which says what a
+module row holds). Noted facts are written whatever the outcome. A row that would pass the
+audit's 4 KB limit is still written: its `changes`, `added` and `removed` are dropped and `cut`
+says so.
 The rules, each refused with its own code:
 
 - **You grant only what you hold.** A role goes to a person or group at a scope only if the actor
@@ -406,13 +417,18 @@ the two added that day are added to a saved list as off (migration `0067`, `@olt
 | Health check, lane `access`, hourly | `iam.unusual` | Unusual sign-ins (2026-11-21): over the last 7 days, warns when a sign-in came from two countries within the hour, or when 10 or more sign-ins were refused for addresses with no account (`REFUSED_WARN`); fewer refused ones are only counted in its words (someone who left, a mistyped address). One query on the audit log's action index. |
 
 The four only read the rows. The notices go through the same `mail` as an invitation, and the
-health page shows the checks' last results with the others. Cloudflare's bot score, which the
+health page shows the checks' last results with the others. With `iam.expiring` and `iam.reviews` off,
+whoever looks after access is told on Home's Needs you instead (below, since 2026-11-22). Cloudflare's bot score, which the
 plan named for unusual sign-ins, is not used: it needs Bot Management, which the free plan does
 not have.
 
 Home's "Needs you" (`todo`, `src/todo.ts`) asks the module for what waits for the person signed
 in, under `iam.self`: the access requests and second-person approvals they may decide, each
-access review with grants they may keep or remove, and their own grants ending within 7 days.
+access review with grants they may keep or remove, their own grants ending within 7 days, and,
+since 2026-11-22, for whoever may renew them (`standingAt`) how many other people's own grants end
+within 7 days (one links to that person's page, more to People), and for whoever holds
+`iam.bindings.manage` at the company "An access review is due" when none is open, none was opened
+for 90 days and someone else holds a grant (a company of one has nobody to review).
 `waitingFor` counts with the rules the decisions check (`standingAt`, `can`, never one's own
 request, approval or grant), so a person is never sent to a decision the API would refuse.
 

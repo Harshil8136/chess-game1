@@ -116,3 +116,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Security and access](2026-11-20-security-and-access.md) | company pages for the company alone; ended sign-ins stay ended; bodies read to their cap; time limits; P299-P301 |
 | [The full codebase review](2026-11-20-codebase-review.md) | the master audit, five batches, measurements, lines, proposals for a yes, directions to expand; P302-P307 |
 | [Safer and calmer](2026-11-21-safer-and-calmer.md) | sign-in alerts, Signed in today, file kinds and room, passcodes on links, the jobs' last day, What changed, read and unread, Service status; four extras off; P310-P320 |
+| [A fuller audit log](2026-11-22-audit-log-fuller.md) | from where on every row; To what by name; from → to; Needs you for whoever looks after access; P321-P324 |

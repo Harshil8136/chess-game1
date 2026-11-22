@@ -35,6 +35,27 @@ audit.after(ctx.waitUntil, {
 A bad entry is refused with `KIT-E-1101` in the request, where the programming error is; only
 the write itself is deferred. `record(entry)` writes at once and returns the row, for jobs.
 
+**Every row says from where.** The pipeline notes each change request's address, country and
+browser (`noteRequest`, `@oltrem/core-module`), and a row written for that request gets `ip`,
+`country` and `browser` added to its details, a module's own row as much as the automatic one; a
+fact the module gave itself wins. A job's row, with no request, gets nothing added.
+
+**What a module row holds.** So the log is worth reading, a module's row carries:
+
+| Fact | What it is |
+|---|---|
+| `name` | the record's name as it was when the row was written (`Invoice 12: Repairs`, a task's title, a role's name), so the log still says what it was after the record is gone; the Audit log page shows it under "To what" |
+| `changes` | on a change, `{ field: { from, to } }` for each field that changed and only those, from `changesOf(before, after, fields?, personal?)` |
+| `placeName`, `person` | the location's name, the person it concerns, when the record has them |
+
+`changesOf` cuts each side to `FACT_LIMIT` (120) characters, names at most `CHANGES_LIMIT` (10)
+fields and counts the rest in `more`, and drops any field whose name looks like a credential. A
+field named in `personal` (a customer's name or note, free notes, a list of addresses) is kept as
+`{ hidden: true }`: the log is kept for good and is not erased by a privacy request, so it says
+that a person's details changed, never to what. `shortFact` cuts one value the same way (a list
+to its first `LIST_LIMIT`, 40, items). In a module, `recorded` (`@oltrem/iam`) hands its work a
+`note(facts)` for these, written on the row whatever the outcome, a refusal included.
+
 ## The automatic row
 
 A module does not have to remember the audit. The pipeline tells the app of every change made
@@ -53,7 +74,7 @@ const app = createApp({
 | `action` | `<module>.<verb>`: the route's `action`, or its method and fixed path segments |
 | `target` | the route's last parameter, the thing changed |
 | `outcome` | `ok` below status 400, `failed` from 500, `refused` between: the permission check's and the schema's refusals are recorded too |
-| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the caller's `ip` and `country` |
+| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the caller's `ip`, `country` and `browser` (the browser and system, as `Chrome on Android`) |
 
 A module that writes its own row for the request (`record` or `after` with the request id) keeps
 its richer row, and the automatic one is not written beside it: the writer remembers, in the

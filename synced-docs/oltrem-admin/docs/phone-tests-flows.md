@@ -98,6 +98,11 @@ sources: [docs/records/2026-11-15-flows-fixed.md; docs/records/2026-11-21-safer-
 | P297 | Settings, Company: a time zone (as America/Mexico_City), then Automations, New automation, On a schedule | The time field reads At (America/Mexico_City); a made automation says every day at 08:00 America/Mexico_City, and its next run is 08:00 there | [record](records/2026-11-20-left-items-finished.md) |
 | P298 | The same time zone, then a campaign's Pace | The sending hours name America/Mexico_City | [record](records/2026-11-20-left-items-finished.md) |
 
+### Fuller audit log, 20 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+
 ## Passed
 
 None yet.
@@ -139,3 +144,7 @@ None yet.
 | P318 | Switch What changed card on; Home | What others changed since you last looked; Mark as seen leaves Nobody else changed anything | [record](records/2026-11-21-safer-and-calmer.md) |
 | P319 | Forms, Try the form and send an answer; then the inbox | The answer is bold and Unread (1); open it and go back, it is plain; Mark unread makes it bold again | [record](records/2026-11-21-safer-and-calmer.md) |
 | P320 | Switch Service status on; System status, Check again now | Service status is listed, naming Cloudflare and your email service | [record](records/2026-11-21-safer-and-calmer.md) |
+| P321 | Change a task's title and due day, then Audit log | The row's To what is the task's old title; Details shows Title: old → new and Due on: old → new, and the address, country and browser it came from | [record](records/2026-11-22-audit-log-fuller.md) |
+| P322 | Change a customer's name and note, then Audit log | To what is Customer and the start of their id, never their name; Details shows Name and Note: Changed (the value is not kept) | [record](records/2026-11-22-audit-log-fuller.md) |
+| P323 | Edit a role (rename it, add a permission), then Audit log | To what is the role's old name; Details shows Name: old → new and Added: the permission | [record](records/2026-11-22-audit-log-fuller.md) |
+| P324 | On a new portal, as an Owner, with a grant of someone else ending this week, open Home | Needs you says 1 person's access ends this week; a review is due after 90 days without one | [record](records/2026-11-22-audit-log-fuller.md) |

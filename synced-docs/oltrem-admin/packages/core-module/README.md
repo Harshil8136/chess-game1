@@ -420,6 +420,14 @@ so a store imports them from `@oltrem/core-module` and its pages from `@oltrem/c
 Expenses, invoices and quotes use them (one copy since 2026-11-20; each had its own) and still
 export them under the same names.
 
+## Where a request came from
+
+`deviceName(userAgent)` names a browser and system in plain words (`Chrome on Android`), for the
+sign-in alerts and lists (`@oltrem/iam/device` passes it on) and the audit log; its own entry, `@oltrem/core-module/device`, holds no Workers type. The pipeline (`@oltrem/core-http`) calls `noteRequest(requestId,
+{ ip, country, browser })` for each change request before its route runs, and the audit writer
+reads it back with `requestWhere(requestId)`, so every row of the request says from where. The
+isolate keeps the newest 512 requests; nothing is stored.
+
 ## Migrations, settings and errors
 
 The manifest also names what the module owns elsewhere, so one file says everything a reviewer

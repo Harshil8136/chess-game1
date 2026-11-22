@@ -37,7 +37,10 @@ route is handed over once it answered or threw, as a `RouteChange` (`@oltrem/cor
 module, the action (the route's `action`, or one made from its method and fixed path segments,
 `POST /lists/:id/items` as `create-lists-items`), the route as declared, the last parameter as the
 target, the status, `ok` below 400, `failed` from 500, `refused` between, the error code, the time
-taken, the identity and session, and the caller's address and country as the edge gave them. The
+taken, the identity and session, the caller's address and country as the edge gave them, and the
+browser and system read from the user-agent (`deviceName`). The same address, country and browser
+are noted for the request (`noteRequest`, `@oltrem/core-module`) before the route runs, so a row a
+module writes itself says from where too. The
 session hook's, the capability check's and the schema's refusals are told too; what the door or
 the same-origin check refuses never reaches a route and is not. A hook that throws goes to
 `report` and leaves the answer as it was. The client template passes the audit module's
