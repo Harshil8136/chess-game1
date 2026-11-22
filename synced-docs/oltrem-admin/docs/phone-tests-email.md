@@ -2,7 +2,7 @@
 title: "Phone tests owed: Email and Mail"
 status: living
 owner: vendor
-last_verified: 2026-11-15
+last_verified: 2026-11-22
 sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the records each line links]
 ---
 
@@ -117,3 +117,9 @@ sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the reco
 The Mail add-on's own owed tests (its bundles A, B, C, F and L) are listed in Oltrem Mail's
 documents, packed in [vendor/mail](../vendor/mail/README.md); they are run with a domain on the
 Cloudflare route.
+
+### Colours for everyone, 22 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P422 | Pick a colour from the dots in the sidebar's account menu; then Admin, Settings, Colours for everyone: pick another palette, Save changes | Saved, and the portal turns to the colours just saved on your phone too; the card says saving clears your own pick | [screens](../packages/screens/README.md) |
