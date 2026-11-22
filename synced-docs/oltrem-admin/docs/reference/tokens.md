@@ -12,11 +12,12 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 1 active, 20 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 1 active, 21 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
 | ACCESS_AUD | planned | Cloudflare | a Worker secret, set with wrangler secret put |
+| AIRTABLE_CLIENT_ID | planned | Airtable | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard; the relay hands it to the portal, sealed with the connection's tokens |
 | BACKUP_PUBLIC_KEY | planned | none: a key pair generated offline by the vendor | a Worker secret, set with wrangler secret put |
 | CLOUDFLARE_ACCOUNT_ID | planned | Cloudflare | a GitHub repository secret in the client repository |
 | CLOUDFLARE_API_TOKEN | planned | Cloudflare | a GitHub repository secret in the client repository |
@@ -54,6 +55,22 @@ sources: [tokens.registry.json]
 | Rotation | none; it changes only if the Access application is recreated |
 | Why it exists | The Worker must check that a sign-in came through this client's own Access application. |
 | Plan section | 6 |
+
+## AIRTABLE_CLIENT_ID
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Airtable; the Vendor's Airtable OAuth integration (airtable.com/create/oauth), registered without a client secret, with data.records:read and schema.bases:read |
+| What it may do | none: the integration's public id; it asks only for data.records:read and schema.bases:read, on the bases the person picks |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal; each portal's Airtable connections made by signing in, which renew their tokens with it (modules/data) |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard; the relay hands it to the portal, sealed with the connection's tokens |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | changes only when the integration is made again; set the new id, and the connections signed in with the old one sign in again |
+| Why it exists | Airtable has no key an app can make that lasts, so a sign-in gives an hour's access token and a refresh token; a public integration (PKCE, no secret) lets each portal renew them itself with this id, so no portal and no relay endpoint holds a secret for it. |
+| Plan section | records/2026-11-22-airtable-sign-in.md |
 
 ## BACKUP_PUBLIC_KEY
 

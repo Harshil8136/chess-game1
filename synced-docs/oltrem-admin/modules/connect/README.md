@@ -21,8 +21,9 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
   Calendar, Apple Calendar, Outlook or any other calendar app, each with a link of its own.
 - **Spreadsheets.** A list, a form's answers or the invoices in Google Sheets or Excel. With
   one-click, the Google Sheet is created in the person's Drive for them.
-- **Supabase.** The data part's Supabase page signs in through the same relay and connects the
-  project after the person confirms it (below, "Supabase, for the data part").
+- **Supabase and Airtable.** The data part's pages for them sign in through the same relay and
+  connect after the person confirms it (below, "Supabase, for the data part", and "Airtable, for
+  the data part").
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
@@ -158,8 +159,8 @@ What keeps it safe:
   Google's token (`drive.file`, used once) and sends back only the sheet's address. The link is
   written only then, so a trip that ends any other way leaves no link behind (the owner's pick of
   2026-11-22).
-- **Supabase is confirmed first.** Its answer is held, never saved on the way back; see
-  "Supabase, for the data part" below.
+- **Supabase and Airtable are confirmed first.** Their answer is held, never saved on the way
+  back; see "Supabase, for the data part" below.
 - **Cloudflare Access.** The way back is a top-level GET from the person's own browser to
   `/connect/back`, behind the portal's Access door like every page.
 
@@ -182,8 +183,13 @@ the project's secret key with Supabase's token, used once there and never sent o
   back someone else hands the person cannot connect that someone's database (the security
   review). A refusal there is shown on the same page, the project still held; when the data part
   answers that the project is already connected (`KIT-E-4104`: Connect pressed twice, or the Back
-  button), that connection's page opens instead, saying so, and the held answer is let go. Cancel, also a
-  form post, clears the held cookie at once.
+  button), that connection's page opens instead, saying so, and the held answer is let go. After
+  Connect, the held cookie keeps only the new connection's id (`made.<id>`, no secret) for the rest
+  of the ten minutes, so Back to "Connect <project>?" or Connect pressed again opens that connection
+  ("already connected") instead of saying nothing was connected or making a second one. Cancel,
+  also a form post, clears the held cookie at once and says "You pressed Cancel" on the data page.
+  The sign-in button and the project picker's buttons carry `data-reload`: they leave for the
+  relay, another site, which the page script's own form posts cannot follow.
 - **Several projects:** a page with one button each; pressing one signs in again with that
   project's ref sent sealed to the relay's key.
 - **A project with no secret key yet:** a page saying where in Supabase to make one.
@@ -191,7 +197,25 @@ the project's secret key with Supabase's token, used once there and never sent o
   fixed words.
 
 Starting it is refused at once, before the trip to Supabase, without `data.manage` held at the
-company. Airtable signs in this way later, once its rotating refresh token has a home.
+company.
+
+### Airtable, for the data part
+
+The data part's Airtable page (`/data/connect/airtable`) offers "Sign in with Airtable" the same
+way and to the same people (batch 5 of the database review, 2026-11-22). The person picks the
+bases on Airtable's own page; the Vendor's Airtable integration asks only for `data.records:read`
+and `schema.bases:read`. Airtable has no lasting key an app can make, so the relay sends back its
+access token (an hour), its refresh token (60 days, replaced on each use) and the integration's
+public id. The integration is registered without a client secret, as Airtable allows with PKCE, so
+each portal renews the tokens itself and no relay endpoint is needed after the sign-in. The portal
+checks the three again (printable, no spaces, a lifetime of at most a day), turns the lifetime into
+the time it ends, and holds them in the same sealed cookie. The page asks "Connect Airtable?"
+(no address: Airtable has one for everyone), and Connect saves them through
+`POST /api/data/connections` as the fields `token`, `refresh`, `expires` and `client`. The way back,
+the confirm page and Cancel carry the service (`?p=airtable`, a hidden `service`), so a stale or
+cancelled trip lands on the Airtable page, not Supabase's. Airtable has no address to spot a
+second connection by, so the `made.<id>` cookie above is what stops Back or a second press from
+making one. How the data part renews them is in its README, "Sign in with Airtable".
 
 Microsoft Teams and Google Chat can sign in this way only after Microsoft's publisher
 verification and Google's app verification, with a refresh token kept for each alert; Zapier and
@@ -208,7 +232,7 @@ Make only for apps listed in their stores. Those stay on the pasted link (the ow
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>` |
-| `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", whose Connect posts to `/connect/back` ("Supabase, for the data part") |
+| `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
 
 ## The logos
 

@@ -391,6 +391,14 @@ made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activ
 `rename` (the new name, since 2026-11-22, for the data part), `remove` and `rewrap`, with the
 field names and never a value.
 
+`registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable) seals
+secrets the service itself renewed over the credential `from` was opened from, and writes them only
+while that credential is still the one stored (`UPDATE … WHERE credential = <the one read>`): it
+answers false when another request renewed it first, so two renewals at once never overwrite each
+other. It cannot move the key to another host. It is the one write that is not audited: the data
+part's timed check renews a signed-in Airtable connection every hour, and no person's access
+changes.
+
 ## Tables and errors
 
 Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (one wrapped data

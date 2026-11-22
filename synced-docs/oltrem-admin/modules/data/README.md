@@ -33,7 +33,7 @@ that reads only what those people may see.
 |---|---|
 | `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
 | `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
-| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's page also offers "Sign in with Supabase" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and says in fixed words why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part", has the journey |
+| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's and Airtable's pages also offer "Sign in with Supabase" or "Sign in with Airtable" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and say in fixed words, with the service's name, why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part" and "Airtable, for the data part", has the journey. The tokens a sign-in fills (Airtable's `refresh`, `expires`, `client`) are never asked for |
 | `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
 | `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. Saved views keep the table, its search and its sort |
 
@@ -104,7 +104,7 @@ service's own dashboard with the steps on its page:
 | Service | How it connects | Why |
 |---|---|---|
 | Supabase | Sign in with Supabase (the Apps part's connect relay), or its key | Supabase offers OAuth to any app; its key is a full secret key, so sign-in saves copying it |
-| Airtable | its read-only token; sign-in next | Airtable offers OAuth, with a token that lasts an hour and a refresh token that rotates: it needs that token kept with the connection first |
+| Airtable | Sign in with Airtable (the Apps part's connect relay), or its read-only token | Airtable offers OAuth to any app, with read-only scopes and the bases picked on its own page: no token to make or paste. The portal renews its tokens ("Sign in with Airtable", below) |
 | Neon | the connection string of a read-only role | Neon's OAuth is for approved partners only; a read-only role is narrower than any sign-in |
 | Turso | the address and a read-only token | Turso offers no sign-in to other apps |
 | Upstash Redis | the REST address and the Read Only token | Upstash offers no sign-in to other apps |
@@ -112,6 +112,37 @@ service's own dashboard with the steps on its page:
 `src/brands.ts` holds each service's logo (Simple Icons, CC0, in its brand colour) and its card's
 line; `GET /services` answers them (`mark`, `line`, `signIn`) so the Apps page draws the same
 cards, and a service with none keeps its initials.
+
+## Sign in with Airtable
+
+A connection made by Sign in with Airtable (batch 5 of the database review, 2026-11-22; the
+journey is in the Apps part's README) holds four sealed fields: `token`, an access token that
+lasts an hour; `refresh`, a refresh token that lasts 60 days and that Airtable replaces on each
+use; `expires`, when the access token ends, in ms; and `client`, the Vendor's Airtable integration's
+public id. The integration has no client secret (a public client, with PKCE at the sign-in), so the
+portal renews the tokens itself, and the relay keeps no part in it.
+
+Before each read (the tables, a page of rows, Check now, the timed check), `airtableDue` asks
+whether the access token ends within five minutes. When it does, `airtableRenew` posts the refresh
+token and the id to `https://airtable.com/oauth2/v1/token`, and `registry.renew` keeps the new
+three over the credential that was opened, only while that one is still stored (the providers
+README). Then:
+
+- **Airtable answers 409** (renewed a moment ago by another request): the stored tokens are read
+  back and used; still due, the read is refused with "Airtable is still renewing the sign-in. Try
+  again in a minute".
+- **Airtable refuses the refresh token** (401, or `invalid_grant` or `invalid_client`: not used
+  for 60 days, or taken back in Airtable): the stored tokens are read back once, in case another
+  request renewed them; otherwise `KIT-E-4101` with `SIGN_IN_ENDED`, which says to remove the
+  connection and sign in again, or to paste a personal access token with Change key. Under
+  Database checks it is a failed check with the same words, which the connection's page shows as
+  "Airtable's sign-in has ended" rather than "did not answer", and Status opens a problem after
+  two.
+- **Not reached, another answer, or no tokens in it:** `KIT-E-4101`, try again in a minute.
+
+A pasted token (`pat…`) is never renewed, even when Change key replaced a sign-in's token and its
+refresh token is still sealed beside it. The renewal is not audited (it runs hourly under Database
+checks); the sign-in and the save are, as `providers.create`.
 
 ## What a dialect does
 
@@ -227,15 +258,20 @@ the kit's `KIT-E-0422`.
 A count of reads per connection (it would cost a write on every page read); the Data API's
 description and the last good page kept in Cloudflare's cache (today every page of a Supabase table
 reads the description again, which a large schema makes slow); AWS, Google Cloud, Azure and
-Snowflake through the portal's own identity (no key at all); sign-in through the connect relay for
-Airtable (Supabase signs in since 2026-11-22); Postgres and MySQL through Hyperdrive; edits with
-approvals and read-only SQL questions (phase 3).
+Snowflake through the portal's own identity (no key at all); Postgres and MySQL through
+Hyperdrive; edits with approvals and read-only SQL questions (phase 3).
 
 Left on purpose, to come back to:
 
 - a cursor's offset has no upper bound, so a page far down a large table is slow on the
   database's side; the 4 s wait ends the call, not the query;
 - an Airtable table in a base past the first 10 can still be opened by its id;
+- signing in with Airtable again makes a new connection beside the old one (Airtable has no address
+  to tell them apart by): remove the old one;
+- a signed-in Airtable connection read by nobody for 60 days (with Database checks off) loses its
+  refresh token and is signed in again;
+- two renewals that Airtable both accepted at the same moment (it answers the second with a 409,
+  so this should not happen) would keep the first one stored, whose tokens the second replaced;
 - the portal cannot tell whether a pasted key is truly read only: the guides ask for one;
 - the limits above are constants, not settings, until the settings pass.
 
@@ -258,6 +294,12 @@ Inside the Workers runtime, every service answered from a script so nothing leav
 - `test/detect.test.ts`: each service told from what was pasted, and the refusals that say what to
   paste instead; several lines put together; another secret in the block never taken for the key;
   the read-only token of two; Neon's psql line and parameters; Supabase's dashboard and pooler.
+- `test/airtable-sign-in.test.ts`: a signed-in Airtable connection with most of its hour left
+  read as it is; one ending within five minutes renewed with the refresh token and the app id,
+  kept and read with, then not renewed again; a refresh token Airtable refuses said as a failed
+  check and a refused read with how to come back; Airtable's 409 answered by reading the stored
+  tokens back, and still due refused with nothing overwritten; `registry.renew` keeping a renewal
+  only over the credential it was opened from; a pasted `pat…` token never renewed.
 - `test/module.test.ts`: the routes through the pipeline beside IAM and providers: the two
   permissions; every route held at the company (a manager of one place reads nothing); connecting,
   checked at once and audited, the key never back; tables and rows; a sort or a page link that is
