@@ -77,7 +77,7 @@ then ORs each role's bits into `allow` or `deny` per scope and module. The map h
 (`parent`), the bits per scope, whether the person holds the Owner role at the root, the
 tenant's policy version and Vendor setting, `refreshAt` (when the next grant starts or ends), and
 a `sha256-` hash of all of it. A compile only reads: it writes no row (since 2026-11-22; its old
-record in `iam_policy_compiles` was never read, and the table goes in a later release). A map is
+record in `iam_policy_compiles` was never read, and migration `0078` drops the table). A map is
 a few hundred bytes to a few kilobytes.
 
 `can` decides in this order, and refuses when in doubt (R-10):
@@ -595,14 +595,19 @@ Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_mig
 `iam_tenants`, `iam_principals` (kinds `person`, `service`, `vendor`; the Vendor row exists from
 the migration), `iam_modules`, `iam_capabilities`, `iam_scopes`, `iam_groups`,
 `iam_group_members`, `iam_roles` (position `0` is the Owner role), `iam_role_caps`,
-`iam_bindings`, `iam_overrides`, `iam_policy_compiles`. Migration `0005_iam_governance.sql` adds
+`iam_bindings`, `iam_overrides` (`0004` also made `iam_policy_compiles`, dropped by `0078`).
+Migration `0005_iam_governance.sql` adds
 `activated_from` to `iam_bindings` (the eligible grant an activation came from) and the tables
 `iam_access_requests`, `iam_approvals`, `iam_reviews` and `iam_review_items`. Migration
 `0006_iam_handover.sql` adds `handed_over_at`, `vendor_window_until` and `vendor_window_reason`
 to `iam_tenants` and the table `iam_invitations`. Ids are text. Migration
 `0076_iam_ready_role_names.sql` (2026-11-22) renames the ready-made roles Full admin, Standard
 user and View only to Admin, Member and Viewer, each only where no role of the new name exists
-in that company, so it runs twice the same.
+in that company, so it runs twice the same. Migration `0078_iam_drop_policy_compiles.sql`
+(2026-11-22, the owner's yes in the database review) drops `iam_policy_compiles` and its index,
+which nothing has read ever or written since kit `053f26e`; marked `-- contract:`, it shipped a
+release after the code that stopped writing it (the live portal's last row, read through the
+Cloudflare connector on 2026-11-22, was from before that release).
 
 ## Errors
 
