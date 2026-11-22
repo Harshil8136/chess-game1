@@ -33,7 +33,7 @@ that reads only what those people may see.
 |---|---|
 | `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
 | `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
-| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form |
+| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's page also offers "Sign in with Supabase" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and says in fixed words why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part", has the journey |
 | `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Change key and Remove (one confirm). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
 | `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. Saved views keep the table, its search and its sort |
 
@@ -188,7 +188,7 @@ Home cards; the usage count; the connections
 check on a timer with its alerts; the Data API's description and the last good page kept in
 Cloudflare's cache (today every page of a Supabase table reads the description again, which a
 large schema makes slow); AWS, Google Cloud, Azure and Snowflake through the portal's own
-identity (no key at all); sign-in through the connect relay (Supabase and Airtable, next); Postgres and MySQL through
+identity (no key at all); sign-in through the connect relay for Airtable (Supabase signs in since 2026-11-22); Postgres and MySQL through
 Hyperdrive; edits with approvals and read-only SQL questions (phase 3).
 
 Left on purpose, to come back to:

@@ -19,6 +19,8 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
   Calendar, Apple Calendar, Outlook or any other calendar app, each with a link of its own.
 - **Spreadsheets.** A list, a form's answers or the invoices in Google Sheets or Excel. With
   one-click, the Google Sheet is created in the person's Drive for them.
+- **Supabase.** The data part's Supabase page signs in through the same relay and connects the
+  project after the person confirms it (below, "Supabase, for the data part").
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
@@ -154,8 +156,38 @@ What keeps it safe:
   Google's token (`drive.file`, used once) and sends back only the sheet's address. The link is
   written only then, so a trip that ends any other way leaves no link behind (the owner's pick of
   2026-11-22).
+- **Supabase is confirmed first.** Its answer is held, never saved on the way back; see
+  "Supabase, for the data part" below.
 - **Cloudflare Access.** The way back is a top-level GET from the person's own browser to
   `/connect/back`, behind the portal's Access door like every page.
+
+### Supabase, for the data part
+
+The data part's Supabase page (`/data/connect/supabase`) offers "Sign in with Supabase" to a
+person with `data.manage` at the company once the relay is set. It goes through the same relay, to
+Supabase's own OAuth (the app's permissions: Projects Read and Secrets Read), and the relay reads
+the project's secret key with Supabase's token, used once there and never sent on. Then:
+
+- **One project, or the one picked:** the relay sends back its address, name and secret key. The
+  portal checks the address (`<ref>.supabase.co`) and the key (`sb_secret_…`) again, saves
+  nothing, and holds them sealed under the KEK in a second ten-minute cookie
+  (`oltrem_connect_trip_held`, HttpOnly, Path=/connect) for this person only. The page asks
+  "Connect <project>?" with its address; only Connect, a form post, opens the held answer again
+  (`POST /api/connect/oneclick/held` with `use`: the key comes back only then, and only while the
+  person still holds `data.manage` at the company and within 10 minutes of the trip's start) and
+  saves it through the data part's own
+  `POST /api/data/connections`, which checks `data.manage` and a fresh sign-in as always. So a way
+  back someone else hands the person cannot connect that someone's database (the security
+  review). A refusal there is shown on the same page, the project still held. Cancel, also a
+  form post, clears the held cookie at once.
+- **Several projects:** a page with one button each; pressing one signs in again with that
+  project's ref sent sealed to the relay's key.
+- **A project with no secret key yet:** a page saying where in Supabase to make one.
+- **Anything else** (cancelled, too slow, refused): back on the Supabase page with the reason in
+  fixed words.
+
+Starting it is refused at once, before the trip to Supabase, without `data.manage` held at the
+company. Airtable signs in this way later, once its rotating refresh token has a home.
 
 Microsoft Teams and Google Chat can sign in this way only after Microsoft's publisher
 verification and Google's app verification, with a refresh token kept for each alert; Zapier and
@@ -172,7 +204,7 @@ Make only for apps listed in their stores. Those stay on the pasted link (the ow
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>` |
-| `/connect/back` | one-click's way back: never shown, it redirects to the row made, the new sheet, or the page with why nothing was made |
+| `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", whose Connect posts to `/connect/back` ("Supabase, for the data part") |
 
 ## The logos
 

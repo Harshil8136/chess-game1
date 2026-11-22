@@ -12,7 +12,7 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 1 active, 18 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 1 active, 20 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
@@ -36,6 +36,8 @@ sources: [tokens.registry.json]
 | SESSION_KEY | planned | none: generated locally | a Worker secret, set with wrangler secret put |
 | SLACK_CLIENT_ID | planned | Slack | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
 | SLACK_CLIENT_SECRET | planned | Slack | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| SUPABASE_CLIENT_ID | planned | Supabase | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| SUPABASE_CLIENT_SECRET | planned | Supabase | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
 
 ## ACCESS_AUD
 
@@ -356,3 +358,35 @@ sources: [tokens.registry.json]
 | Rotation | make a new secret in Slack's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
 | Why it exists | Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold. |
 | Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+
+## SUPABASE_CLIENT_ID
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Supabase; the Vendor's Supabase OAuth app (Organization settings, OAuth Apps), with Projects read and Secrets read |
+| What it may do | none: the app's public id; the app is registered with projects:read and secrets:read only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | changes only when the app is made again; set the new id |
+| Why it exists | Supabase exchanges the sign-in code for a Management API token, used once by the relay to read the picked project's secret key, only with the app's id and secret. |
+| Plan section | records/2026-11-22-supabase-one-click.md |
+
+## SUPABASE_CLIENT_SECRET
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Supabase; the Vendor's Supabase OAuth app (Organization settings, OAuth Apps), with Projects read and Secrets read |
+| What it may do | exchanges a sign-in code for what projects:read and secrets:read give, for this app only |
+| Used by | the connect relay (packages/relay), the Vendor's one Worker for one-click sign-in from every portal |
+| Stored in | a Worker secret of the relay, set with wrangler secret put or in the Cloudflare dashboard |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new secret in the OAuth app's settings in Supabase, set it on the relay, then revoke the old one; yearly, or at once if exposed |
+| Why it exists | Supabase exchanges the sign-in code for a Management API token, used once by the relay to read the picked project's secret key, only with the app's id and secret. |
+| Plan section | records/2026-11-22-supabase-one-click.md |
