@@ -73,6 +73,10 @@ somewhere, and Edit or Manage the matching capability somewhere. What was given 
 otherwise the place's folders are read once to walk up from an item. Entries that ended a month
 ago are deleted by the trash job; deleting an item for good deletes its entries.
 
+There is no "Ask for access" button: offering it on a hidden item would tell the person the item
+exists, which None and restricted folders are there to prevent. Someone who needs a hidden file
+asks the person who manages the location.
+
 ## Folders, names and uploads
 
 A name is trimmed to one line of at most 120 characters, with no slashes or control characters;
@@ -109,6 +113,17 @@ pass it is refused before it is stored when its length is known, and removed aga
 (`KIT-E-2408`). One indexed sum answers it, and only when the setting is on. Two uploads by the
 same person at the same moment are each judged against the room before either is counted, so
 together they may pass it once by up to one file.
+
+### Limits per person, role and location (2026-11-23)
+
+**Files, Limits** (`/files?show=limits`, shown to whoever holds `files.access` somewhere) lists
+the limits set, with what each person and location keeps, and lets an Owner set or remove one.
+They are kept in the company setting `files.room_rules`, in MB, 0 for no limit. A person's room
+is their own limit when one is set; otherwise the largest of the limits of the roles they hold
+(directly or through a group; one role without a limit lifts it); otherwise `files.person_room_mb`.
+A location's limit counts every file kept there, by anyone, the trash included: an upload or a
+copy past it is refused (`KIT-E-2409`), before it is stored when its length is known. The roles
+are read only when a role limit is set, and the location's sum only when it has one.
 
 ## Links that end
 
@@ -186,6 +201,7 @@ file holds.
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
 | `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
+| `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), and whether the person may change them (an Owner or the Vendor, through `PUT /api/settings/values/files.room_rules`) |
 | `GET /items/:id/access` | `files.read`, and Manage on the item | its entries and those of the folders above it, whether it is restricted, and the company's people, groups and roles |
 | `POST /items/:id/access` (`whoKind`, `whoId`, `level`, `viewOnly`, `endsAt`), `DELETE /access/:id`, `POST /items/:id/restrict` (`on`) | `files.access`, and Manage on the item | give an entry (a second for the same one replaces the first), end one, restrict a folder or open it again |
 | `POST /items/:id/copy` (`parentId`), bulk `trash` (`POST /bulk/trash`, up to 100 ids) | `files.write` | a copy of a file, numbered like an upload, counted against the person's room; many items to the trash in one batch with an audit row each, each refused alone when out of reach |
@@ -229,6 +245,7 @@ who) and `files_items.restricted`.
 | `files.trash_days` | 30 (1 to 365) | an Owner |
 | `files.allowed_types` | `any` (or `documents and pictures`, `documents`) | an Owner |
 | `files.person_room_mb` | 0, no limit (0 to 10240) | an Owner |
+| `files.room_rules` | no limits (`people`, `roles`, `places`, each id to MB, 0 to 10240) | an Owner, on Files, Limits |
 
 ## Errors
 
@@ -236,7 +253,7 @@ The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in th
 `KIT-E-2402` the file is larger than the setting allows, `KIT-E-2403` that folder cannot hold it,
 `KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link, `KIT-E-2406`
 a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
-`KIT-E-2408` the person's room is used up. An item that
+`KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up. An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
@@ -275,5 +292,11 @@ Activity, and a copy made in the same folder. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.
+
+The limits tests (2026-11-23): a person's own room winning over a role's, a role's over
+everyone's and a role without a limit lifting it; a location's room refusing an upload and a copy
+while another location takes it; `GET /limits` with what each keeps for an Owner and refused
+without `files.access`; the Limits page listing by name, saving one more as the setting, and no
+form for someone who is not an Owner.
 
 The search test finds names only in the places a person's roles reach, folders first, and takes `_` as a letter.

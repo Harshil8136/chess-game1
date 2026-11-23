@@ -162,7 +162,7 @@ split on 2026-11-15 like the Email list.
 
 ### The Files page, 23 November
 
-Owed in [their own list](phone-tests-files.md), P447 to P454 and P463 to P467 (Manage access).
+Owed in [their own list](phone-tests-files.md), P447 to P454, P463 to P467 (Manage access) and P475 to P478 (Limits).
 
 ### The flows fixed on 15 November
 
