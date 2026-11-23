@@ -39,3 +39,7 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P481 | Set one location to that bucket, Save; upload a file there and open it | "Saved"; the file uploads and opens; in the service's own dashboard it is in the bucket under files/ | [record](records/2026-11-23-files-storage.md) |
 | P482 | Set the location back to This portal's storage; open that file again | It still opens: a file stays where it was stored | [record](records/2026-11-23-files-storage.md) |
 | P483 | Remove the connection while that file is kept there | Refused with "This storage still keeps files"; delete it for good from the trash, then Remove works | [record](records/2026-11-23-files-storage.md) |
+| P484 | As a clerk: upload a zip that has a program (.exe) inside | It uploads, and the list shows it with "· Held for review"; its page says why, with no Download and no links | [record](records/2026-11-23-files-safety.md) |
+| P485 | As the Owner: open that file's page | The same notice, and Release in the buttons; Release says "The file was released" and Download works | [record](records/2026-11-23-files-safety.md) |
+| P486 | Upload a PDF made with a form button or JavaScript (or a zip with a password) | Held for review, with the reason in words | [record](records/2026-11-23-files-safety.md) |
+| P487 | Files, Shared links (left on a computer, the chip row on the phone) | Every open link with its file, location, who made it, downloads and end date; End it removes it from the list | [record](records/2026-11-23-files-safety.md) |

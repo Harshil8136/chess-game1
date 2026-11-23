@@ -146,6 +146,21 @@ pass it is refused before it is stored when its length is known, and removed aga
 same person at the same moment are each judged against the room before either is counted, so
 together they may pass it once by up to one file.
 
+### Held for review (2026-11-23)
+
+Some files are kept but held, so nobody opens them unawares (`src/safety.ts`): a program; a zip
+(or a Word, Excel or PowerPoint file, which are zips) with a program inside, macros
+(`vbaProject.bin`) or a password; a PDF that names JavaScript, a launch action, an embedded file or
+rich media. The checks read only small parts of the stored file (a zip's list of contents from its
+end, up to 512 KB; a PDF's first and last 64 KB), so they cost a millisecond or two whatever the
+size. A part that cannot be read holds the file too. A held file (`files_items.held`, the reason
+in words) is listed with "Held for review", and nobody downloads, previews, copies or shares it
+(`KIT-E-2412`) until someone with Manage access at its location releases it
+(`POST /items/:id/release`, audited `files.release` with the reason) or it is deleted. This is not
+a virus scan: a program inside a zip inside a zip, macros in an old `.doc`, or JavaScript inside a
+PDF's compressed parts pass unseen. A name with marks that change the direction of the text, or
+ending with a dot, is refused, since it can hide its real ending.
+
 ### Limits per person, role and location (2026-11-23)
 
 **Files, Limits** (`/files?show=limits`, shown to whoever holds `files.access` somewhere) lists
@@ -216,6 +231,7 @@ then removes link rows that ended a month ago. Its check (the jobs page's **Chec
 |---|---|
 | `/files` | a file manager (2026-11-23): on a computer the place's folders as a tree on the left with a storage bar (the visible places' bytes against the bucket's 10 GB), on a phone a row of the places; the folder's path, a find box (names in this folder), List or Grid (`?view=grid`, pictures as thumbnails), sorting by Name, Changed or Size (`?sort=`, `-` for the largest first), folders first; a tick on each row and **Move to the trash** for the ticked; a menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a file's name opens a details pane (`?item=`) with a preview of a picture, video, sound, PDF or text, its facts, Download and, for a person who may delete for good, its Activity (the last 30 of its audit rows); for a writer **Upload** (many files), **Upload a folder** and **New folder**. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder of the tree; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
 | `/files?show=shared` | Shared with me: the folders and files given to the person by Manage access, with their places |
+| `/files?show=links` | Shared links (2026-11-23): every open link and customer share the person made or may end, with its file, location, who made it, its downloads and its end, and **End it** |
 | `/files/:id` | one item: download or open (only open when it is View only), its details, its **Manage access** for a person who may change it (the entries on it and on the folders above it, Restrict this folder, and a form for a person, group or role, a level, View only and Ends on), an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
 ## Search
@@ -233,6 +249,8 @@ file holds.
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
 | `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
+| `GET /links` | `files.share` | the open links and customer shares at the locations the person may see, those they made or may end, newest first (up to 200) |
+| `POST /items/:id/release` | `files.access` at the item's location | release a file held for review |
 | `GET /stores` | `files.access` | the storage connections (their bucket and where, last check, files and bytes kept), the S3 services one may join with their fields and steps, each location's choice, and whether the person may change them |
 | `POST /stores` (`service`, `label`, `fields`), `POST /stores/:id/check`, `POST /stores/:id/key` (`fields`), `DELETE /stores/:id` | `files.access` at the company, and an Owner or the Vendor | join a bucket and check it; check again; paste the key again and check; remove a connection no location uses and no file is kept in |
 | `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), and whether the person may change them (an Owner or the Vendor, through `PUT /api/settings/values/files.room_rules`) |
@@ -247,7 +265,7 @@ The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:tok
 passcode from the page. Every change is audited by the module
 (`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.access-grant`,
 `files.access-remove`, `files.restrict`, `files.trash`, `files.restore`,
-`files.purge`, `files.share`, `files.share-revoke`; the system's `files.share-download`,
+`files.purge`, `files.share`, `files.share-revoke`, `files.release`; the system's `files.share-download`,
 `files.share-locked` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
 
 The module has no card on Home: Home reads a card without the person, and a count of every file
@@ -271,7 +289,8 @@ sums from the index alone. Migration `0079_files_access.sql` (2026-11-23) adds `
 only, the day it ends, who gave it and when; one entry per item and who; indexed by place and by
 who) and `files_items.restricted`. Migration `0080_files_stores.sql` (2026-11-23) adds
 `files_items.store_id`, the storage connection a file's content is kept in (empty for the portal's
-bucket).
+bucket). Migration `0081_files_held.sql` (2026-11-23) adds `files_items.held`, why a file is held
+for review (empty when it is not).
 
 ## Settings
 
@@ -291,7 +310,7 @@ The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in th
 `KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link, `KIT-E-2406`
 a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
 `KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up, `KIT-E-2410` the storage where a file is kept refused
-or failed, `KIT-E-2411` a storage connection still in use. An item that
+or failed, `KIT-E-2411` a storage connection still in use, `KIT-E-2412` a file held for review. An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
@@ -320,7 +339,10 @@ and back once listed, by name or through a group, its audit rows; None hiding on
 person, bulk trash refusing it, and back once removed; View only for someone from another place,
 under Shared with me, no download but a preview, gone the day it ends; giving access refused
 without `files.access`, to someone unknown, and Restrict on a file (`test/access.test.ts` decides
-the rules on their own). The pages,
+the rules on their own); a zip with a program held, refused to download, link and copy, released
+only by Manage and opened after, a plain zip not held, a name with a direction mark refused, and
+Shared links listing a link for whoever may share and dropping it once ended (`test/safety.test.ts`
+reads zips, PDFs and names on their own). The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent
