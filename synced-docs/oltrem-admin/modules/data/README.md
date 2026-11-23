@@ -27,9 +27,10 @@ Bit plane 32 ([architecture](../../docs/architecture.md) lists every plane):
 | `data.manage` | Manage | Connect a database, change its key or remove it, turn editing on or off; asks for a fresh sign-in, like an email service's key |
 | `data.edit` | Manage | Change a row where editing is on, and undo a change (a deleted row put back included) |
 | `data.delete` | Manage, Owner floor | Delete a row where editing is on; only through the Owner role, with a fresh sign-in |
+| `data.hidden.read` | Manage | See the columns a manager hid or masked ([Hidden and masked columns](#hidden-and-masked-columns)) |
 | `data.questions.run` | Manage | Ask a Neon or Turso database a question in SQL that only reads ([Questions in SQL](#questions-in-sql)); it reads any table and column the key may read |
 
-All five are held at the company itself: a grant at one place gives none. Reading a table runs with
+All six are held at the company itself: a grant at one place gives none. Reading a table runs with
 the connection's own key, which reads every row that key may read, whatever place a person works
 at, so `data.read` sits in the Manage level (class `admin`) and no ready-made everyday role hands
 it out: an Owner gives it to the people who should read the company's own databases. Connect a key
@@ -45,6 +46,7 @@ that reads only what those people may see.
 | `/data/connections/<id>` | The connection's facts and last check; then Editing (on or off, with Turn on editing or Turn off editing for a manager; a service whose rows cannot be changed here, Airtable or Upstash, says so instead) and Recent changes (when there are any, or why they could not be read); then its tables; Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
 | `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. In a table with a primary key, each row's first value links to the row's own page. Saved views keep the table, its search and its sort |
 | `/data/connections/<id>/row` | One row found by its key (`k`), read whole. With editing on and `data.edit`: a box for each value (a text box for a long or broken one), No value for a column that may be empty, a locked column's value with why, and Save changes; with `data.delete` also Delete row (one confirm, which says rows the database removes with it are not put back). Otherwise the values, and why they cannot be changed, with a link to the database's page for a manager. A refused save keeps what was typed |
+| `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: "N columns are hidden from you", a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns under the rows (closed until opened): each column but the key Shown, Masked or Hidden, and Save columns |
 | `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon and Turso only |
 | `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
@@ -78,6 +80,7 @@ the connection.
 | `GET /connections/:id/row` | `data.read`, company | One row by `table` and `k`: each column, whether it can be changed and why not, its value whole when it can; the values seen (`expect`), whether editing is on and what this person may do |
 | `POST /connections/:id/row/change` | `data.edit`, company | `{table, k, expect, values}`: only the columns whose value differs from what the form showed, and only while they still hold it; `{changed, id, kept}` |
 | `POST /connections/:id/row/delete` | `data.delete`, company | `{table, k}`: the row's values kept first, then the row deleted; the copy dropped only when the database clearly refused |
+| `POST /connections/:id/columns` | `data.manage`, company | `{table, columns: {name: show, hide or mask}}`: one table's hidden and masked columns, checked against its columns (one read of the table); a key column is refused; audited as `providers.option` |
 | `POST /connections/:id/ask` | `data.questions.run`, company | `{sql}`: one statement that only reads; `{columns, rows, more, left?}`, at most 100 rows and 60 columns; audited as `data.question` with the row count, never the question or its rows |
 | `GET /connections/:id/changes` | `data.read`, company | The last 10 changes still kept, newest first; anything past 30 days deleted after the answer |
 | `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
@@ -222,6 +225,26 @@ usual `KIT-E-4101`.
   and title, never the database's words, which often quote the row. The log is kept for good and
   a client's rows are often about people, so the values stay only in the kept copy.
 
+## Hidden and masked columns
+
+Phase 3, batch 9 (2026-11-23): personal data such as phone numbers, per database, for people
+without `data.hidden.read`. A manager sets each column of a table Shown, Masked or Hidden on the
+table's page; the rules are kept as the connection's `columns` option, so a page reads them with
+the connection and no extra call. For a person without the permission:
+
+- a hidden column is left out of the rows, a row's page and a change's page; a masked one shows
+  `••••` and its last four characters when it has eight or more, else `••••`;
+- neither is searched, sorted or ordered by (either would tell its values), and a sort asked for
+  by one is refused as a column the table does not have;
+- on a row's page a masked column is locked and neither is in the values the form sends back, so
+  a change that names one is refused;
+- a key column cannot be hidden or masked: rows are opened by it, and its values are in each
+  row's link.
+
+Questions in SQL read every column, so give `data.questions.run` only to people who may see them.
+Recent changes still lists which columns a change named. The rules are kept through a new key for
+the same database and dropped with a key for another host.
+
 ## Questions in SQL
 
 Phase 3, batch 8 (2026-11-23). Someone with `data.questions.run` types one statement on a Neon or Turso
@@ -365,8 +388,7 @@ A count of reads per connection (it would cost a write on every page read); the 
 description and the last good page kept in Cloudflare's cache (today every page of a Supabase table
 reads the description again, which a large schema makes slow); AWS, Google Cloud, Azure and
 Snowflake through the portal's own identity (no key at all); Postgres and MySQL through
-Hyperdrive; an approval before an edit (optional in the owner's plan) and hiding columns (the next batch
-of phase 3); questions in SQL on Supabase (its Data API runs none); saved questions; editing
+Hyperdrive; an approval before an edit (optional in the owner's plan); questions in SQL on Supabase (its Data API runs none); saved questions; editing
 Airtable and Upstash.
 
 Left on purpose, to come back to:

@@ -46,3 +46,6 @@ sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-
 | P444 | Ask `DELETE FROM <a table>` | Refused in plain words; the table unchanged | [record](records/2026-11-23-connected-data-questions.md) |
 | P445 | Ask a question with more than 100 rows | 100 rows and a line saying there are more | [record](records/2026-11-23-connected-data-questions.md) |
 | P446 | Edit a task or invoice that has notes | The notes show in the box | [record](records/2026-11-23-connected-data-questions.md) |
+| P460 | As an Owner, a table's Hide or mask columns: mask one, hide one, Save columns | Saved; the key column not offered | [record](records/2026-11-23-connected-data-hidden-columns.md) |
+| P461 | As someone without hidden columns, open that table | The hidden one gone with a line saying so; the masked one shows its last 4 characters | [record](records/2026-11-23-connected-data-hidden-columns.md) |
+| P462 | As that person, search for a value of the masked column | No row found by it | [record](records/2026-11-23-connected-data-hidden-columns.md) |

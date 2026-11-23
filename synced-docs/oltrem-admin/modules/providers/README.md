@@ -393,8 +393,9 @@ with the field names and never a value.
 
 `registry.setOption(env, actor, id, name, value)` (2026-11-23, for the data part's editing) keeps
 one of `OPTIONS` on the instance's config beside its fields: a choice about how the portal uses
-it, not part of its key. The one option is `edits` (`on`, or `null` to take it away): a connected
-database whose rows the portal may change. A new key (`setCredential`) keeps the options.
+it, not part of its key. `edits` (`on`, or `null` to take it away): a connected database whose
+rows the portal may change. `columns` (JSON of 2 to 8,000 characters, no control characters):
+the data part's hidden and masked columns. A new key for the same host keeps the options.
 
 `registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable) seals
 secrets the service itself renewed over the credential `from` was opened from, and writes them only
