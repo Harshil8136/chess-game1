@@ -58,6 +58,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
 | [Phone tests owed: Users and access](phone-tests-users.md) | the phone tests owed on the Users and access pages, split from the list above | living |
 | [Phone tests owed: Connected data](phone-tests-data.md) | the phone tests owed on the Data pages from 22 November on (Sign in with Supabase), split from the flows list | living |
+| [Phone tests owed: Files](phone-tests-files.md) | the phone tests owed on the Files page from its rebuild on 23 November | living |
 | [Phone tests owed: Backups and Status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and Status, split from the list above | living |
 | [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |

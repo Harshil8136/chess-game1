@@ -145,7 +145,7 @@ then removes link rows that ended a month ago. Its check (the jobs page's **Chec
 
 | Path | Shows |
 |---|---|
-| `/files` | a row of the places the person may see (when more than one, each with its count of files), a row for Files and Trash, the folder's path, its folders and files, and for a writer the **Upload a file** and **New folder** sheets; after a move to the trash, a notice with **Undo** and the days it stays there; the trash says those days |
+| `/files` | a file manager (2026-11-23): on a computer the place's folders as a tree on the left with a storage bar (the visible places' bytes against the bucket's 10 GB), on a phone a row of the places; the folder's path, a find box (names in this folder), List or Grid (`?view=grid`, pictures as thumbnails), sorting by Name, Changed or Size (`?sort=`, `-` for the largest first), folders first; a tick on each row and **Move to the trash** for the ticked; a menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a file's name opens a details pane (`?item=`) with a preview of a picture, video, sound, PDF or text, its facts, Download and, for a person who may delete for good, its Activity (the last 30 of its audit rows); for a writer **Upload** (many files), **Upload a folder** and **New folder**. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder of the tree; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
 | `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
 ## Search
@@ -160,16 +160,18 @@ file holds.
 |---|---|---|
 | `GET /places` | `files.read` | the places the person may see, with each one's files and bytes |
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
-| `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself |
-| `POST /folders`, `POST /uploads`, `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
+| `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
+| `GET /items/:id/activity` | `files.read`, and `files.purge` at the item's place | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
+| `POST /items/:id/copy` (`parentId`), bulk `trash` (`POST /bulk/trash`, up to 100 ids) | `files.write` | a copy of a file, numbered like an upload, counted against the person's room; many items to the trash in one batch with an audit row each, each refused alone when out of reach |
+| `POST /folders`, `POST /uploads` (`path` makes its folders, up to the depth), `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
 | `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`, `passcode`, `to` to email it, with `sent` saying whether it went), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
 
 The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:token` takes its
 passcode from the page. Every change is audited by the module
-(`files.folder-create`, `files.upload`, `files.update`, `files.trash`, `files.restore`,
+(`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.trash`, `files.restore`,
 `files.purge`, `files.share`, `files.share-revoke`; the system's `files.share-download`,
-`files.share-locked` and `files.trash-empty`), with names and sizes, never content.
+`files.share-locked` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
 
 The module has no card on Home: Home reads a card without the person, and a count of every file
 would tell someone about places their roles do not reach. Its check `files.storage` counts the
@@ -225,11 +227,16 @@ and the share kept when the email fails; the trash's days answered with a folder
 dressed as a picture or a text refused whatever the settings, Allowed types narrowing the rest,
 Room per person counted for each one, a link's passcode page, a wrong passcode and the right one,
 the tenth wrong one locking the link with its audit row, a link emailed without its passcode and
-its address in the share's audit row, and the room's sum read from its index alone. The pages,
+its address in the share's audit row, and the room's sum read from its index alone; folders made from an upload's path once and refused past
+the depth, a copy numbered with its content, many trashed at once with one refused, a download
+and a text preview audited but a picture's preview not, a range answered with 206, and the
+Activity refused to a clerk. The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent
-on, and a link's passcode, last download and Locked shown. The client template's
+on, a link's passcode, last download and Locked shown, and the file manager: folders first in the
+order picked, the tree, the upload boxes, the bulk bar, the grid and the details pane with its
+Activity, and a copy made in the same folder. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.
