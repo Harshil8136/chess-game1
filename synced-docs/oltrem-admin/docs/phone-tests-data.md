@@ -42,3 +42,7 @@ sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-
 | P440 | As the Owner, a row: Delete row, confirm; then open it under Recent changes and press Undo delete | "The row was deleted…"; after Undo the row is back with every value it had | [record](records/2026-11-23-connected-data-edits.md) |
 | P441 | Change key back to a key that may only read, then Save changes on a row; then Turn off editing | "The key may only read this database", nothing changed; with editing off the row's page says Editing is off and shows no boxes | [record](records/2026-11-23-connected-data-edits.md) |
 | P442 | An Airtable or Upstash database's page | No Editing switch; it says its rows can only be read here | [record](records/2026-11-23-connected-data-edits.md) |
+| P443 | As an Owner, a Neon or Turso database's page, Ask a question in SQL, `SELECT * FROM <a table>` | Its rows | [record](records/2026-11-23-connected-data-questions.md) |
+| P444 | Ask `DELETE FROM <a table>` | Refused in plain words; the table unchanged | [record](records/2026-11-23-connected-data-questions.md) |
+| P445 | Ask a question with more than 100 rows | 100 rows and a line saying there are more | [record](records/2026-11-23-connected-data-questions.md) |
+| P446 | Edit a task or invoice that has notes | The notes show in the box | [record](records/2026-11-23-connected-data-questions.md) |
