@@ -134,6 +134,9 @@ for the portal's initials, `icon:<name>` for one of the screens' icons, or
 `picture:<file>` for a small picture the screens keep in the bucket under `ui/mark/`. Both are
 Owner-editable and immediate, set on the Settings page's Name and icon card, and always
 registered by the settings module; the template reads them from memory with the parts.
+`settings.portal_tagline` (`TAGLINE_SETTING`, 2026-11-23) is the short line under the name in
+the sidebar, at most 40 characters, empty for "Admin portal"; Owner-editable and immediate, on
+the same card, read the same way.
 
 ## The parts switches
 
