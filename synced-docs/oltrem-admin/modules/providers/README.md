@@ -90,6 +90,17 @@ refuse a connection of the kind `data` too: setting one up is refused as an unkn
 the listing leaves them out, and every route on one instance answers as if it were not there
 (404), so `providers.manage` cannot replace or remove a client's database connection.
 
+Since 2026-11-23 it also ships six definitions of the kind `storage`, in
+`src/definitions/storage.ts`: a bucket of the client's own that the Files module may keep a
+location's files in ([`@oltrem/files`](../files/README.md), Storage locations). Each speaks S3 with
+`sigv4` (transport `s3`: the endpoint and region built from config fields) and takes the secret
+fields `accessKeyId` and `secretAccessKey`: Amazon S3 (the bucket in the host name), Cloudflare R2
+in another account, Backblaze B2, Wasabi, DigitalOcean Spaces and any other S3 service by its
+endpoint (the bucket in the path). A storage definition whose address is built from a field without
+a `pattern` is refused, as for data. Each guide asks for a key limited to the one bucket. They are
+joined on Files, Storage by an Owner; like a data connection, the routes below neither make, list
+nor touch one, and the Email services page and its Home card leave them out.
+
 A field may say what its whole value must look like (`pattern`, 2026-11-22): a regular
 expression and the problem to show. It is matched against the whole value whatever the
 definition wrote (wrapped as `^(?:…)$`), on a value of at most 500 characters
@@ -433,7 +444,9 @@ field refused; a pattern matched against the whole value only, and a value past 
 refused (2026-11-22); the five data definitions each naming its dialect, with a pattern that
 takes the service's own address and refuses another, Neon's connection string checked, a data
 definition without a pattern on its host refused; a data connection neither made, listed nor
-touched through these routes; activation and the failover order, `pick`, the active instance not removable, a
+touched through these routes; the six storage definitions speaking S3 with their key fields, a
+host pattern refusing a scheme or a path, and a storage connection neither made, listed nor touched
+here (2026-11-23); activation and the failover order, `pick`, the active instance not removable, a
 suggestion not activatable; a client's definition added by the Vendor, replacing the kit's and
 removed, and refused to the Owner and to whoever sets up integrations; a stored key refused when
 its definition or its host field names another host, opened again when put back, bound to the

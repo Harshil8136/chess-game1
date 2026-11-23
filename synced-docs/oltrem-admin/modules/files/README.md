@@ -77,6 +77,38 @@ There is no "Ask for access" button: offering it on a hidden item would tell the
 exists, which None and restricted folders are there to prevent. Someone who needs a hidden file
 asks the person who manages the location.
 
+## Storage locations (2026-11-23)
+
+Each location keeps its new files in the portal's own bucket (`FILES`, 10 GB on the free plan,
+shared with the backups) or in a bucket of the company's own at a service that speaks Amazon S3's
+API: Amazon S3, Cloudflare R2 in another account, Backblaze B2, Wasabi, DigitalOcean Spaces, or any
+other by its endpoint (MinIO, Storj, Scaleway and the like). **Files, Storage**
+(`/files?show=storage`, shown to whoever holds `files.access`; changes are an Owner's) joins one:
+pick the service in a sideways row, follow its steps, paste the bucket, where it is and the key.
+The key is a storage connection of the providers module ([`@oltrem/providers`](../providers/README.md)):
+sealed to its row and sent only to the address it was saved for. The email services page and the
+providers routes neither list nor touch one.
+
+On Join, and on each **Check**, the portal lists the bucket, writes a small test file, reads it
+back, asks for it without the key (it must be refused, or the check says anyone can read the
+files), deletes it and reads whether versioning is on (a note: deleted files then stay at the
+service until its own rules remove them). Six calls, each said in words and kept on the
+connection. A location is offered only connections whose last check passed, and the choice is kept
+in the company setting `files.location_stores`. A file stays where it was stored: its row names its
+store (`files_items.store_id`, empty for the portal's bucket), so changing a location's choice moves
+nothing and old files open as before. A copy goes where its location sends new files now.
+
+The Worker passes every byte through itself both ways (`src/stores.ts`): a request signed with
+AWS Signature Version 4 (the providers module's `signV4`, handed in by the client), the upload held
+to its told length, a `Range` passed on for a video's seek, deletes a thousand at a time with
+DeleteObjects. So the rights of this module decide every open, the outside bucket's address is
+never shown, and it needs no CORS rule. A service that refuses or fails answers `KIT-E-2410` with
+what it said, and an upload it refused leaves no row. A connection is removed only once no location
+sends files to it and no file is kept there (`KIT-E-2411`); the bucket itself is never touched.
+
+Not here yet: bringing in the files already in a bucket, and moving a location's existing files
+from one store to another.
+
 ## Folders, names and uploads
 
 A name is trimmed to one line of at most 120 characters, with no slashes or control characters;
@@ -201,6 +233,8 @@ file holds.
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
 | `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
+| `GET /stores` | `files.access` | the storage connections (their bucket and where, last check, files and bytes kept), the S3 services one may join with their fields and steps, each location's choice, and whether the person may change them |
+| `POST /stores` (`service`, `label`, `fields`), `POST /stores/:id/check`, `POST /stores/:id/key` (`fields`), `DELETE /stores/:id` | `files.access` at the company, and an Owner or the Vendor | join a bucket and check it; check again; paste the key again and check; remove a connection no location uses and no file is kept in |
 | `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), and whether the person may change them (an Owner or the Vendor, through `PUT /api/settings/values/files.room_rules`) |
 | `GET /items/:id/access` | `files.read`, and Manage on the item | its entries and those of the folders above it, whether it is restricted, and the company's people, groups and roles |
 | `POST /items/:id/access` (`whoKind`, `whoId`, `level`, `viewOnly`, `endsAt`), `DELETE /access/:id`, `POST /items/:id/restrict` (`on`) | `files.access`, and Manage on the item | give an entry (a second for the same one replaces the first), end one, restrict a folder or open it again |
@@ -235,7 +269,9 @@ passcodes, and an index on the files by who uploaded them with their sizes, whic
 sums from the index alone. Migration `0079_files_access.sql` (2026-11-23) adds `files_access`
 (each entry of Manage access: its tenant, place, item, a person, group or role, the level, view
 only, the day it ends, who gave it and when; one entry per item and who; indexed by place and by
-who) and `files_items.restricted`.
+who) and `files_items.restricted`. Migration `0080_files_stores.sql` (2026-11-23) adds
+`files_items.store_id`, the storage connection a file's content is kept in (empty for the portal's
+bucket).
 
 ## Settings
 
@@ -245,6 +281,7 @@ who) and `files_items.restricted`.
 | `files.trash_days` | 30 (1 to 365) | an Owner |
 | `files.allowed_types` | `any` (or `documents and pictures`, `documents`) | an Owner |
 | `files.person_room_mb` | 0, no limit (0 to 10240) | an Owner |
+| `files.location_stores` | every location in the portal's bucket (location id to a storage connection's id) | an Owner, on Files, Storage |
 | `files.room_rules` | no limits (`people`, `roles`, `places`, each id to MB, 0 to 10240) | an Owner, on Files, Limits |
 
 ## Errors
@@ -253,7 +290,8 @@ The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in th
 `KIT-E-2402` the file is larger than the setting allows, `KIT-E-2403` that folder cannot hold it,
 `KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link, `KIT-E-2406`
 a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
-`KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up. An item that
+`KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up, `KIT-E-2410` the storage where a file is kept refused
+or failed, `KIT-E-2411` a storage connection still in use. An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
@@ -292,6 +330,16 @@ Activity, and a copy made in the same folder. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.
+
+The storage tests (2026-11-23), against an S3 bucket in memory that answers only signed calls:
+the address built from the definition, put, get, a part and a delete each signed with a checksum on
+the delete, the six checks passing and versioning noted, a public bucket failing the private check
+and a key that may not list stopping at the first; through the pipeline, a location's upload kept
+in the bucket and not in the portal's, opened whole and in part, copied there, still opened after
+the choice changed, and deleted there for good; a service down refusing the upload with
+`KIT-E-2410` and no row; the Storage view for an Owner and refused to a clerk, a bucket joined and
+checked, a data service refused, a connection in use refused with `KIT-E-2411` and removed once
+free; the page offering only checked connections and saving the choice as the setting.
 
 The limits tests (2026-11-23): a person's own room winning over a role's, a role's over
 everyone's and a role without a limit lifting it; a location's room refusing an upload and a copy
