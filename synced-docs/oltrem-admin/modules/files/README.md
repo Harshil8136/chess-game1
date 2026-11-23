@@ -39,10 +39,12 @@ a Worker-typed client sees of them, held to the implementation by `test/pages-ty
 
 ## Who may do what: the place of a file
 
-Four capabilities, on bit plane `12`: `files.read` sees the places' files and opens them;
+Five capabilities, on bit plane `12`: `files.read` sees the places' files and opens them;
 `files.write` uploads, makes folders, renames, moves within the place, puts in the trash and
-restores; `files.share` makes and ends links; `files.purge` deletes from the trash for good, and
-asks for a fresh sign-in. They join every Owner role when the Worker starts.
+restores; `files.share` makes and ends links; `files.access` (2026-11-23, "Change who has access
+to folders and files", alias `files.access.manage`) changes who has access and sees everything at
+the place; `files.purge` deletes from the trash for good, and asks for a fresh sign-in. They join
+every Owner role when the Worker starts.
 
 An item sits at one place (an IAM scope), at its top or in one of its folders. A role held at
 that place, or at a place above it, decides what a person may do with it; a role held only at
@@ -50,6 +52,26 @@ another place gives nothing. The route checks that the person holds the capabili
 the drive then checks it at the item's own place. An item the person may not see answers as one
 that is not there (`KIT-E-0404`), so its name never leaks. An item whose place was removed
 belongs to the company.
+
+### Manage access (2026-11-23)
+
+The roles at the place stay the base. An entry on a folder or file adds to them for one person, a
+group or a role, on that item and everything inside it, with a level: **None** hides it, **View**
+opens it, **Edit** adds upload, folders, rename, move, trash and links, **Manage** adds Activity,
+delete for good and changing access. An entry may be **View only** (open and preview, no download
+through the portal; a screenshot or the browser's own PDF viewer can still keep a copy) and may
+**end on** a day. A **restricted** folder is hidden from everyone not listed on it. The person's
+level on an item, in order: whoever holds `files.access` at the place (an Owner among them) sees
+everything there; None on the item or a folder above it hides it; a restricted folder above it
+that lists the person nowhere hides it; otherwise the highest of their roles' level and the
+entries on the way. A group entry reaches its members, a role entry everyone holding that role.
+
+An entry widens only within what the route gates allow: the routes still ask for the capability
+somewhere in the company, so View for someone from another place needs a role with `files.read`
+somewhere, and Edit or Manage the matching capability somewhere. What was given shows under
+**Shared with me**. A place without entries or restricted folders costs two small reads a request;
+otherwise the place's folders are read once to walk up from an item. Entries that ended a month
+ago are deleted by the trash job; deleting an item for good deletes its entries.
 
 ## Folders, names and uploads
 
@@ -146,7 +168,8 @@ then removes link rows that ended a month ago. Its check (the jobs page's **Chec
 | Path | Shows |
 |---|---|
 | `/files` | a file manager (2026-11-23): on a computer the place's folders as a tree on the left with a storage bar (the visible places' bytes against the bucket's 10 GB), on a phone a row of the places; the folder's path, a find box (names in this folder), List or Grid (`?view=grid`, pictures as thumbnails), sorting by Name, Changed or Size (`?sort=`, `-` for the largest first), folders first; a tick on each row and **Move to the trash** for the ticked; a menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a file's name opens a details pane (`?item=`) with a preview of a picture, video, sound, PDF or text, its facts, Download and, for a person who may delete for good, its Activity (the last 30 of its audit rows); for a writer **Upload** (many files), **Upload a folder** and **New folder**. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder of the tree; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
-| `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
+| `/files?show=shared` | Shared with me: the folders and files given to the person by Manage access, with their places |
+| `/files/:id` | one item: download or open (only open when it is View only), its details, its **Manage access** for a person who may change it (the entries on it and on the folders above it, Restrict this folder, and a form for a person, group or role, a level, View only and Ends on), an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
 ## Search
 
@@ -161,7 +184,10 @@ file holds.
 | `GET /places` | `files.read` | the places the person may see, with each one's files and bytes |
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
-| `GET /items/:id/activity` | `files.read`, and `files.purge` at the item's place | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
+| `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
+| `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
+| `GET /items/:id/access` | `files.read`, and Manage on the item | its entries and those of the folders above it, whether it is restricted, and the company's people, groups and roles |
+| `POST /items/:id/access` (`whoKind`, `whoId`, `level`, `viewOnly`, `endsAt`), `DELETE /access/:id`, `POST /items/:id/restrict` (`on`) | `files.access`, and Manage on the item | give an entry (a second for the same one replaces the first), end one, restrict a folder or open it again |
 | `POST /items/:id/copy` (`parentId`), bulk `trash` (`POST /bulk/trash`, up to 100 ids) | `files.write` | a copy of a file, numbered like an upload, counted against the person's room; many items to the trash in one batch with an audit row each, each refused alone when out of reach |
 | `POST /folders`, `POST /uploads` (`path` makes its folders, up to the depth), `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
 | `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`, `passcode`, `to` to email it, with `sent` saying whether it went), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
@@ -169,7 +195,8 @@ file holds.
 
 The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:token` takes its
 passcode from the page. Every change is audited by the module
-(`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.trash`, `files.restore`,
+(`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.access-grant`,
+`files.access-remove`, `files.restrict`, `files.trash`, `files.restore`,
 `files.purge`, `files.share`, `files.share-revoke`; the system's `files.share-download`,
 `files.share-locked` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
 
@@ -189,7 +216,10 @@ Migration `0040_files_customers.sql` adds the address a share is for (`email`, e
 and an index on it in lower case, which a customer's account page reads by. Migration
 `0068_files_passcodes_and_room.sql` (2026-11-21) adds a link's passcode hash and its count of wrong
 passcodes, and an index on the files by who uploaded them with their sizes, which Room per person
-sums from the index alone.
+sums from the index alone. Migration `0079_files_access.sql` (2026-11-23) adds `files_access`
+(each entry of Manage access: its tenant, place, item, a person, group or role, the level, view
+only, the day it ends, who gave it and when; one entry per item and who; indexed by place and by
+who) and `files_items.restricted`.
 
 ## Settings
 
@@ -230,7 +260,12 @@ the tenth wrong one locking the link with its audit row, a link emailed without 
 its address in the share's audit row, and the room's sum read from its index alone; folders made from an upload's path once and refused past
 the depth, a copy numbered with its content, many trashed at once with one refused, a download
 and a text preview audited but a picture's preview not, a range answered with 206, and the
-Activity refused to a clerk. The pages,
+Activity refused to a clerk; Manage access: a restricted folder hidden from a clerk and a keeper
+and back once listed, by name or through a group, its audit rows; None hiding one file from one
+person, bulk trash refusing it, and back once removed; View only for someone from another place,
+under Shared with me, no download but a preview, gone the day it ends; giving access refused
+without `files.access`, to someone unknown, and Restrict on a file (`test/access.test.ts` decides
+the rules on their own). The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent

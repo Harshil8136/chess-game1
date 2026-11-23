@@ -25,3 +25,8 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P452 | Press a file's name (a PDF, a picture, a video) | A details pane with the preview (the video plays and seeks), its facts, Download and its Activity | [record](records/2026-11-23-files-explorer.md) |
 | P453 | Tick three files, Move to the trash | "Moved to the trash" for all three; Trash lists them | [record](records/2026-11-23-files-explorer.md) |
 | P454 | As a clerk without Delete for good: open a file's details | No Activity list; as the Owner the same file lists who downloaded or previewed it | [record](records/2026-11-23-files-explorer.md) |
+| P463 | As the Owner: a folder's three dots, Rename, move or share; Manage access, Restrict this folder | "The folder is restricted…"; signed in as someone with only a role at that location, the folder is gone from the list, the tree and search | [record](records/2026-11-23-files-access.md) |
+| P464 | As the Owner on that folder: Who, pick that person, Level View, Give access | "Access was given"; as them, the folder is back | [record](records/2026-11-23-files-access.md) |
+| P465 | On one file: Who, a person, Level None (hide it), Give access | As them, the file is gone; Remove the entry and it is back | [record](records/2026-11-23-files-access.md) |
+| P466 | On a folder: a person from another location, View, tick View only, Ends on tomorrow, Give access | As them, Files, Shared with me lists the folder; a file in it shows Open and no Download | [record](records/2026-11-23-files-access.md) |
+| P467 | As someone without Change who has access: open a file's details page | No Manage access section | [record](records/2026-11-23-files-access.md) |
