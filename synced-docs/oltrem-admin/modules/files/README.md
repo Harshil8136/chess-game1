@@ -161,6 +161,23 @@ a virus scan: a program inside a zip inside a zip, macros in an old `.doc`, or J
 PDF's compressed parts pass unseen. A name with marks that change the direction of the text, or
 ending with a dot, is refused, since it can hide its real ending.
 
+### Versions, Starred and Recent (2026-11-23)
+
+**Upload a new version** on a file's page keeps its name, place and links: the new content is
+judged and checked as an upload is, under the file's own name (a program dressed as it is
+refused, one that can run is held), and stored under a key of its own
+(`files_items.content_key`); the content it had becomes an earlier version (`files_versions`, with
+its key, store, size, type and held reason). The newest ten are kept; an older one's content and
+row are deleted as the next is made. **Restore** on a version brings it back, and the content it
+replaces becomes a version in its turn. Both need Change on the file and are audited
+(`files.version`, `files.version-restore`). A new version is checked against its location's room;
+earlier versions are not counted in any room or in the storage check. Deleting a file for good
+deletes its versions' content too.
+
+**Star** on an item's page keeps it under **Files, Starred**, for that person alone
+(`files_stars`, not audited). **Files, Recent** lists the 50 files changed most lately at the
+locations the person sees, of the newest 200, leaving out what they may not see.
+
 ### Limits per person, role and location (2026-11-23)
 
 **Files, Limits** (`/files?show=limits`, shown to whoever holds `files.access` somewhere) lists
@@ -231,6 +248,7 @@ then removes link rows that ended a month ago. Its check (the jobs page's **Chec
 |---|---|
 | `/files` | a file manager (2026-11-23): on a computer the place's folders as a tree on the left with a storage bar (the visible places' bytes against the bucket's 10 GB), on a phone a row of the places; the folder's path, a find box (names in this folder), List or Grid (`?view=grid`, pictures as thumbnails), sorting by Name, Changed or Size (`?sort=`, `-` for the largest first), folders first; a tick on each row and **Move to the trash** for the ticked; a menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a file's name opens a details pane (`?item=`) with a preview of a picture, video, sound, PDF or text, its facts, Download and, for a person who may delete for good, its Activity (the last 30 of its audit rows); for a writer **Upload** (many files), **Upload a folder** and **New folder**. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder of the tree; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
 | `/files?show=shared` | Shared with me: the folders and files given to the person by Manage access, with their places |
+| `/files?show=starred`, `/files?show=recent` | Starred and Recent (2026-11-23): what the person starred, and the files changed most lately at their locations, with their places |
 | `/files?show=links` | Shared links (2026-11-23): every open link and customer share the person made or may end, with its file, location, who made it, its downloads and its end, and **End it** |
 | `/files/:id` | one item: download or open (only open when it is View only), its details, its **Manage access** for a person who may change it (the entries on it and on the folders above it, Restrict this folder, and a form for a person, group or role, a level, View only and Ends on), an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
@@ -249,6 +267,8 @@ file holds.
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
 | `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
+| `GET /starred`, `GET /recent`, `PUT /items/:id/star` (`on`) | `files.read` | what the person starred; the newest files at their locations; star an item they see, or take the star off |
+| `POST /items/:id/versions` (the content as the body), `POST /items/:id/versions/:version/restore` | `files.write`, and Change on the file | a new version of a file; an earlier version back |
 | `GET /links` | `files.share` | the open links and customer shares at the locations the person may see, those they made or may end, newest first (up to 200) |
 | `POST /items/:id/release` | `files.access` at the item's location | release a file held for review |
 | `GET /stores` | `files.access` | the storage connections (their bucket and where, last check, files and bytes kept), the S3 services one may join with their fields and steps, each location's choice, and whether the person may change them |
@@ -265,7 +285,8 @@ The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:tok
 passcode from the page. Every change is audited by the module
 (`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.access-grant`,
 `files.access-remove`, `files.restrict`, `files.trash`, `files.restore`,
-`files.purge`, `files.share`, `files.share-revoke`, `files.release`; the system's `files.share-download`,
+`files.purge`, `files.share`, `files.share-revoke`, `files.release`, `files.version`,
+`files.version-restore`; the system's `files.share-download`,
 `files.share-locked` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
 
 The module has no card on Home: Home reads a card without the person, and a count of every file
@@ -290,7 +311,11 @@ only, the day it ends, who gave it and when; one entry per item and who; indexed
 who) and `files_items.restricted`. Migration `0080_files_stores.sql` (2026-11-23) adds
 `files_items.store_id`, the storage connection a file's content is kept in (empty for the portal's
 bucket). Migration `0081_files_held.sql` (2026-11-23) adds `files_items.held`, why a file is held
-for review (empty when it is not).
+for review (empty when it is not). Migration `0082_files_versions_and_stars.sql` (2026-11-23) adds
+`files_items.content_key` (where a file's content is kept since a new version; empty is
+`files/<id>`), `files_versions` (each earlier version: its file, key, store, size, type, held
+reason, who changed the file before and when; indexed by file and time) and `files_stars` (one row
+a person and item).
 
 ## Settings
 
@@ -342,7 +367,11 @@ without `files.access`, to someone unknown, and Restrict on a file (`test/access
 the rules on their own); a zip with a program held, refused to download, link and copy, released
 only by Manage and opened after, a plain zip not held, a name with a direction mark refused, and
 Shared links listing a link for whoever may share and dropping it once ended (`test/safety.test.ts`
-reads zips, PDFs and names on their own). The pages,
+reads zips, PDFs and names on their own); a new version kept under the name, refused to someone
+without Change and as a disguised program, restored with the one it replaced kept, ten kept with
+the older content gone from the bucket and every version's content gone with the file; a new
+version that can run held and the clean one restored; a star for the person alone, Starred,
+Recent leaving out another location's files. The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent

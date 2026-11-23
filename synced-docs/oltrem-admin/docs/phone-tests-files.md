@@ -43,3 +43,7 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P485 | As the Owner: open that file's page | The same notice, and Release in the buttons; Release says "The file was released" and Download works | [record](records/2026-11-23-files-safety.md) |
 | P486 | Upload a PDF made with a form button or JavaScript (or a zip with a password) | Held for review, with the reason in words | [record](records/2026-11-23-files-safety.md) |
 | P487 | Files, Shared links (left on a computer, the chip row on the phone) | Every open link with its file, location, who made it, downloads and end date; End it removes it from the list | [record](records/2026-11-23-files-safety.md) |
+| P488 | A file's page: Upload a new version, pick another file | "The new version was uploaded"; Download gives the new content under the same name; Versions lists the one before with who and when | [record](records/2026-11-23-files-versions.md) |
+| P489 | Restore on that earlier version | "That version is back"; Download gives the old content; Versions now lists the one it replaced | [record](records/2026-11-23-files-versions.md) |
+| P490 | Star on a file, then Files, Starred (left on a computer, the chip row on the phone) | The file is listed with its location; signed in as someone else, their Starred does not show it | [record](records/2026-11-23-files-versions.md) |
+| P491 | Files, Recent | The files changed most lately at your locations, newest first, with the one you just changed near the top | [record](records/2026-11-23-files-versions.md) |
