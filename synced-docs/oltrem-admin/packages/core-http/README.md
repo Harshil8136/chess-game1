@@ -44,7 +44,10 @@ module writes itself says from where too. The
 session hook's, the capability check's and the schema's refusals are told too; what the door or
 the same-origin check refuses never reaches a route and is not. A hook that throws goes to
 `report` and leaves the answer as it was. The client template passes the audit module's
-`createChangeAudit` (`@oltrem/core-audit`), so every change is a row in the audit log.
+`createChangeAudit` (`@oltrem/core-audit`), so every change is a row in the audit log. A GET
+that brings in data from outside the portal (a connected database's tables or rows) is marked
+`audited: true` on its route and is told the same way, so every read of outside data is on record
+too (2026-11-23); `audited` on any other method is refused by the contract.
 
 **A page's own calls to the API stay in process.** The screens render a page by calling the
 portal's API inside the page's request (Home makes about 25 such calls). Each used to go through
@@ -113,6 +116,15 @@ capability or same-origin check runs, so the handler checks the caller itself. T
 door must let `/hooks/` through: a self-hosted Access application on that path with a Bypass
 policy, on a custom domain or a `workers.dev` address alike (a path rule wins over the door that
 protects every Worker); `oltrem deploy` prints the step.
+
+**Every hook call is told** (2026-11-23). With `onHook` given, each call that reached a hook is
+handed over once it answered or threw, as a `HookCall` (`@oltrem/core-module`): the module, the
+method, the route as declared (`/hooks/connect/calendar/:token`, never the address, which may hold
+a secret), the status and outcome, the time taken, the bytes in and out, the caller's address,
+country and browser, and the facts the handler noted with `ctx.note` (whose link, how many rows;
+never a body). A hook that throws goes to `report`. The client template passes `createHookAudit`
+(`@oltrem/core-audit`), so every webhook, delivery report and link another app reads is a row in
+the audit log.
 
 Every answer carries `frame-ancestors 'self'` in its content security policy, added to the
 policy the handler set when it set one: a file served for download keeps its sandbox.

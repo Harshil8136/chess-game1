@@ -62,11 +62,13 @@ kept 30 days so it can be undone.
 Under `/api/data`; every change to a connection is audited by the providers registry
 (`providers.create`, `providers.credential`, `providers.probe`, `providers.option`,
 `providers.remove`), and every change to a row by this module ([Editing](#editing)); the target is
-the connection.
+the connection. Every read of what is in the database (its tables, a page of rows, one row) is
+audited too (`audited` on the route: `data.read-connections-tables`, `data.read-connections-rows`,
+`data.read-connections-row`), without what was searched or read (2026-11-23).
 
 | Route | Permission | What it does |
 |---|---|---|
-| `GET /services` | `data.read`, company | The data services a database can be connected from: fields (never a pattern or a value), steps, help; and whether this person may connect one |
+| `GET /services` | `data.read`, company | The data services a database can be connected from: fields (never a pattern or a value), steps, help, the connections already made to each (`connected`: id, name, last check), for the Apps page's cards; and whether this person may connect one |
 | `GET /connections` | `data.read`, company | The connections and whether this person may manage them |
 | `GET /connections/:id` | `data.read`, company | One connection, never its key, and whether this person may change it |
 | `POST /connections` | `data.manage`, company | Connect: definition, label, fields; tidied by `prepare`, sealed, checked at once; `201 {id, check}`. The same service at the same address already connected is refused (`KIT-E-4104`, its name in the detail), so a Connect pressed twice or a sign-in come back twice makes one; the pages then open that connection with "This database was already connected". Not Neon: one endpoint serves several databases and roles, which only the secret connection string names |

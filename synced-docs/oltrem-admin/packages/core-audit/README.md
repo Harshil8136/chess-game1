@@ -80,6 +80,23 @@ A module that writes its own row for the request (`record` or `after` with the r
 its richer row, and the automatic one is not written beside it: the writer remembers, in the
 isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 
+## The public addresses
+
+Every call to a public hook (a provider's delivery report, an inbound webhook, a calendar or
+spreadsheet link another app reads) is a row too, for data-loss prevention and compliance
+(2026-11-23): `createHookAudit` is the app's `onHook` (`@oltrem/core-http`).
+
+| Field | Value |
+|---|---|
+| `actor` | `outside`, as `system` |
+| `action` | `<module>.received` |
+| `target` | what the handler noted as `target` (the link's id), else empty |
+| `details` | `method`, `route` (the declared pattern, never the address), `status`, `ms`, `bytesIn`, `bytesOut`, the caller's `ip`, `country` and `browser`, and the handler's other notes (`name`, `person`, `rows`, `events`) |
+
+A route writes at most 30 rows a minute in one isolate (`HOOK_ROWS_A_MINUTE`), so a stranger
+hammering a public address cannot spend the database's daily writes; the calls past it are
+counted and the route's next row says how many (`notLoggedBefore`).
+
 ## Reading and checking
 
 `list({ actor, action, target, module, outcome, since, until, before, limit })` pages newest first (`module` reads every action of one module); the

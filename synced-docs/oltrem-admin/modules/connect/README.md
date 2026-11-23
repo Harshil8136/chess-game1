@@ -226,23 +226,33 @@ Make only for apps listed in their stores. Those stay on the pasted link (the ow
 
 | Path | Shows |
 |---|---|
-| `/connect` | Connected (the rows, their health and actions); the filters; the cards by group; "Any other app" |
+| `/connect` | Connected (one line of how many work and how many need a look, then the rows, their health and actions, the databases of the data part among them); the filters; the cards by group; "Any other app". A card already connected shows its health and how it is doing (its last delivery, use or check) and opens what is running: the webhook's page, the link's row, the database's page, or Connected when there are several; "Add another" sits under it (2026-11-23) |
 | `/connect?show=chat` | the four chat cards and "Any other app"; a card's window: "Continue to Slack" when one-click is set up, otherwise (or under "Or paste a webhook link instead") Open <app>, the steps, the link, "Tell me when", the name, "Connect and send a test" |
 | `/connect?show=calendar` | Google Calendar, Apple Calendar, Outlook and "Another calendar app"; a card's window makes that app's link; once made, the button that adds it to that app (Outlook.com and Outlook for work or school for Outlook) and the link to copy |
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
-| `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>` |
+| `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
 | `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
 
 ## The logos
 
 Slack, Discord, Google Chat, Google Calendar, Google Sheets, Zapier, Make and n8n show their own
 one-colour mark from the Simple Icons project (CC0 data; each brand keeps its trademark), drawn in
-the brand's colour on a white tile (`src/brands.ts`, the design system's one exception for logos).
+the brand's colour on the logo tile (`src/brands.ts`, the design system's one exception for logos):
+white in the light theme, clear in the dark one, where a brand colour too dark to see
+(Slack's, Make's) is drawn in the text colour; Apple Calendar's icon is a grey that reads on both (`inkOf`, `@oltrem/core-ui`). Zapier
+shows its asterisk, drawn here, since the project's mark is its badge with an unreadable name.
 Microsoft asked for its marks to be taken out of that project, so Teams, Outlook and Excel show a
 plain icon in their colour. Apple Calendar, "Another calendar app", the spreadsheet rows and "Any
 other app" show a plain icon. The page ends with one line saying the names and logos belong to
 their owners and only show which app a card connects to.
+
+## What is logged
+
+Every read of a calendar or spreadsheet link is an audit row (`connect.received`, through the
+app's `onHook`): the link's id as the target, its name, whose it is, how many events or rows went
+out, the caller's address and the bytes sent; never the link's address. Every change made on the
+page is a row through `onChange`, as everywhere.
 
 ## Tables
 

@@ -118,8 +118,12 @@ and `ui-tcard-foot` for `ui-tag` pills; `ui-tcard-link` is a second link on the 
 list of modules, its columns lined up from 52 rem, an unticked row's tile grey; `ui-scard` with
 `ui-scard-head` is a settings section; `ui-parts` a list of module cards, two columns on a wide
 page; `ui-settings-cols` two columns of sections from 84 rem; `ui-footbar` a full-width save bar
-stuck to the foot; `ui-tgroup` a group heading with a dot in its hue. `ui-logo` is a white 40 px
-tile for a brand's mark. An open `Dropdown` lifts the clipping of every box around it on the
+stuck to the foot; `ui-tgroup` a group heading with a dot in its hue. `ui-logo` is a 40 px
+tile for a brand's mark, white in the light theme and clear in the dark one, so it never glares;
+`inkOf(colour)` gives the mark's `style` when its brand colour is too dark to see there (the text
+colour in dark, its own in light). Every card lifts under the pointer, a button card as well as a
+link card, except for someone who asked for less motion, and the whole card shows the keyboard's
+focus. An open `Dropdown` lifts the clipping of every box around it on the
 page or in a dialog, so its list is never cut at a card's edge.
 
 ## The console pieces
