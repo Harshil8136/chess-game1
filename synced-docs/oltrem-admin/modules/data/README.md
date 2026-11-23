@@ -1,16 +1,21 @@
 # @oltrem/data
 
-Connected data: a client's own databases and data services, read from the portal. The client
+Connected data: a client's own databases and data services, read from the portal and, where a
+manager turns editing on, changed from it. The client
 keeps their data where it is; the portal adds the screens, the permissions, the audit trail and
 the checks their database lacks. The plan is the owner's of 2026-11-22 (phases 2 and 3 of the
 database review, "Connected data").
 
 Built 2026-11-22 in two parts: the **dialects** that read each service over its own web API and
 the **detector** that tells which service a pasted value belongs to; then the module itself, its
-two permissions, its routes under `/api/data` and the **Data** pages, mounted in the client
+permissions (two then, four since editing), its routes under `/api/data` and the **Data** pages, mounted in the client
 template beside the providers module. The providers routes, held by whoever runs email, refuse a
 connection of the kind `data`: they neither make, list nor touch one, and the Data routes treat
 any other kind as not there.
+
+Editing came on 2026-11-23 (phase 3, batch 7): once a manager presses **Turn on editing** for a
+database, a row of Supabase, Neon or Turso opens on its own page to be changed, deleted (an
+Owner alone) and undone for 30 days; see [Editing](#editing).
 
 ## Permissions
 
@@ -19,9 +24,11 @@ Bit plane 32 ([architecture](../../docs/architecture.md) lists every plane):
 | Permission | Level | What it allows |
 |---|---|---|
 | `data.read` | Manage | See the connected databases, read their tables and rows, check a connection now |
-| `data.manage` | Manage | Connect a database, change its key or remove it; asks for a fresh sign-in, like an email service's key |
+| `data.manage` | Manage | Connect a database, change its key or remove it, turn editing on or off; asks for a fresh sign-in, like an email service's key |
+| `data.edit` | Manage | Change a row where editing is on, and undo a change (a deleted row put back included) |
+| `data.delete` | Manage, Owner floor | Delete a row where editing is on; only through the Owner role, with a fresh sign-in |
 
-Both are held at the company itself: a grant at one place gives neither. Reading a table runs with
+All four are held at the company itself: a grant at one place gives none. Reading a table runs with
 the connection's own key, which reads every row that key may read, whatever place a person works
 at, so `data.read` sits in the Manage level (class `admin`) and no ready-made everyday role hands
 it out: an Owner gives it to the people who should read the company's own databases. Connect a key
@@ -34,19 +41,24 @@ that reads only what those people may see.
 | `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
 | `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
 | `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's and Airtable's pages also offer "Sign in with Supabase" or "Sign in with Airtable" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and say in fixed words, with the service's name, why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part" and "Airtable, for the data part", has the journey. The tokens a sign-in fills (Airtable's `refresh`, `expires`, `client`) are never asked for |
-| `/data/connections/<id>` | The connection's facts and last check, its tables, Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
-| `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. Saved views keep the table, its search and its sort |
+| `/data/connections/<id>` | The connection's facts and last check; then Editing (on or off, with Turn on editing or Turn off editing for a manager; a service whose rows cannot be changed here, Airtable or Upstash, says so instead) and Recent changes (when there are any, or why they could not be read); then its tables; Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
+| `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. In a table with a primary key, each row's first value links to the row's own page. Saved views keep the table, its search and its sort |
+| `/data/connections/<id>/row` | One row found by its key (`k`), read whole. With editing on and `data.edit`: a box for each value (a text box for a long or broken one), No value for a column that may be empty, a locked column's value with why, and Save changes; with `data.delete` also Delete row (one confirm, which says rows the database removes with it are not put back). Otherwise the values, and why they cannot be changed, with a link to the database's page for a manager. A refused save keeps what was typed |
+| `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
 either way: "Connected" when the database answered, "Saved, but the database did not answer yet"
 when it did not, with the reason under it. A new key says the same two ways. Check now pressed
 again within 30 seconds answers the last check without calling the service. Nothing read from a
-client's database is kept: each page is read when it is opened.
+client's database is kept, each page being read when it is opened, except a change's values,
+kept 30 days so it can be undone.
 
 ## The routes
 
-Under `/api/data`; every change is audited by the providers registry (`providers.create`,
-`providers.credential`, `providers.probe`, `providers.remove`, the target the connection).
+Under `/api/data`; every change to a connection is audited by the providers registry
+(`providers.create`, `providers.credential`, `providers.probe`, `providers.option`,
+`providers.remove`), and every change to a row by this module ([Editing](#editing)); the target is
+the connection.
 
 | Route | Permission | What it does |
 |---|---|---|
@@ -59,7 +71,14 @@ Under `/api/data`; every change is audited by the providers registry (`providers
 | `POST /connections/:id/check` | `data.read`, company | Reach the database with its sealed key; a refusal is a failed check kept on the connection, never an error. Within 30 s of the last check it answers that one instead (`CHECK_AGAIN_MS`) |
 | `DELETE /connections/:id` | `data.manage`, company | Remove the connection and its sealed key; the database is not touched |
 | `GET /connections/:id/tables` | `data.read`, company | The tables, views or key sets the key may read, at most 500, and whether that is all |
-| `GET /connections/:id/rows` | `data.read`, company | One page: `table`, `cursor`, `search`, `sort`, `desc` |
+| `GET /connections/:id/rows` | `data.read`, company | One page: `table`, `cursor`, `search`, `sort`, `desc`; with the key's columns (`key`) and each row's link (`links`, null where a key value was cut or empty) |
+| `POST /connections/:id/editing` | `data.manage`, company | `{on}`: editing on or off; audited as `providers.option`; a new key keeps it |
+| `GET /connections/:id/row` | `data.read`, company | One row by `table` and `k`: each column, whether it can be changed and why not, its value whole when it can; the values seen (`expect`), whether editing is on and what this person may do |
+| `POST /connections/:id/row/change` | `data.edit`, company | `{table, k, expect, values}`: only the columns whose value differs from what the form showed, and only while they still hold it; `{changed, id, kept}` |
+| `POST /connections/:id/row/delete` | `data.delete`, company | `{table, k}`: the row's values kept first, then the row deleted; the copy dropped only when the database clearly refused |
+| `GET /connections/:id/changes` | `data.read`, company | The last 10 changes still kept, newest first; anything past 30 days deleted after the answer |
+| `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
+| `POST /connections/:id/changes/:change/undo` | `data.edit`, company | Undo a change while the row holds what it made, or put a deleted row back; once; `{undone, id, kept, marked}` |
 | `GET /home` | `data.read` | Home's Databases line: how many connections answered their last kept check, of how many |
 
 ## The timed check and Home
@@ -91,9 +110,9 @@ dialect. The kit's five, with the smallest key each service offers:
 
 | Service | Dialect | How it is read | The key the guide asks for |
 |---|---|---|---|
-| Turso | `libsql` | SQL over HTTP, `POST /v2/pipeline` | a token made with `--read-only` |
-| Neon | `neon` | Neon's HTTP SQL endpoint, the queries of a call in one read-only batch | a role made with `--access read_only` |
-| Supabase | `postgrest` | the Data API (PostgREST): the OpenAPI description, then `GET` only | a secret key: Supabase has no read-only key |
+| Turso | `libsql` | SQL over HTTP, `POST /v2/pipeline` | a token made with `--read-only`; one without it once editing is on |
+| Neon | `neon` | Neon's HTTP SQL endpoint, the queries of a read in one read-only batch | a role made with `--access read_only`; one that may write once editing is on |
+| Supabase | `postgrest` | the Data API (PostgREST): the OpenAPI description, then `GET` for reads | a secret key: Supabase has no read-only key |
 | Airtable | `airtable` | the metadata API, then list records | a personal access token with `data.records:read` and `schema.bases:read` |
 | Upstash Redis | `upstash-redis` | REST `POST /pipeline`, read commands only | the Read Only token |
 
@@ -144,9 +163,66 @@ A pasted token (`pat…`) is never renewed, even when Change key replaced a sign
 refresh token is still sealed beside it. The renewal is not audited (it runs hourly under Database
 checks); the sign-in and the save are, as `providers.create`.
 
+## Editing
+
+Off for every database until a manager presses **Turn on editing** on its page (`data.manage`, with
+a fresh sign-in; anyone holding Manage, not only an Owner): kept as the connection's `edits`
+option (the providers registry's `setOption`). A new key for the same host keeps it; a key or
+address for another host drops it, and the data module forgets that connection's kept changes,
+which belonged to the old database. Its key must then be allowed to write: the services' steps
+still ask for a key that only reads, so Change key takes one that may write. A refused write is
+said for what it is: a key that may only read (`KIT-E-4107`), a value the database will not take,
+with its own words (`KIT-E-4108`), or, when the service failed on its side or did not answer, the
+usual `KIT-E-4101`.
+
+- **What can be changed.** Supabase, Neon and Turso tables with a primary key (from PostgREST's
+  `<pk/>`, Postgres's `pg_index`, SQLite's `table_xinfo`). Not a view, the key's own columns, a
+  column the database works out, binary data, JSON or a list, a value over 10,000 characters, or a
+  Supabase number past 2^53, which comes back rounded (shown, never changed; such a key opens no
+  row). A form holds at most 32,000 characters in boxes (`withinForm`): past that the longest
+  values are shown, not boxed, so its hidden copy of what it showed stays quick to read back.
+  Airtable and Upstash are read only, and their pages offer no switch.
+- **Types.** Postgres refuses a value of the wrong kind itself; SQLite would keep text in a number
+  column, so for Turso text typed into an INTEGER, REAL or NUMERIC column is sent as a number, or
+  refused when it is not one.
+- **A change.** The row's form sends every value; only those that differ from what it showed
+  (a text box's CR LF read as LF) are written, by one UPDATE (or PATCH) that matches the key and
+  each changed column's old value (`IS`, `IS NOT DISTINCT FROM`, `eq.` or `is.`) and returns the
+  new ones. No row matched means someone changed or deleted it since: `KIT-E-4105`, nothing
+  written. Values travel as parameters, never inside the SQL. A refused save shows the form again
+  with what was typed; a column someone changed since shows its value now, and what the form had,
+  so a second press never writes over their change unseen. A box that held no value and was typed
+  into is saved with the text, even with No value left ticked.
+- **A delete** (an Owner's) reads the row whole, keeps its values, then deletes it, and keeps what
+  the database returned when that differs. A delete the database clearly refused keeps no copy;
+  one with no answer, or none it could read, keeps it, since the row may be gone. Only that row
+  is kept: rows in other tables that the database deletes or changes with it (a cascade) are not
+  put back by Undo, and the confirm says so.
+- **Undo.** A change is undone by changing the columns back while they still hold what it made;
+  a delete by putting the kept row back (Neon with `OVERRIDING SYSTEM VALUE` for a key Postgres
+  numbers itself). Each is undone once, and an undo is listed as a change of its own. An undo
+  over a newer value is refused (`KIT-E-4105`) and writes nothing; one whose mark could not be
+  written says so, as the change would still offer Undo.
+- **Where the values are kept.** In the portal's one bucket (`FILES`), at
+  `data/changes/<company>/<connection>/<id>.json`, the newest first by name: the key and the exact
+  values before and after, as the service gave them, and who and when. Kept 30 days
+  (`KEEP_DAYS`); older ones are deleted when the database's page lists them and by the hourly
+  check (Database checks), and every copy of a connection when it is removed or moved to another
+  host. The backup's copy of the files leaves them out (the backup module's `NOT_COPIED`), so none
+  outlives the 30 days locked in a backup. A privacy request does not search them: they are a
+  client's own rows, which the portal does not own, and they go within 30 days. One that could
+  not be kept is reported and the page says the change cannot be undone.
+- **The audit log** has a row for each change, delete and undo (`data.row-change`,
+  `data.row-delete`, `data.row-undo`): who, the table, the row's key when every key value is a
+  number (else only the key's column names: a text key may be an email), the change's id and
+  which columns changed, each marked changed without its values. A refusal is logged by its code
+  and title, never the database's words, which often quote the row. The log is kept for good and
+  a client's rows are often about people, so the values stay only in the kept copy.
+
 ## What a dialect does
 
-Every dialect gives the same three things (`DataSource`):
+Every dialect gives the same three things (`DataSource`), and the SQL ones a row's editor
+(`edit`, above):
 
 - `probe()`: one cheap call (`SELECT 1`, the Data API's description, Airtable's `whoami`,
   `PING`). It keeps the `Sunset` date and the `Deprecation` mark of the answer (RFC 8594,
@@ -188,8 +264,10 @@ How it stays safe and inside the free plan:
   inside the filter (PostgREST, Airtable formulas, Redis globs), never pasted into the text. A
   typed `%` or `_` is looked for as itself; PostgREST offers no way to look for a literal `*`, so
   there a typed `*` matches anything.
-- **Read only.** The dialects send no statement that changes data; Neon's queries run in a
-  read-only batch besides, and the guides ask for read-only keys.
+- **Reads stay reads.** Every read sends no statement that changes data, and Neon's reads run in
+  a read-only batch besides. A write goes out only from the three row routes (change, delete,
+  undo), for a database whose editing is on, a person with the permission, and a key that may
+  write ([Editing](#editing)); the guides still ask for read-only keys until editing is wanted.
 - **Bounded.** One call waits at most 4 s, body included, and an answer over 2 MB is refused
   rather than read whole. The SQL dialects read each value cut to 501 characters and a blob by
   its size alone; Redis reads a string's first 501 bytes (`GETRANGE`) and a collection's size; a
@@ -249,6 +327,10 @@ The 41xx block of the kit's range (`src/errors.ts`):
 | `KIT-E-4102` | 404 | The table, view or collection is not there, or the key may not read it |
 | `KIT-E-4103` | 409 | That is not a database: the connection, or the service asked for, is not a data service |
 | `KIT-E-4104` | 409 | That database is already connected: the same service at the same address (never Neon); the detail says the name it is saved as |
+| `KIT-E-4105` | 409 | The row changed after the form was opened: nothing saved |
+| `KIT-E-4106` | 409 | Editing is off for this database |
+| `KIT-E-4107` | 409 | The database refused a write: the key may only read |
+| `KIT-E-4108` | 422 | The database did not take a value (its own words in the detail): nothing changed |
 
 A request the page made that cannot be met as asked (the sort, search, cursor or key set above) is
 the kit's `KIT-E-0422`.
@@ -259,7 +341,8 @@ A count of reads per connection (it would cost a write on every page read); the 
 description and the last good page kept in Cloudflare's cache (today every page of a Supabase table
 reads the description again, which a large schema makes slow); AWS, Google Cloud, Azure and
 Snowflake through the portal's own identity (no key at all); Postgres and MySQL through
-Hyperdrive; edits with approvals and read-only SQL questions (phase 3).
+Hyperdrive; an approval before an edit (optional in the owner's plan), read-only SQL questions and
+hiding columns (the next batches of phase 3); editing Airtable and Upstash.
 
 Left on purpose, to come back to:
 
@@ -272,8 +355,15 @@ Left on purpose, to come back to:
   refresh token and is signed in again;
 - two renewals that Airtable both accepted at the same moment (it answers the second with a 409,
   so this should not happen) would keep the first one stored, whose tokens the second replaced;
-- the portal cannot tell whether a pasted key is truly read only: the guides ask for one;
-- the limits above are constants, not settings, until the settings pass.
+- the portal cannot tell whether a pasted key is truly read only, nor, when editing is turned on,
+  whether it may write: the first save says so plainly (`KIT-E-4107`);
+- the limits above are constants, not settings, until the settings pass;
+- Supabase's description does not mark a column Postgres works out, so putting back a deleted row
+  of such a table is refused by Postgres;
+- a kept copy holds the client's row for 30 days, and one past 30 days stays in the bucket until
+  that database's changes are next listed or the hourly check reaches it;
+- only the 10 newest changes are listed, so an older one inside its 30 days cannot be opened from
+  the page.
 
 ## Tests
 
@@ -287,10 +377,23 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   not every key; each probe; the plan's refusals; a changed cursor refused; a table that is not
   there or not listed; a name two Neon tables share; a row of the wrong width; a typed `%` looked
   for as itself; an answer of the wrong shape; a refusal with its words and the key blanked.
+- `test/edits.test.ts`: editing through the pipeline on a Turso database played by a fake libSQL
+  server that runs each statement on the test's own D1, so the SQL really runs on SQLite: rows
+  linked by their key and a view by none, a row opened whole with its locked columns, editing off
+  until a manager turns it on and kept through a new key, a reader refused, only the changed
+  column written while it holds the old value, audited without its values, the same values
+  changing nothing, a stale form refused, a missing value or a locked column refused, the change
+  listed, opened and undone once, a delete only an Owner makes and its Undo, a read-only key said
+  plainly with no copy left, copies past 30 days pruned, and every copy forgotten on removal.
+- `test/editors.test.ts`: Neon's and Supabase's editors against scripted answers: the key from
+  `pg_index` and `<pk/>`, the read-only batch for a row and none for a write, the UPDATE or PATCH
+  found by the key and the values seen, a delete returning its row, a put-back with
+  `OVERRIDING SYSTEM VALUE`, a view and a locked column refused before any write, and a refusal
+  said as a read-only key.
 - `test/call.test.ts`: no answer in time, no connection, a redirect not followed, an answer that
   is not JSON or is empty, an answer over 2 MB by its length or as it streams, an IP address or
   `localhost` never called, the key never in the address, and every kit data definition with a
-  dialect behind it.
+  dialect behind it, a row editor only for the SQL services.
 - `test/detect.test.ts`: each service told from what was pasted, and the refusals that say what to
   paste instead; several lines put together; another secret in the block never taken for the key;
   the read-only token of two; Neon's psql line and parameters; Supabase's dashboard and pooler.

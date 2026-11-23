@@ -2,8 +2,8 @@
 title: "Phone tests owed: Connected data"
 status: living
 owner: vendor
-last_verified: 2026-11-22
-sources: [docs/records/2026-11-22-supabase-one-click.md; docs/records/2026-11-22-database-checks-and-rename.md; docs/records/2026-11-22-airtable-sign-in.md; modules/data/README.md; the records each line links]
+last_verified: 2026-11-23
+sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-22-supabase-one-click.md; docs/records/2026-11-22-database-checks-and-rename.md; docs/records/2026-11-22-airtable-sign-in.md; modules/data/README.md; the records each line links]
 ---
 
 # Phone tests owed: Connected data
@@ -34,3 +34,11 @@ sources: [docs/records/2026-11-22-supabase-one-click.md; docs/records/2026-11-22
 | P432 | Sign in with Airtable again and press Cancel on Airtable's page | Back on Connect Airtable: "You cancelled on Airtable’s page, so nothing was connected." | [record](records/2026-11-22-airtable-sign-in.md) |
 | P433 | Two hours after P431, open that Airtable connection and a table | The tables and rows load as before: the portal renewed the sign-in by itself | [record](records/2026-11-22-airtable-sign-in.md) |
 | P434 | Sign in with Airtable again, allow it, then press Cancel on "Connect Airtable?" | Back on Connect Airtable: "You pressed Cancel, so nothing was connected."; no new connection on the Data page | [record](records/2026-11-22-airtable-sign-in.md) |
+| P435 | Work, Data, a Supabase, Neon or Turso database, as its manager: Editing (above the tables), Turn on editing | "Editing is on." at the top; the Editing section says On. Before that, Change key with a key that may write | [record](records/2026-11-23-connected-data-edits.md) |
+| P436 | Open a table with a primary key and tap a row's first value | The row's own page with a box for each value; the key and any binary or JSON column show their value and why they cannot be changed; No value is ticked for an empty one | [record](records/2026-11-23-connected-data-edits.md) |
+| P437 | Change one value and press Save changes; open the table again | "Saved. You can undo it under Recent changes…"; the table shows the new value | [record](records/2026-11-23-connected-data-edits.md) |
+| P438 | Open the same row in two tabs; save a change in one, then another change in the other | The second says "The row changed after you opened it" and saves nothing; its box shows the value now, with what you typed under it | [record](records/2026-11-23-connected-data-edits.md) |
+| P439 | The database's page, Recent changes: open the change, press Undo change | Before and after for each column, whole; then "Undone." and the row holds its old value; the change cannot be undone twice | [record](records/2026-11-23-connected-data-edits.md) |
+| P440 | As the Owner, a row: Delete row, confirm; then open it under Recent changes and press Undo delete | "The row was deleted…"; after Undo the row is back with every value it had | [record](records/2026-11-23-connected-data-edits.md) |
+| P441 | Change key back to a key that may only read, then Save changes on a row; then Turn off editing | "The key may only read this database", nothing changed; with editing off the row's page says Editing is off and shows no boxes | [record](records/2026-11-23-connected-data-edits.md) |
+| P442 | An Airtable or Upstash database's page | No Editing switch; it says its rows can only be read here | [record](records/2026-11-23-connected-data-edits.md) |

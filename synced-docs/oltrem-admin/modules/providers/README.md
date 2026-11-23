@@ -388,8 +388,13 @@ key is then saved for the new host. A key sealed before hosts were recorded open
 kit's own definition of that id sends; for a client's own definition it is pasted again. `registry.instance(db, id)`
 finds an instance by its id alone, for that public address. Every write is audited under the person who
 made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
-`rename` (the new name, since 2026-11-22, for the data part), `remove` and `rewrap`, with the
-field names and never a value.
+`rename` (the new name, since 2026-11-22, for the data part), `option`, `remove` and `rewrap`,
+with the field names and never a value.
+
+`registry.setOption(env, actor, id, name, value)` (2026-11-23, for the data part's editing) keeps
+one of `OPTIONS` on the instance's config beside its fields: a choice about how the portal uses
+it, not part of its key. The one option is `edits` (`on`, or `null` to take it away): a connected
+database whose rows the portal may change. A new key (`setCredential`) keeps the options.
 
 `registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable) seals
 secrets the service itself renewed over the credential `from` was opened from, and writes them only

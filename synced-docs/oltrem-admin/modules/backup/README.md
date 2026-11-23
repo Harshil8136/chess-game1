@@ -85,7 +85,7 @@ original's etag pinned (a file changed half way is not copied wrong), and checke
 its size and checksum against the original's; a file uploaded in parts has no checksum as its
 etag, so its copy is checked by size and the run says how many were. A file found already copied
 counts only when the copy is the original's size and checksum. A file changed between the list and
-the copy is counted and left for a later run. Nothing under `backups/` is ever copied. The copies
+the copy is counted and left for a later run. Nothing under `backups/` is ever copied, nor the data module's kept changes under `data/changes/` (`NOT_COPIED`): they are a client's rows, kept 30 days for Undo, and a locked copy would outlive that. The copies
 are under the bucket lock and the lifecycle rule like the database copies: kept at least 35 days,
 deleted after 90, after which the next run copies the file again. They take room in the same
 bucket, which is why the files are not ticked on a new portal.
