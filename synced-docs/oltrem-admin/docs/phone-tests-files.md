@@ -47,3 +47,7 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P489 | Restore on that earlier version | "That version is back"; Download gives the old content; Versions now lists the one it replaced | [record](records/2026-11-23-files-versions.md) |
 | P490 | Star on a file, then Files, Starred (left on a computer, the chip row on the phone) | The file is listed with its location; signed in as someone else, their Starred does not show it | [record](records/2026-11-23-files-versions.md) |
 | P491 | Files, Recent | The files changed most lately at your locations, newest first, with the one you just changed near the top | [record](records/2026-11-23-files-versions.md) |
+| P492 | A folder's page: File requests, 7 days, Files it takes 3, a passcode, Make a file request | "The file request was made" with the link and Copy; the request listed with 0 of 3 files received | [record](records/2026-11-23-files-requests.md) |
+| P493 | Open that link in a private window on the phone | A plain page "Send files to" the folder, with Your name, Passcode and Files; no sign-in | [record](records/2026-11-23-files-requests.md) |
+| P494 | Fill in your name and the passcode, pick two files, Send | "Received, thank you" with both names; in the folder they show "your name (file request)"; the request shows 2 of 3 | [record](records/2026-11-23-files-requests.md) |
+| P495 | End the request (on the folder's page or Files, Shared links), then open the link again | "This link has ended" | [record](records/2026-11-23-files-requests.md) |

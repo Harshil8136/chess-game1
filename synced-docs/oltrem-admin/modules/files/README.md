@@ -213,6 +213,24 @@ share's audit row (`to`), so the file's history says where the link went. It goe
 company's sending address through the email service, within that service's own daily limits.
 Since only the link's hash is kept, a link is emailed only when it is made.
 
+## File requests (2026-11-23)
+
+A file request is a link on a folder through which people outside the portal send files into it,
+without signing in. Someone who may share and add files there makes one on the folder's page
+(**File requests**: one to thirty days, the files it takes, 20 unless told and 100 at most, an
+optional passcode, an optional address to email it to); it is shown once, like a link, and is a
+row of `files_shares` with `request` set. It opens at `/hooks/files/r/<token>`: a page with the
+folder's name, the files it still takes and the largest size, a name field, the passcode when it
+asks for one, and the files (ten at most at once). Each file holds a place among the files the
+request takes before it is read, is judged and checked as an upload is (a disguised program
+refused, one that can run held for review), counts against the location's room, keeps the name
+it came with (numbered on a clash) and shows "name (file request)" as who added it. Each is
+audited as `files.request-upload`, with the name given, the file's name and size. The request
+ends at its day, when it has taken its files, by hand (End on the folder's page or on Shared
+links), after ten wrong passcodes, or when its folder goes to the trash; an ended one answers
+`410`. A sending is read only when its declared length is within the largest upload, so one
+sending holds at most that much in all.
+
 ## Shared with a customer
 
 When the portal has customers (`@oltrem/customers`), a person who may share a file can also share
@@ -282,12 +300,14 @@ file holds.
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
 
 The hook `GET /hooks/files/s/:token` opens a link, and `POST /hooks/files/s/:token` takes its
-passcode from the page. Every change is audited by the module
+passcode from the page; `GET /hooks/files/r/:token` shows a file request's page, and
+`POST /hooks/files/r/:token` takes what is sent from it (a hook that reads its own body).
+`POST /items/:id/shares` with `request: true` on a folder makes a file request. Every change is audited by the module
 (`files.folder-create`, `files.upload`, `files.copy`, `files.update`, `files.access-grant`,
 `files.access-remove`, `files.restrict`, `files.trash`, `files.restore`,
 `files.purge`, `files.share`, `files.share-revoke`, `files.release`, `files.version`,
 `files.version-restore`; the system's `files.share-download`,
-`files.share-locked` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
+`files.share-locked`, `files.request-upload` and `files.trash-empty`), with names and sizes, never content. A staff download or a preview in place is audited too (`files.download`, `files.preview`, 2026-11-23), except a picture's preview, which the grid shows by the dozen, and a later part of a video.
 
 The module has no card on Home: Home reads a card without the person, and a count of every file
 would tell someone about places their roles do not reach. Its check `files.storage` counts the
@@ -315,7 +335,8 @@ for review (empty when it is not). Migration `0082_files_versions_and_stars.sql`
 `files_items.content_key` (where a file's content is kept since a new version; empty is
 `files/<id>`), `files_versions` (each earlier version: its file, key, store, size, type, held
 reason, who changed the file before and when; indexed by file and time) and `files_stars` (one row
-a person and item).
+a person and item). Migration `0083_files_requests.sql` (2026-11-23) adds `files_shares.request`, set
+for a file request.
 
 ## Settings
 
@@ -371,7 +392,11 @@ reads zips, PDFs and names on their own); a new version kept under the name, ref
 without Change and as a disguised program, restored with the one it replaced kept, ten kept with
 the older content gone from the bucket and every version's content gone with the file; a new
 version that can run held and the clean one restored; a star for the person alone, Starred,
-Recent leaving out another location's files. The pages,
+Recent leaving out another location's files; a file request made on a folder only and by someone
+who may share there, its token never opening as a link, its page, a passcode asked and a wrong one
+refused, a name needed, two files received with one held and the name escaped, a disguised
+program refused, the files past its count refused and the request then gone, one ended by hand.
+The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent

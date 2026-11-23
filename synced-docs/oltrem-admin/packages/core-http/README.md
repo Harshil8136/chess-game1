@@ -107,7 +107,9 @@ A module's public hooks (`hooks` in `@oltrem/core-module`) are mounted at
 the identity is read, so an outside service such as an email provider can post its reports with
 no sign-in. The body is read once, as text, at most
 `HOOK_BODY_MAX` (512 KiB): through `readCapped`, so a body sent in pieces without a declared length
-is still refused at the first byte past it rather than read whole (2026-11-20). It is handed to the
+is still refused at the first byte past it rather than read whole (2026-11-20). A hook declared
+with `body: 'bytes'` is the exception (2026-11-23): its body is left unread for the handler, which
+holds it to its own limit, and the log counts it by its declared length. It is handed to the
 handler with the path's parameters; the answer is
 `no-store`, except a successful answer to a GET that asks to be kept for ever (`immutable`), as a
 script whose address changes with any byte of it does (Oltrem Mail's reader), and a `KitError` the

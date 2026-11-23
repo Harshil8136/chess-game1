@@ -151,7 +151,9 @@ A module's `hooks` are addresses an outside service posts to, such as a provider
 reports, or a link a person opens, such as a shared file (`method: 'GET'`; `POST` by default),
 mounted by `@oltrem/core-http` at `/hooks/<module><path>` before the Access identity is read. The handler gets the body exactly as it arrived (`HookContext.body`), the path's
 parameters and no session; it is the only check, so it verifies the caller by a signature or a
-secret in the address.
+secret in the address. A hook with `body: 'bytes'` (2026-11-23, the files module's file requests)
+gets its body unread and an empty `body`, and reads `request` itself under its own limit, which it
+checks from the declared length before it reads.
 
 ## Jobs
 
