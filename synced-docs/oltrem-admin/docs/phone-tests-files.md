@@ -72,3 +72,6 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P533 | On a folder's page, Restrict, then Open to the location | The first row says "Only the people added here", then "Everyone whose role reaches" the location again | [record](records/2026-11-24-files-item-page.md) |
 | P534 | Links, New link, Make a link; then End on its row | The link shows once to copy; its row says the downloads and the end date; End ends it | [record](records/2026-11-24-files-item-page.md) |
 | P535 | A file's page on the phone | The name and its buttons on top, the preview, Who has access, the cards, and Activity last; nothing wider than the screen | [record](records/2026-11-24-files-item-page.md) |
+| P536 | Open a link that has ended, on the phone | A card in the middle: "This link has ended" and what to do, in the phone's light or dark | [record](records/2026-11-24-files-public-pages.md) |
+| P537 | Open a link with a passcode, in a private window | A card with a lock, the Passcode box and a wide Download button; a wrong one says so in red | [record](records/2026-11-24-files-public-pages.md) |
+| P538 | Open a file request, in a private window | "Send files to" the folder, the date as "1 Dec 2026", Your name, the passcode if asked, Files and a wide Send | [record](records/2026-11-24-files-public-pages.md) |

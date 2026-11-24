@@ -220,7 +220,7 @@ A link hands one file to anyone who has it, for one to thirty days, and optional
 of downloads; it is shown once, with a Copy button, and the database keeps only its SHA-256. It opens at
 `/hooks/files/s/<token>`, past the door, and ends when its day passes, its downloads are used
 (one statement counts a download only while the link is good), someone ends it by hand, or its
-file goes to the trash. An ended link answers `410` with a line of text. Each download is
+file goes to the trash. An ended link answers `410` with a page that says so in plain words. The public pages (the passcode, a file request, an ended link) are one card in the reader's light or dark, with no script and nothing loaded but the page itself (2026-11-24). Each download is
 audited as `files.share-download`, and the file's page shows when each link was last downloaded.
 
 A link may ask for a passcode (2026-11-21), 4 to 64 characters, kept only as a SHA-256 of the link's
