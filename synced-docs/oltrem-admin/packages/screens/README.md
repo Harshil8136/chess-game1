@@ -217,8 +217,9 @@ trips before a page's own first read; now a page waits for its slowest read.
 
 - **Saved views** (since 2026-11-03), above a list page that keeps them (`views` on a module's
   page; a records list, a form's inbox and the audit log): the person's views as a sideways row of
-  chips, All first and the one on screen marked, then a field to name the filters on screen and
-  Save view, or Remove on a saved one. Both post to `/do/views` and `/do/views/remove`, which
+  chips, All first and the one on screen marked, then Save view (since 2026-11-24 a small button
+  whose dialog asks the name, and the row folds behind the toolbar's Filters button with the filter
+  rows), or Remove view on a saved one. Both post to `/do/views` and `/do/views/remove`, which
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
