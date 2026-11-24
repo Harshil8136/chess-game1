@@ -73,6 +73,12 @@ somewhere, and Edit or Manage the matching capability somewhere. What was given 
 otherwise the place's folders are read once to walk up from an item. Entries that ended a month
 ago are deleted by the trash job; deleting an item for good deletes its entries.
 
+**Access review** (2026-11-24, **Files, Access review**, for whoever holds `files.access`) lists
+every entry at the locations where the person holds it, the soonest to end first, then those with
+no end (up to 500), each with its item, location, level, end and who gave it; **Ends within 14
+days** and **Ended** pick them out. Tick entries and **End access** ends them in one write, with an
+audit row each (`files.access-remove`, `bulk: true`); one out of reach is refused alone.
+
 There is no "Ask for access" button: offering it on a hidden item would tell the person the item
 exists, which None and restricted folders are there to prevent. Someone who needs a hidden file
 asks the person who manages the location.
@@ -236,7 +242,9 @@ audited as `files.request-upload`, with the name given, the file's name and size
 ends at its day, when it has taken its files, by hand (End on the folder's page or on Shared
 links), after ten wrong passcodes, or when its folder goes to the trash; an ended one answers
 `410`. A sending is read only when its declared length is within the largest upload, so one
-sending holds at most that much in all.
+sending holds at most that much in all. When a sending brings files, the person who made the
+request is emailed (2026-11-24) who sent them and their names, once per sending; a failed email
+never fails the sending.
 
 ## Shared with a customer
 
@@ -274,6 +282,7 @@ then removes link rows that ended a month ago. Its check (the jobs page's **Chec
 | `/files` | a file manager (2026-11-23): on a computer the place's folders as a tree on the left with a storage bar (the visible places' bytes against the bucket's 10 GB), on a phone a row of the places; the folder's path, a find box (names in this folder), List or Grid (`?view=grid`, pictures as thumbnails), sorting by Name, Changed or Size (`?sort=`, `-` for the largest first), folders first; a tick on each row and **Move to the trash** for the ticked; a menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a file's name opens a details pane (`?item=`) with a preview of a picture, video, sound, PDF or text, its facts, Download and, for a person who may delete for good, its Activity (the last 30 of its audit rows); for a writer **Upload** (many files), **Upload a folder** and **New folder**. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder of the tree; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
 | `/files?show=shared` | Shared with me: the folders and files given to the person by Manage access, with their places |
 | `/files?show=starred`, `/files?show=recent` | Starred and Recent (2026-11-23): what the person starred, and the files changed most lately at their locations, with their places |
+| `/files?show=access` (`ends=soon`, `ends=ended`) | Access review (2026-11-24): every entry of Manage access at the locations the person manages, with ticks and **End access** |
 | `/files?show=links` | Shared links (2026-11-23): every open link and customer share the person made or may end, with its file, location, who made it, its downloads and its end, and **End it** |
 | `/files/:id` | one item: download or open (only open when it is View only), its details, its **Manage access** for a person who may change it (the entries on it and on the folders above it, Restrict this folder, and a form for a person, group or role, a level, View only and Ends on), an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
@@ -290,7 +299,8 @@ file holds.
 | `GET /places` | `files.read` | the places the person may see, with each one's files and bytes |
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
-| `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items) |
+| `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items); with `format=csv` (2026-11-24) up to 1,000 as a CSV download (**Export (CSV)** under Activity), a cell that could run as a spreadsheet formula started with a quote mark |
+| `GET /access`, bulk `end-access` (`POST /bulk/end-access`, up to 100 ids) | `files.access` | the access review; many entries ended in one batch with an audit row each, each refused alone when out of reach |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
 | `GET /starred`, `GET /recent`, `PUT /items/:id/star` (`on`) | `files.read` | what the person starred; the newest files at their locations; star an item they see, or take the star off |
 | `POST /items/:id/versions` (the content as the body), `POST /items/:id/versions/:version/restore` | `files.write`, and Change on the file | a new version of a file; an earlier version back |
@@ -403,14 +413,16 @@ clean one downloaded and restored; earlier versions counted in a location's room
 Recent leaving out another location's files; a file request made on a folder only and by someone
 who may share there, its token never opening as a link, its page, a passcode asked and a wrong one
 refused, a name needed, two files received with one held and the name escaped, a disguised
-program refused, the files past its count refused and the request then gone, one ended by hand.
-The pages,
+program refused, the files past its count refused and the request then gone, one ended by hand,
+its maker emailed once with what came; the access review for whoever manages access only, the
+soonest end first, End access in bulk with an unknown entry refused alone and an audit row each;
+a folder's activity as CSV with a formula cell made plain. The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent
 on, a link's passcode, last download and Locked shown, and the file manager: folders first in the
 order picked, the tree, the upload boxes, the bulk bar, the grid and the details pane with its
-Activity, and a copy made in the same folder. The client template's
+Activity and its Export (CSV) link, the access review with its filters and ticks, and a copy made in the same folder. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.
