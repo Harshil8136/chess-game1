@@ -399,9 +399,11 @@ its quotes doubled, a yes or no as `Yes` or `No`, and text a spreadsheet would r
 (starting with `=`, `+`, `-`, `@`, a tab or a carriage return) given a leading apostrophe, so what
 someone typed never runs on the computer of whoever opens the download. Every download of the kit
 writes through them: the audit log's, the forms' answers, the records' lists, the expenses' month
-and the time clock's hours. `csvResponse(csv, fileName)` sends one as a download that no cache
+the time clock's hours and the connected data's answers. `csvResponse(csv, fileName)` sends one as a download that no cache
 keeps, and `fileNameOf(name, fallback, suffix?)` names it from what a person typed, kept to
-letters, digits, dashes and 60 characters.
+letters, digits, dashes and 60 characters. A module's pages, type-checked against the DOM, take
+them from their own entry, `@oltrem/core-module/csv`, which holds no Workers type (the connected
+data's answers, 2026-11-24).
 
 ## Calendar items
 

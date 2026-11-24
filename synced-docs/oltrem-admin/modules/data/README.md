@@ -43,11 +43,11 @@ that reads only what those people may see.
 | `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
 | `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
 | `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's and Airtable's pages also offer "Sign in with Supabase" or "Sign in with Airtable" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and say in fixed words, with the service's name, why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part" and "Airtable, for the data part", has the journey. The tokens a sign-in fills (Airtable's `refresh`, `expires`, `client`) are never asked for |
-| `/data/connections/<id>` | The connection's facts and last check; then Editing (on or off, with Turn on editing or Turn off editing for a manager; a service whose rows cannot be changed here, Airtable or Upstash, says so instead) and Recent changes (when there are any, or why they could not be read); then its tables; Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
+| `/data/connections/<id>` | The connection's facts and last check; then Editing (on or off, with Turn on editing or Turn off editing for a manager; a service whose rows cannot be changed here, Airtable or Upstash, says so instead) and Recent changes (when there are any, or why they could not be read), ten at a time with Older changes and Newest changes; then its tables; Check now, Rename, Change key and Remove (one confirm). When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
 | `/data/connections/<id>/rows` | One page of a table, read now: Back at the top, a search, a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a table on a computer whose columns scroll sideways, and a card for each row on a phone, its first value as the title and every field under it. In a table with a primary key, each row's first value links to the row's own page. Saved views keep the table, its search and its sort |
 | `/data/connections/<id>/row` | One row found by its key (`k`), read whole. With editing on and `data.edit`: a box for each value (a text box for a long or broken one), No value for a column that may be empty, a locked column's value with why, and Save changes; with `data.delete` also Delete row (one confirm, which says rows the database removes with it are not put back). Otherwise the values, and why they cannot be changed, with a link to the database's page for a manager. A refused save keeps what was typed |
 | `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: "N columns are hidden from you", a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns under the rows (closed until opened): each column but the key Shown, Masked or Hidden, and Save columns |
-| `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon and Turso only |
+| `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. Download CSV gives the same answer as a file. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon and Turso only |
 | `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
@@ -83,8 +83,8 @@ audited too (`audited` on the route: `data.read-connections-tables`, `data.read-
 | `POST /connections/:id/row/change` | `data.edit`, company | `{table, k, expect, values}`: only the columns whose value differs from what the form showed, and only while they still hold it; `{changed, id, kept}` |
 | `POST /connections/:id/row/delete` | `data.delete`, company | `{table, k}`: the row's values kept first, then the row deleted; the copy dropped only when the database clearly refused |
 | `POST /connections/:id/columns` | `data.manage`, company | `{table, columns: {name: show, hide or mask}}`: one table's hidden and masked columns, checked against its columns (one read of the table); a key column is refused; audited as `providers.option` |
-| `POST /connections/:id/ask` | `data.questions.run`, company | `{sql}`: one statement that only reads; `{columns, rows, more, left?}`, at most 100 rows and 60 columns; audited as `data.question` with the row count, never the question or its rows |
-| `GET /connections/:id/changes` | `data.read`, company | The last 10 changes still kept, newest first; anything past 30 days deleted after the answer |
+| `POST /connections/:id/ask` | `data.questions.run`, company | `{sql, as?}`: one statement that only reads; `{columns, rows, more, left?}`, at most 100 rows and 60 columns; audited as `data.question` with the row count (and `download: csv` when `as` is `csv`), never the question or its rows |
+| `GET /connections/:id/changes` | `data.read`, company | `?after=<change id>`: the next 10 changes still kept, newest first, with `next` (the id to ask after) while more remain; anything past 30 days deleted after the answer |
 | `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
 | `POST /connections/:id/changes/:change/undo` | `data.edit`, company | Undo a change while the row holds what it made, or put a deleted row back; once; `{undone, id, kept, marked}` |
 | `GET /home` | `data.read` | Home's Databases line: how many connections answered their last kept check, of how many |
@@ -268,6 +268,11 @@ A question is audited (`data.question`) by who asked, the connection and how man
 the question and its rows are not kept anywhere, and a refusal is logged by its code and title.
 `data.questions.run` is apart from `data.read` because a question reads every column the key may read.
 
+Download CSV (2026-11-24) asks the same question again and gives back the same at most 100 rows as
+a file, `answer.csv`, through the kit's CSV writer: a value starting with `=`, `+`, `-`, `@` or a
+tab is written with an apostrophe before it, so a spreadsheet shows it rather than runs it. Its
+audit row adds `download: csv`, so the log tells a look from a copy that left the portal.
+
 ## What a dialect does
 
 Every dialect gives the same three things (`DataSource`), and the SQL ones a row's editor
@@ -387,8 +392,9 @@ the kit's `KIT-E-0422`.
 ## Not here yet
 
 A count of reads per connection (it would cost a write on every page read); the Data API's
-description and the last good page kept in Cloudflare's cache (today every page of a Supabase table
-reads the description again, which a large schema makes slow); AWS, Google Cloud, Azure and
+description kept in Cloudflare's cache (today every page of a Supabase table reads the description
+again, which a large schema makes slow; left out on 2026-11-24, since a cached description can be
+out of date after a table changes or follow a key that was replaced, for one request saved); AWS, Google Cloud, Azure and
 Snowflake through the portal's own identity (no key at all); Postgres and MySQL through
 Hyperdrive; an approval before an edit (optional in the owner's plan); questions in SQL on Supabase (its Data API runs none); saved questions; editing
 Airtable and Upstash.
@@ -410,9 +416,7 @@ Left on purpose, to come back to:
 - Supabase's description does not mark a column Postgres works out, so putting back a deleted row
   of such a table is refused by Postgres;
 - a kept copy holds the client's row for 30 days, and one past 30 days stays in the bucket until
-  that database's changes are next listed or the hourly check reaches it;
-- only the 10 newest changes are listed, so an older one inside its 30 days cannot be opened from
-  the page.
+  that database's changes are next listed or the hourly check reaches it.
 
 ## Tests
 

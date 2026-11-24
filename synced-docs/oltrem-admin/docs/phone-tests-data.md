@@ -49,3 +49,6 @@ sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-
 | P460 | As an Owner, a table's Hide or mask columns: mask one, hide one, Save columns | Saved; the key column not offered | [record](records/2026-11-23-connected-data-hidden-columns.md) |
 | P461 | As someone without hidden columns, open that table | The hidden one gone with a line saying so; the masked one shows its last 4 characters | [record](records/2026-11-23-connected-data-hidden-columns.md) |
 | P462 | As that person, search for a value of the masked column | No row found by it | [record](records/2026-11-23-connected-data-hidden-columns.md) |
+| P520 | A Neon or Turso database's Ask page, type a question, Download CSV | `answer.csv` downloads with the same rows Ask shows | [README](../modules/data/README.md#questions-in-sql) |
+| P521 | Open that file in a spreadsheet where a value starts with `=` | The value shows as typed with an apostrophe before it, nothing runs | [README](../modules/data/README.md#questions-in-sql) |
+| P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again | [README](../modules/data/README.md#editing) |
