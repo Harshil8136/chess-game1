@@ -693,7 +693,11 @@ The client template's deploy workflow runs it on `main` after its checks and `ve
 2. **The version running now**, from `wrangler deployments status`: the one carrying most traffic.
 3. **The migrations**, as `migrations apply` runs them (the database created on the first deploy).
    A failed migration stops the release: no new code deploys.
-4. **The deploy.**
+4. **The deploy.** When the account refuses a binding the portal can run without (2026-11-24:
+   Analytics Engine, which an account must switch on in the dashboard, and the Worker's rate
+   limit; `OPTIONAL_BINDINGS`), the release takes that binding out of its copy of the
+   configuration, deploys again once, and says in the log what waits: an account without
+   Analytics Engine stopped every fleet update for a day.
 5. **The health check:** `/healthz` on the portal's address (`PUBLIC_HOST`, or the workers.dev
    address wrangler printed), up to six reads five seconds apart. The Worker answers it before its
    own sign-in check; the door must let the path through, as it does `/hooks` (`oltrem deploy`
