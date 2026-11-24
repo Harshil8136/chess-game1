@@ -17,6 +17,7 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; docs
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P643 | Settings, Modules, Access (a portal where nobody switched Sign-in alerts off) | Sign-in alerts on; signing in from another browser brings the email | [record](records/2026-11-24-sign-in-alerts-on.md) |
 | P640 | My access, Your sign-ins | Report a sign-in, then Sign out everywhere, in one row; Report a sign-in asks first and says whoever looks after access is told | [record](records/2026-11-24-report-a-sign-in.md) |
 | P641 | Signed in on two browsers: press Report a sign-in on one, then Report and sign out | Signed out on both; the alert recipients get a Critical email naming you and the other browser | [record](records/2026-11-24-report-a-sign-in.md) |
 | P642 | As the Owner, Alerts | The report is open, with Mark resolved; pressing it moves it to resolved | [record](records/2026-11-24-report-a-sign-in.md) |

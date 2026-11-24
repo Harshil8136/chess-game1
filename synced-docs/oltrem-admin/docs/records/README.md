@@ -151,4 +151,5 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Files: keep for and legal hold, phase 9a](2026-11-24-files-keep.md) | a folder keeps its files a set time and a legal hold freezes what it covers; trash, delete, move and the trash job refused; migration 0084; P502-P504 |
 | [Public addresses rest before a limit](2026-11-24-public-hooks-rest.md) | the fleet's edge rule `oltrem_hooks`, 60 hook calls a minute per address, 503 near the day's D1 limit, migration rules as a test, one Analytics Engine figure per request; P510-P511 |
 | [Report a sign-in that was not you](2026-11-24-report-a-sign-in.md) | one press on My access signs out everywhere and raises a critical alert naming the other browsers; the sign-in alert points to it; a report is resolved by hand; P640-P642 |
+| [Sign-in alerts on for everyone](2026-11-24-sign-in-alerts-on.md) | the owner's pick: on from the start, and on every portal but where an admin switched them off; migration 0085; P643 |
 | [Verification log, 2 and 3 November](2026-11-02-to-03-verification-log.md) | the log's rows of those days, moved when it passed its size |

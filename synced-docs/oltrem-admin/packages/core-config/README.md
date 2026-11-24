@@ -175,7 +175,8 @@ backup and the drill reminder, since 2026-11-12: work on the timer that costs da
 day; Access's ending-access emails and access-review reminder, since 2026-11-21, the owner's pick:
 mail and warnings a new portal did not ask for; the four extras added on 2026-11-21; the Monday
 summary and Database checks, 2026-11-22) is off on a
-new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's default, so a
+new portal until someone switches it on (Sign-in alerts left that list on 2026-11-24, the owner's
+pick: on for everyone): `EXTRAS_OFF_AT_FIRST` is the setting's default, so a
 portal whose list was already saved keeps what it saved. The others are on until switched off.
 An extra added later that should start off on every portal also needs a migration that adds it to
 a saved list, as `0067_parts_quiet_extras.sql` does for the four of 2026-11-21 and
@@ -215,6 +216,9 @@ id), `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; t
 that day to a saved parts list as off (above); a portal that never saved the list keeps the
 default and gets no row. Migration `0074_parts_summary_off.sql` (2026-11-22) does the same for
 the Monday summary, and `0077_parts_data_watch_off.sql` (2026-11-22) for Database checks.
+Migration `0085_parts_sign_in_alerts_on.sql` (2026-11-24) goes the other way: it takes Sign-in
+alerts out of a saved list, unless the settings history shows the list without them since they
+existed, which means an admin switched them off after they had been on.
 
 ## Tests
 
@@ -227,7 +231,9 @@ at once with its history and audit rows, and the four refusals. `test/clock.test
 (New York), a time skipped and a time repeated, the day after across a year and a leap day.
 `test/quiet-extras.test.ts` runs migration `0067` on a saved list: the four extras added as off,
 nothing else changed, the version moved and the history written once, a second run changing
-nothing, and a portal with no saved list given no row; the same for `0074` and `0077`. `test/parts.test.ts` holds the
+nothing, and a portal with no saved list given no row; the same for `0074` and `0077`; and `0085`
+taking Sign-in alerts out of a list that held them since they began, but not where an admin
+switched them off after they had been on. `test/parts.test.ts` holds the
 kinds to the catalogue (each kind's parts switchable, Records never off), and saves a kind with the
 parts: the setting, the audit row, the Get started step done (and done once modules were saved
 with no kind), a kind that is not one refused by the route's schema, and the Settings page's edit
