@@ -2,8 +2,8 @@
 title: "Phone tests owed: the Apps page"
 status: living
 owner: vendor
-last_verified: 2026-11-23
-sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-23-apps-logs-connected-look.md; modules/connect/README.md]
+last_verified: 2026-11-24
+sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-23-apps-logs-connected-look.md; docs/records/2026-11-24-everyones-links.md; modules/connect/README.md]
 ---
 
 # Phone tests owed: the Apps page
@@ -39,3 +39,11 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 | P472 | A Zapier or Slack card with one connection; then a calendar card with a link made | The card shows that connection's last delivery and opens its page; the calendar card scrolls to its row under Connected | [record](records/2026-11-23-apps-logs-connected-look.md) |
 | P473 | Open a calendar link in another app (or a browser), then System, Audit log | A row "connect.received" for that link: its name, whose it is, how many events, the address it came from; the link's own address is not in it | [record](records/2026-11-23-apps-logs-connected-look.md) |
 | P474 | A connected database's page, open a table; then the Audit log | A row "data.read-connections-rows" naming the database, with no rows or search words in it | [record](records/2026-11-23-apps-logs-connected-look.md) |
+
+### Everyone's links, 24 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P512 | As an Owner, Admin, Integrations, Apps | "Everyone's links" beside the title; it lists every calendar and spreadsheet link, whose it is and when it was last used | [record](records/2026-11-24-everyones-links.md) |
+| P513 | Delete on someone else's link, then Delete link | It asks first, then says the link is deleted; the list no longer has it, and the Audit log has "connect.end" naming whose it was | [record](records/2026-11-24-everyones-links.md) |
+| P514 | As a person without that permission, Apps | No "Everyone's links" button; their own links still under Connected | [record](records/2026-11-24-everyones-links.md) |

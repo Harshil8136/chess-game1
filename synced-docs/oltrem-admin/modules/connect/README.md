@@ -68,6 +68,7 @@ address. Empty, the cards offer the pasted link only.
 |---|---|
 | `connect.self` (every account) | see their own links, make their calendar link, delete their own links |
 | `connect.share` (bit plane `31`, operate) | make a spreadsheet link. It hands a whole list out of the portal, so an Owner can withhold it, as `files.share` for one file; taken away, the person's spreadsheet links open nothing until it is given back |
+| `connect.links.manage` (admin, at the company) | see everyone's links on `/connect/links` (whose each is, when an app last read it; never a secret) and delete any, audited as `connect.end` with whose it was (`GET /api/connect/links/everyone`, `DELETE /api/connect/links/everyone/:id`, 2026-11-24) |
 
 A chat alert or an automation needs `developer.manage`, checked by the Developer module. Without
 it, or with Developer switched off, the two tabs say who can help instead of showing cards that do
@@ -232,6 +233,7 @@ Make only for apps listed in their stores. Those stay on the pasted link (the ow
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
+| `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Everyone's links" beside the Apps title |
 | `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
 
 ## The logos
@@ -246,6 +248,13 @@ Microsoft asked for its marks to be taken out of that project, so Teams, Outlook
 plain icon in their colour. Apple Calendar, "Another calendar app", the spreadsheet rows and "Any
 other app" show a plain icon. The page ends with one line saying the names and logos belong to
 their owners and only show which app a card connects to.
+
+## Reads too often
+
+A link read more than 60 times in ten minutes in one Worker isolate is refused (`KIT-E-0429`) for
+the rest of those ten minutes (`LIMITS.reads`, `LIMITS.readWindow`), before the database is asked:
+a calendar app or a sheet reads about once an hour, so only a leaked address read in a loop meets
+it, and it cannot spend the portal's free allowance. Each refusal is still logged.
 
 ## What is logged
 
@@ -273,9 +282,12 @@ without `connect.share` is `KIT-E-0403`; a link that is not theirs is `KIT-E-040
 ## Not here yet
 
 - One-click for Microsoft Teams, Google Chat, Excel, Zapier and Make (see "One-click sign-in").
-- An Owner's list of everyone's links, to delete one; signing the person out ends them all today.
-- A row in the audit log for each read of a spreadsheet link.
 - Calendar items from modules other than bookings, shifts, time off and tasks.
+- A Google Sheet's Google account named before its link is written. Today the way back only
+  finishes in the browser that started it (the trip's cookie), so another person's account can
+  own the sheet only if someone opens a stranger's return address within the ten minutes; a
+  confirm step naming the account would close even that. An Owner sees and deletes any such
+  link under Everyone's links.
 
 ## Tests
 

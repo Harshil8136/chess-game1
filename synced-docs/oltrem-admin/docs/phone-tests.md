@@ -168,9 +168,9 @@ Owed in [their own list](phone-tests-files.md), P447 to P454, P463 to P467 (Mana
 
 Owed together in [their own list](phone-tests-flows.md), P251 to P294.
 
-### The Apps page, 22 and 23 November
+### The Apps page, 22 to 24 November
 
-Owed in [their own list](phone-tests-apps.md), P376 to P385 and P468 to P474.
+Owed in [their own list](phone-tests-apps.md), P376 to P385, P468 to P474 and P512 to P514.
 
 ### Alerts, audit and errors
 
