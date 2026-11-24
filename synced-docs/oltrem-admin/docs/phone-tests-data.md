@@ -52,3 +52,7 @@ sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-
 | P520 | A Neon or Turso database's Ask page, type a question, Download CSV | `answer.csv` downloads with the same rows Ask shows | [README](../modules/data/README.md#questions-in-sql) |
 | P521 | Open that file in a spreadsheet where a value starts with `=` | The value shows as typed with an apostrophe before it, nothing runs | [README](../modules/data/README.md#questions-in-sql) |
 | P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again | [README](../modules/data/README.md#editing) |
+| P570 | A Neon or Turso database's Ask page, type a question and a name, Save question | Saved as that name; a chip with the name above the box | [README](../modules/data/README.md#questions-in-sql) |
+| P571 | Press the chip | The box filled with that question, and Remove saved question | [README](../modules/data/README.md#questions-in-sql) |
+| P572 | Remove saved question | Removed; the chip gone | [README](../modules/data/README.md#questions-in-sql) |
+| P573 | Home and a signed-in Airtable database whose sign-in ended | Home says signed out, sign in again; the database says Signed out, with Sign in with Airtable again | [README](../modules/data/README.md#the-pages) |
