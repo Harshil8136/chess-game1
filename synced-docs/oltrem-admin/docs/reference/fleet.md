@@ -72,7 +72,8 @@ flowchart TD
    step says so. A key without Zone WAF Edit is named with that fix and the update still counts.
 6. **Says how it went.** The build's log first names the accounts the key reaches and any
    database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
-   `held` or `failed`, with the steps under it. The build is red when any portal failed or was
+   `held` or `failed`, with the steps under it; a failed deploy ends with what wrangler said, its
+   error lines (since 2026-11-24, when builds failed for half a day with no reason shown). The build is red when any portal failed or was
    held, or when the key found no portal at all. With the GitHub token, each portal that did not update gets an issue named
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
    closed by the first run that updates it.
