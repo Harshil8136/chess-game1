@@ -161,6 +161,12 @@ a virus scan: a program inside a zip inside a zip, macros in an old `.doc`, or J
 PDF's compressed parts pass unseen. A name with marks that change the direction of the text, or
 ending with a dot, is refused, since it can hide its real ending.
 
+### Content never left without its row (2026-11-24)
+
+When the content is stored but the row that records it cannot be written (an upload, a copy, a new
+version, a file request), the stored content is deleted again, so no bucket keeps a file the
+portal cannot see or count.
+
 ### Versions, Starred and Recent (2026-11-23)
 
 **Upload a new version** on a file's page keeps its name, place and links: the new content is
@@ -170,9 +176,10 @@ refused, one that can run is held), and stored under a key of its own
 its key, store, size, type and held reason). The newest ten are kept; an older one's content and
 row are deleted as the next is made. **Restore** on a version brings it back, and the content it
 replaces becomes a version in its turn. Both need Change on the file and are audited
-(`files.version`, `files.version-restore`). A new version is checked against its location's room;
-earlier versions are not counted in any room or in the storage check. Deleting a file for good
-deletes its versions' content too.
+(`files.version`, `files.version-restore`). Earlier versions count toward their location's room
+and in the storage check (since 2026-11-24). **Download** on a version gives that version
+(`GET /items/:id/content?version=<id>`, audited with the version), unless it is held or the file is
+View only. Deleting a file for good deletes its versions' content too.
 
 **Star** on an item's page keeps it under **Files, Starred**, for that person alone
 (`files_stars`, not audited). **Files, Recent** lists the 50 files changed most lately at the
@@ -390,8 +397,9 @@ only by Manage and opened after, a plain zip not held, a name with a direction m
 Shared links listing a link for whoever may share and dropping it once ended (`test/safety.test.ts`
 reads zips, PDFs and names on their own); a new version kept under the name, refused to someone
 without Change and as a disguised program, restored with the one it replaced kept, ten kept with
-the older content gone from the bucket and every version's content gone with the file; a new
-version that can run held and the clean one restored; a star for the person alone, Starred,
+the older content gone from the bucket and every version's content gone with the file, an earlier
+version downloaded on its own and an unknown one not found; a new version that can run held, the
+clean one downloaded and restored; earlier versions counted in a location's room; a star for the person alone, Starred,
 Recent leaving out another location's files; a file request made on a folder only and by someone
 who may share there, its token never opening as a link, its page, a passcode asked and a wrong one
 refused, a name needed, two files received with one held and the name escaped, a disguised

@@ -51,3 +51,5 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P493 | Open that link in a private window on the phone | A plain page "Send files to" the folder, with Your name, Passcode and Files; no sign-in | [record](records/2026-11-23-files-requests.md) |
 | P494 | Fill in your name and the passcode, pick two files, Send | "Received, thank you" with both names; in the folder they show "your name (file request)"; the request shows 2 of 3 | [record](records/2026-11-23-files-requests.md) |
 | P495 | End the request (on the folder's page or Files, Shared links), then open the link again | "This link has ended" | [record](records/2026-11-23-files-requests.md) |
+| P496 | A file with an earlier version: on its page, Download on that version | The earlier content downloads; the file itself still gives the newest | [record](records/2026-11-24-files-tidy.md) |
+| P497 | Files, Limits: a location's room just above its files; upload a new version of a big file there, then another file | The new version is taken; the next upload is refused with "This location's room for files is full" | [record](records/2026-11-24-files-tidy.md) |
