@@ -18,6 +18,7 @@ import { withPages } from '@oltrem/core-module';
 const expenses = createExpenses<Env>({
   bindings: (env) => ({ db: env.DB, bucket: env.FILES }), // the bucket keeps the receipts
   config: settingsFor, // reads expenses.currency
+  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // which day today is: spent on; UTC when left out
   send: async (env, m) => {
     await email.send(env, {
       tenantId: m.tenantId,

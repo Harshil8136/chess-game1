@@ -37,3 +37,4 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 | P353 | Privacy: open a request, Find their data | The audit part is titled "What they did in the portal, last 90 days" | [record](records/2026-11-22-lighter-database.md) |
 | P510 | Open a shared file's link five times quickly | It opens every time | [record](records/2026-11-24-public-hooks-rest.md) |
 | P511 | After the fleet key has Zone WAF Edit and the next push: Cloudflare, the portal's domain, Security, WAF, Rate limiting rules | One rule, `oltrem_hooks` | [record](records/2026-11-24-public-hooks-rest.md) |
+| P529 | Settings, Company: the title reads Company time zone; set America/Mexico_City. After 6 PM there, make an invoice due today | It is taken, not refused as past | [record](records/2026-11-24-company-time-zone.md) |

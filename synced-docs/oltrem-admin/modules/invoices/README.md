@@ -24,6 +24,7 @@ import { withPages } from '@oltrem/core-module';
 const invoices = createInvoices<Env>({
   bindings: (env) => ({ db: env.DB }),
   config: settingsFor, // reads the invoices.currency setting
+  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // which day today is: due, overdue, reminders; UTC when left out
   // Whether the address is a customer of the company who is switched on.
   isCustomer: async (env, tenantId, address) =>
     (await customers.store.customerByEmail(env, address))?.tenantId === tenantId,

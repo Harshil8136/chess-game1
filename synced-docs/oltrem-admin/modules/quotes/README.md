@@ -17,6 +17,7 @@ import { withPages } from '@oltrem/core-module';
 const quotes = createQuotes<Env>({
   bindings: (env) => ({ db: env.DB }),
   config: settingsFor, // reads the quotes.currency setting
+  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // which day today is: valid until, expired; UTC when left out
   // Whether the address is a customer of the company who is switched on.
   isCustomer: async (env, tenantId, address) =>
     (await customers.store.customerByEmail(env, address))?.tenantId === tenantId,
