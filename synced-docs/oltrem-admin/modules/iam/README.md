@@ -267,7 +267,11 @@ The rules, each refused with its own code:
 - **You grant only what you hold.** A role goes to a person or group at a scope only if the actor
   holds `iam.bindings.manage` there (`iam.owners.manage` for the Owner role) and the role's
   position is below the actor's own standing at that scope: the best position they hold there or
-  above it (`rankAt`). A capability enters a role only if the actor holds it at every scope where
+  above it (`rankAt`), and the actor holds every permission the role carries at that scope
+  (since 2026-11-24, the owner's pick from the review of 2026-11-20: a role below your own could
+  carry a permission you lack; a deny grant hands nothing on and is not held to it; the same
+  holds for an invitation, a group's members and an API key). `GET /roles` marks each role
+  `mine` when the reader holds all its permissions somewhere, so the pages offer only those. A capability enters a role only if the actor holds it at every scope where
   the role is granted (anywhere, for a role not granted yet); a role is made or edited below the
   actor's best position; the Owner role is edited by the Vendor alone and never deleted.
   Otherwise `KIT-E-2007`. A refusal about a role names the permission by its label in words
