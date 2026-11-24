@@ -3,7 +3,7 @@
 Written by the verify workflow of the source repository on every push to its main branch; do not edit.
 
 - source_repository: Harshil8136/oltrem-admin
-- source_commit: d1de01d41e26269c5284ba3db1c439f6b82e9a44
-- synced_at: 2026-11-24T08:18:12Z
+- source_commit: c0d3fe016f044b0d57dea5d964b76b2f5447d9d6
+- synced_at: 2026-11-24T08:21:25Z
 - files_copied: 336
 - what: docs/, every .md file at the repository root, packages/*/README.md, modules/*/README.md, templates/*/README.md, LICENSE
