@@ -38,3 +38,10 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 | P510 | Open a shared file's link five times quickly | It opens every time | [record](records/2026-11-24-public-hooks-rest.md) |
 | P511 | After the fleet key has Zone WAF Edit and the next push: Cloudflare, the portal's domain, Security, WAF, Rate limiting rules | One rule, `oltrem_hooks` | [record](records/2026-11-24-public-hooks-rest.md) |
 | P529 | Settings, Company: the title reads Company time zone; set America/Mexico_City. After 6 PM there, make an invoice due today | It is taken, not refused as past | [record](records/2026-11-24-company-time-zone.md) |
+| P540 | Admin, System, Audit log | Rows read as sentences under Today, Yesterday and dates, at your own clock's times; the summary line says how many entries and refused | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P541 | Audit log: type a person's name or a record's name in the search, press Enter | Only rows that mention it; the chips keep the search | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P542 | Audit log: tap 7 days, then People, then Refused | Each narrows the list; the summary line's count changes with it | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P543 | Audit log: tap a row that changed something (a role or a setting) | It opens to What changed with Before and After, then the entry; Everything they did lists only that person's rows | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P544 | Sign in twice, then open the Audit log | Your sign-ins are one row with "2 times" | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P545 | Users and access, Settings, on a computer | The Options card and the settings card each run the full width, every option with its words | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P546 | Integrations, Email services, a provider's setup, on a computer | The key steps and the paste form side by side, filling the width; on a phone, one under the other | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
