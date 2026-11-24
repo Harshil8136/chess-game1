@@ -17,6 +17,9 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; docs
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P640 | My access, Your sign-ins | Report a sign-in, then Sign out everywhere, in one row; Report a sign-in asks first and says whoever looks after access is told | [record](records/2026-11-24-report-a-sign-in.md) |
+| P641 | Signed in on two browsers: press Report a sign-in on one, then Report and sign out | Signed out on both; the alert recipients get a Critical email naming you and the other browser | [record](records/2026-11-24-report-a-sign-in.md) |
+| P642 | As the Owner, Alerts | The report is open, with Mark resolved; pressing it moves it to resolved | [record](records/2026-11-24-report-a-sign-in.md) |
 | P400 | Notifications, scroll past How you are told | Keep portal emails in your main inbox: Gmail filter, Add to contacts and Send me a test in one row (it slides sideways if narrow), four steps, and who portal emails come from | [record](records/2026-11-22-main-inbox-step.md) |
 | P401 | Press Send me a test | A notice that a test is on its way; within a minute an email "Is this email in your main inbox?", plain text, from the portal's address | [record](records/2026-11-22-main-inbox-step.md) |
 | P402 | On a computer: Gmail filter, then in Gmail Settings, See all settings, Filters and Blocked Addresses, Import filters, the file, Create filters | One filter, from the portal's domain, Categorize as Primary, Never send it to Spam; press Send me a test again and it lands in Primary | [record](records/2026-11-22-main-inbox-step.md) |
