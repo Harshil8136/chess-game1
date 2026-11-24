@@ -242,4 +242,5 @@ found pages wasting about 40% of the width and much of the top on empty space an
 **Scope.** Every screen of the kit and every document.
 
 **Enforced by.** The screen gates of the user-interface package in phase 1 (viewport tests and
-the dialog allow-list). For documents, the owner's review.
+the dialog allow-list), and since 2026-11-24 `scripts/widths.test.mjs` in the `tests` gate: no
+page, card, form, column or grid caps its width. For documents, the owner's review.

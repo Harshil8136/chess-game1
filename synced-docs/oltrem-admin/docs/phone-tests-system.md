@@ -45,3 +45,5 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 | P544 | Sign in twice, then open the Audit log | Your sign-ins are one row with "2 times" | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
 | P545 | Users and access, Settings, on a computer | The Options card and the settings card each run the full width, every option with its words | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
 | P546 | Integrations, Email services, a provider's setup, on a computer | The key steps and the paste form side by side, filling the width; on a phone, one under the other | [record](records/2026-11-24-audit-log-remade-and-full-width.md) |
+| P547 | Users and access, Settings, on a computer, then on a phone | On a computer the setting cards sit side by side and fill the row, with no empty half; on a phone, one under another | [record](records/2026-11-24-layout-rules.md) |
+| P548 | Users and access, Roles, open a role with special permissions, on a computer | The permission cards fill the row in as many columns as fit; a module alone takes the whole row | [record](records/2026-11-24-layout-rules.md) |
