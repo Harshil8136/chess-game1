@@ -74,7 +74,7 @@ without it works exactly as it does on Cloudflare alone.
 | Core, in every portal | `iam`, `users`, `privacy`, settings, audit, `alerts`, health, `backup`, `github` | built |
 | Work | `records`, `forms`, `files`, `tasks`, `approvals`, `announcements`, `bookings`, `timeoff`, `expenses`, `assets`, `timeclock`, `shifts`, `quotes`, `invoices`, `customers`, `automations`, `analytics` | built 2026-10-22 to 10-27 |
 | Messages | `providers`, then Mail's three modules | built |
-| Developer | `developer` (jobs page, webhooks, API reference) | built; API keys later |
+| Developer | `developer` (jobs page, webhooks, API reference) | built; API keys built 2026-11-24, under Users and access |
 | Everyday polish, across every module | saved views, bulk actions, a get-started checklist, undo, a notifications inbox (the top of [the open-source ideas](reference/open-source-ideas.md)) | proposed, waiting for the owner's pick |
 | Kit health, under every module | an error log, performance budgets, a phone and accessibility check (the top of [the kit review](reference/kit-review.md)) | proposed 2026-11-03; the error log done the same day |
 

@@ -491,6 +491,23 @@ named at setup sign in"); each then presses Accept on the page they land on (`PO
 handover is invited by the same press: the Vendor is never asked for a second person
 (`templates/client/test/setup-people.test.ts`). Without `settings` nobody is named.
 
+## API keys
+
+Since 2026-11-24 (the owner's yes) another system calls the portal's API with a key
+(`src/keys.ts`, `iam.keys`). An Owner makes one under Users and access, Settings, API keys
+(`POST /keys`: a name, a role, a location and an optional end): the module makes a service
+account (`iam_principals` kind `service`, address `key-<id>@keys.invalid`, never a mailbox) and
+gives it the role through the grant rules, so a key never holds more than its maker may give, and
+**never the Owner role** (refused 422, so a lost key cannot hand the company over). The key,
+`okey_<16 hex>_<48 hex>`, is shown once; only the SHA-256 of its secret is kept, compared in
+constant time. A call carries it to `/hooks/api/...` (`@oltrem/core-http`'s `keys`); the session
+hook takes a key's identity with no device, sign-in row, alert or fresh sign-in, and checks its
+capabilities like anyone's. A key that ends stops at that time; Revoke (`DELETE /keys/:id`)
+switches its account off and ends its session at once. Its last use is written at most once an
+hour (`KEY_USE_EVERY_MS`); a company holds 20 keys at most (`KEYS_MAX`). Making and revoking are
+audited (`iam.key-made`, `iam.key-revoked`); making and revoking need `iam.keys.manage`, held to
+the Owner role (`floor: 'owner'`). Tests: `test/keys.test.ts`.
+
 ## The routes
 
 ```ts
@@ -546,6 +563,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now; each binding carries its location's name and parent (`scopeName`, `scopeParentId`, 2026-11-22), so a role's badge can name where it holds |
 | `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability, with its `area.thing.verb` `name` beside its id (2026-11-22, for the rows' names to copy), with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be, and `sources`: the grants behind it at that place or above it (`kind` `role` with the role's and the group's name, or `exception`; `effect`, `scopeId`, `expiresAt`), by the compiler's own rules (`sourcesOf`); `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
+| `GET /keys`, `POST /keys`, `DELETE /keys/:id` | `iam.keys.manage` | the API keys: listed without the key, made (the key shown once, 201), revoked (204); see API keys above |
 | `POST /invitations`, `POST /invitations/many`, `POST /invitations/:id/again`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`, a refusal naming the account or the waiting invitation as `personId` or `invitationId`); with `send`, each link is emailed; send a pending invitation again with a new link; withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
 | `POST /roles`, `PATCH /roles/:id`, `DELETE /roles/:id` | `iam.roles.manage` | roles below your standing, with capabilities you hold |
@@ -608,7 +626,9 @@ in that company, so it runs twice the same. Migration `0078_iam_drop_policy_comp
 (2026-11-22, the owner's yes in the database review) drops `iam_policy_compiles` and its index,
 which nothing has read ever or written since kit `053f26e`; marked `-- contract:`, it shipped a
 release after the code that stopped writing it (the live portal's last row, read through the
-Cloudflare connector on 2026-11-22, was from before that release).
+Cloudflare connector on 2026-11-22, was from before that release). Migration
+`0089_iam_api_keys.sql` (2026-11-24) adds `iam_api_keys`: a key's id, company, service account,
+name, the hash of its secret, who made it and when, its end, last use and revoke time.
 
 ## Errors
 
