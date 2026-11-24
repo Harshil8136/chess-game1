@@ -4,7 +4,7 @@ Written by the verify workflow of oltrem-admin from the Oltrem Mail pack it keep
 
 - source_repository: oltrem-mail, through Harshil8136/oltrem-admin vendor/mail/
 - source_commit: e77b4f65891a1e3a642056429d5f5bc73a09092f
-- kit_commit: 2bd4c53b52072bbe995cb762d96964cd7fb34a69
-- synced_at: 2026-11-24T06:22:05Z
+- kit_commit: 3daf0c723ad64678af28d58cfd20c450c784b616
+- synced_at: 2026-11-24T06:34:01Z
 - files_copied: 45
 - what: every document of oltrem-mail, from vendor/mail/published/

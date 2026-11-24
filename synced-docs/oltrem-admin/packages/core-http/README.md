@@ -128,6 +128,22 @@ never a body). A hook that throws goes to `report`. The client template passes `
 (`@oltrem/core-audit`), so every webhook, delivery report and link another app reads is a row in
 the audit log.
 
+**A hook rests before a limit runs out** (2026-11-24). Since September 2026 Cloudflare's free
+plan refuses every D1 query for the rest of the UTC day once the day's rows read or written run
+out, which would stop the whole portal. With `shed` given, a hook call while it returns a reason
+answers 503 `KIT-E-0503` with that reason, `Retry-After` until midnight UTC (at least 60 seconds)
+and `no-store`, before its body is read; the client template passes `health.shed`
+(`@oltrem/core-health`). With `limiter` given (the template's `LIMITS` rate-limit binding, 60
+calls a minute), each module's hooks are limited per caller's address: past it, 429
+`KIT-E-0429` with `Retry-After: 60`. A call with no address, or a binding that fails, is let in.
+Both are told to `onHook` like any answer.
+
+**One figure per request** (2026-11-24). With `metrics` given (the template's `METRICS` Analytics
+Engine dataset, `oltrem_requests`), every answer writes one data point: the route as declared
+(`other` when none matched, so an address that holds a secret is never written), the method and
+the status as blobs, the time taken and the status as doubles, and the first part of the path as
+the index. A write that fails is ignored. Free: 100,000 points a day.
+
 Every answer carries `frame-ancestors 'self'` in its content security policy, added to the
 policy the handler set when it set one: a file served for download keeps its sandbox.
 

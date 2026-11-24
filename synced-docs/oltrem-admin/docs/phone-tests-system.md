@@ -35,3 +35,5 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 | P351 | Audit log, Export, from a day more than 90 days ago (once the portal is that old) | The file still holds that day's rows | [record](records/2026-11-22-lighter-database.md) |
 | P352 | Settings: remove the line of P349, Save; System status after the next run | The Web addresses row is OK again and the alert closes | [record](records/2026-11-22-lighter-database.md) |
 | P353 | Privacy: open a request, Find their data | The audit part is titled "What they did in the portal, last 90 days" | [record](records/2026-11-22-lighter-database.md) |
+| P510 | Open a shared file's link five times quickly | It opens every time | [record](records/2026-11-24-public-hooks-rest.md) |
+| P511 | After the fleet key has Zone WAF Edit and the next push: Cloudflare, the portal's domain, Security, WAF, Rate limiting rules | One rule, `oltrem_hooks` | [record](records/2026-11-24-public-hooks-rest.md) |

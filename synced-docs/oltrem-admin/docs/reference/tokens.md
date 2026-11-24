@@ -270,7 +270,7 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the Vendor's own Cloudflare login (a user token), which is a member of every client's account |
-| What it may do | Account, on all accounts: Workers Scripts: Edit, D1: Edit, Workers KV Storage: Edit, Workers R2 Storage: Edit, Queues: Edit, Account Settings: Read; Zone, on all zones: Workers Routes: Edit; User: Memberships: Read, User Details: Read |
+| What it may do | Account, on all accounts: Workers Scripts: Edit, D1: Edit, Workers KV Storage: Edit, Workers R2 Storage: Edit, Queues: Edit, Account Settings: Read; Zone, on all zones: Workers Routes: Edit, Zone WAF: Edit; User: Memberships: Read, User Details: Read |
 | Used by | oltrem fleet, the deploy command of the kit's one Workers Builds connection in the Vendor's account: finds every portal and releases each one (docs/reference/fleet.md) |
 | Stored in | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account (Settings, Build, Variables and secrets) |
 | Owner | vendor |

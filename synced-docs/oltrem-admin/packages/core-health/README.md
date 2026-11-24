@@ -183,6 +183,12 @@ stopped 3 requests today for going over a limit (CPU time or memory)".
 - **`pause`**, for the scheduler: while a budget the jobs spend is at or past 90%, every job but
   `health.run` and `health.measure` waits. Nightly flows run as Workflows, not jobs, so the backup
   still runs.
+- **`shed(env)`** (2026-11-24), for the public hooks (`@oltrem/core-http`'s `shed`): on the free
+  plan, while D1 rows read, D1 rows written or Worker requests (`SHED_BUDGETS`) is at its fail
+  line, it gives `SHED_DETAIL`, which says the public addresses rest until midnight UTC; otherwise
+  null. Cloudflare refuses every D1 query past the free limit until midnight UTC, so the hooks
+  rest first and the signed-in pages keep the rest. The answer is kept a minute per isolate
+  (`SHED_MEMO_MS`), so a flood reads the budgets once a minute; a read that fails gives null.
 - **`budgets(env)`** gives each budget's figure, share, status, when it was measured and its
   problem, for the page.
 - **`OPS_TOKEN_RECIPE`** lives here and the backup module declares the same one: the token needs

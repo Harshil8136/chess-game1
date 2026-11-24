@@ -63,7 +63,13 @@ flowchart TD
 5. **Updates the rest.** For each portal it copies the client template beside it (`.fleet/`),
    writes the choices in, and runs `oltrem release`: the restore point, the migrations, the
    deploy, the health check and the step back. The database is never stepped back: the kit's
-   migrations only add, so the version before runs on it.
+   migrations only add, so the version before runs on it (`scripts/migrations.test.mjs` holds
+   every kit migration to that on each verify, 2026-11-24). After a good update on a portal's own
+   address, the run makes sure that zone has the rate-limit rule `oltrem_hooks` (2026-11-24): at
+   most 30 calls to `/hooks/` in 10 seconds from one address at one Cloudflare location, past
+   which the edge refuses for 10 seconds before the Worker runs. The free plan allows one such
+   rule per zone; a zone that already has a rule of the client's own is left as it is and the
+   step says so. A key without Zone WAF Edit is named with that fix and the update still counts.
 6. **Says how it went.** The build's log first names the accounts the key reaches and any
    database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
    `held` or `failed`, with the steps under it. The build is red when any portal failed or was
@@ -92,7 +98,8 @@ but Cloudflare's build secrets.
    account only, and the first real run found no portal for that reason. These permissions:
    - Account: Workers Scripts Edit, D1 Edit, Workers KV Storage Edit, Workers R2 Storage Edit,
      Queues Edit, Account Settings Read.
-   - Zone: Workers Routes Edit (a portal on its own address).
+   - Zone: Workers Routes Edit (a portal on its own address), Zone WAF Edit (the rate-limit rule
+     on its public hooks, 2026-11-24).
    - User: Memberships Read, User Details Read.
    - Account Resources: the accounts that hold portals, your own and each client's. All accounts
      works too: the fleet only ever acts on an Oltrem portal, and only reads the lists of any
@@ -119,8 +126,8 @@ but Cloudflare's build secrets.
 
 One key reaches every client's account, so it is kept in one place: Cloudflare's build secrets,
 which are never shown again and never reach a portal. It can deploy Workers and change their
-databases, storage and queues, and nothing else: it cannot change members, billing, DNS records
-or Access. Rotate it yearly, or at once if it may have been seen: make a new one from the same
+databases, storage and queues, and a zone's rate-limit rule, and nothing else: it cannot change
+members, billing, DNS records or Access. Rotate it yearly, or at once if it may have been seen: make a new one from the same
 permissions, replace the build secret, delete the old one. Its row is in the
 [token registry](tokens.md).
 

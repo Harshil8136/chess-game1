@@ -42,7 +42,7 @@ Every module has the same shape; the names below are the ones to keep.
 | `src/index.ts` | the public exports: the factory, the capabilities, the store's types |
 | `src/pages.tsx` | the pages, JSX on the server; read and change only through `ctx.api` so the capabilities decide; options in sideways rows (`ChipRow`, `ChoiceChips`, `CommandRow`), dialogs for forms, `ConfirmDialog` before anything removed (R-12) |
 | `src/pages.public.d.ts`, `tsconfig.pages.json`, `test/pages-types.ts` | the pages' type check against the DOM, apart from the Worker's; copied unchanged |
-| `migrations/<number>_<id>.sql` | additive and idempotent: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`; tables named for the module |
+| `migrations/<number>_<id>.sql` | additive and idempotent: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`; tables named for the module; a number no other kit file has; a drop, rename or delete only with a `-- contract:` line saying why the running code no longer needs it (`scripts/migrations.test.mjs`, on every verify) |
 | `test/<id>.test.ts`, `test/seed.ts` | the tests inside the Workers runtime, through the pipeline beside the IAM module, with a seeded company, places, roles and people |
 | `vitest.config.ts`, `wrangler.jsonc`, `oltrem.manifest.json`, `test/env.d.ts`, `test/apply-migrations.ts`, `tsconfig.json` | the test Worker; copied with the module's name |
 | `README.md` | what it does, using it, who may do what, the parts of a record, the pages, the routes, the tables, the errors, what is not here yet, the tests |

@@ -159,7 +159,8 @@ a UUID shape, a hostname) in an instruction file.
 
 **Rule.** A client has one Worker and one of each resource: one database, one bucket, one
 key-value namespace, one queue with its dead-letter queue, one coordination class, one
-workflow, one cron trigger, one access application. A new kind of data is a new prefix or row
+workflow, one cron trigger, one access application, one rate limiter and one analytics
+dataset. A new kind of data is a new prefix or row
 type in an existing resource, not a new resource. Settings, toggles, limits and thresholds are
 rows in the database, read through the configuration layers, never environment variables; the
 few true secrets are declared by name so a deploy fails when one is missing. Adding a resource
