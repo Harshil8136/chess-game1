@@ -2,7 +2,7 @@
 title: "Phone tests owed: Files"
 status: living
 owner: vendor
-last_verified: 2026-11-23
+last_verified: 2026-11-24
 sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; the records each line links]
 ---
 
@@ -60,3 +60,9 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P502 | As the Owner: a folder's page, Keep, Keep each file for 30 days, Save; then Move to the trash on a file in it | "Saved"; the file's page says "Kept until" a date; the trash is refused with "This is kept and cannot be deleted yet" | [record](records/2026-11-24-files-keep.md) |
 | P503 | On another folder: Legal hold reason "Audit", Save; try to trash it, and move a file out of it | "On legal hold" on its page and its files' pages; both refused | [record](records/2026-11-24-files-keep.md) |
 | P504 | Empty the reason and set No rule on both, Save; trash them again | Both go to the trash | [record](records/2026-11-24-files-keep.md) |
+| P523 | Files on a computer, then More, Access review, Limits and Storage in the sidebar | The Files menu sits in the portal's sidebar under Files, with no second sidebar and no row of chips across the top; the page takes the full width and the page you are on is marked | [record](records/2026-11-24-files-makeover.md) |
+| P524 | Files on the phone, inside a folder with files | Each file is one short row: a coloured icon, the name, and the size and date under it; the row of chips at the top scrolls sideways | [record](records/2026-11-24-files-makeover.md) |
+| P525 | Press New, then New folder; then New, Upload files | A menu with Upload files, Upload a folder (computer) and New folder; the folder is made; the files upload with a bar each | [record](records/2026-11-24-files-makeover.md) |
+| P526 | Tick one file (on a computer, hover a row to see its tick) | The bar with Move to the trash appears only then; untick it and the bar goes | [record](records/2026-11-24-files-makeover.md) |
+| P527 | Press a file's name | Its details open over the right side with the rest dimmed; the X or a press outside closes them | [record](records/2026-11-24-files-makeover.md) |
+| P528 | Files, Settings tab | One plain list: each setting's name and a short line on the left, its box on the right (stacked on the phone), no card or repeated heading; the last two rows have "Change it on its own page", which opens Limits and Storage | [record](records/2026-11-24-files-makeover.md) |

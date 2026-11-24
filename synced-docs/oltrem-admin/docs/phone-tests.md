@@ -162,7 +162,7 @@ split on 2026-11-15 like the Email list.
 
 ### The Files page, 23 November
 
-Owed in [their own list](phone-tests-files.md), P447 to P454, P463 to P467 (Manage access), P475 to P478 (Limits) and P479 to P483 (Storage) P484 to P487 (Held for review, Shared links) P488 to P491 (Versions, Starred, Recent) P492 to P495 (File requests) P496 to P497 (earlier versions) P498 to P501 (Access review, request emails, activity export) and P502 to P504 (Keep for, legal hold).
+Owed in [their own list](phone-tests-files.md), P447 to P454, P463 to P467 (Manage access), P475 to P478 (Limits) and P479 to P483 (Storage) P484 to P487 (Held for review, Shared links) P488 to P491 (Versions, Starred, Recent) P492 to P495 (File requests) P496 to P497 (earlier versions) P498 to P501 (Access review, request emails, activity export) P502 to P504 (Keep for, legal hold) and P523 to P528 (the page made over).
 
 ### The flows fixed on 15 November
 

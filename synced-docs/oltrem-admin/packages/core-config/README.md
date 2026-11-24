@@ -84,7 +84,9 @@ Vendor writes at setup, a section only the Vendor sees). Left out, a setting tak
 section (`sectionOf`: email and campaigns in Email, invoices, quotes and expenses in Money, iam,
 users and time off in Users and access, alerts, audit and privacy in Security, backup, health
 and settings in System, anything else in Company); every kit setting names its own. `unit` says
-what a number counts (`days`, `MB`, `people`) and is shown beside its box. Settings that mean the
+what a number counts (`days`, `MB`, `people`) and is shown beside its box. `setOn` names the
+page where a value the Settings page cannot draw is set (`/files?show=limits`); the page links
+there instead of showing the stored value (2026-11-24). Settings that mean the
 same in several modules keep one key each (`invoices.currency`, `quotes.currency`,
 `expenses.currency`); the page shows them together under titles that say which is which.
 
@@ -109,7 +111,7 @@ routes; the Settings page of `@oltrem/screens` reads and writes through them.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/values` | `settings.read` | `{ items, standing, sections }`: every defined setting with its title and description, its section, its live value and its default (both left out for a sensitive one), where it comes from (`default`, `client`, `system`), who changed it last and when, the control it takes (`text`, `number` with `min`, `max` and `unit`, `switch`, `choice` with its `options`, `list` of words, or `other`), read once from its schema while the Worker loads (a setting defined later, on the first list that shows it), and whether the caller may change it; how the caller stands (`vendor`, `owner`, `admin`); the sections in their order with their names. Read from D1, the truth, not the snapshot |
+| `GET /api/settings/values` | `settings.read` | `{ items, standing, sections }`: every defined setting with its title and description, its section, its live value and its default (both left out for a sensitive one), where it comes from (`default`, `client`, `system`), who changed it last and when, the control it takes (`text`, `number` with `min`, `max` and `unit`, `switch`, `choice` with its `options`, `list` of words, or `other`, with `setOn` when it names one), read once from its schema while the Worker loads (a setting defined later, on the first list that shows it), and whether the caller may change it; how the caller stands (`vendor`, `owner`, `admin`); the sections in their order with their names. Read from D1, the truth, not the snapshot |
 | `PUT /api/settings/values/:key` | `settings.manage` at the company | `{ value, reason? }`: refused when the key is unknown (`KIT-E-0404`), set in the client file (`KIT-E-0422`), above the caller (`KIT-E-0403`) or rejected by its schema (`KIT-E-0422`); otherwise saved through `Config.save` and audited as `settings.update` |
 
 Who may change a setting is its `editableBy` read against the caller's standing, which the client
