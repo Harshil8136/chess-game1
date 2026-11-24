@@ -167,6 +167,18 @@ a virus scan: a program inside a zip inside a zip, macros in an old `.doc`, or J
 PDF's compressed parts pass unseen. A name with marks that change the direction of the text, or
 ending with a dot, is refused, since it can hide its real ending.
 
+### Keep for and legal hold (2026-11-24)
+
+Whoever manages access on a folder sets, in its **Keep** section, how long it keeps each file in it
+(30 days to 7 years from when the file was added; up to 3,650 days through the API), and on a
+folder or a file a **legal hold** with its reason (`PUT /items/:id/keep`, audited as `files.keep`).
+What a rule or a hold covers, on the item, a folder above it or anything inside it, does not go to
+the trash (one by one or ticked), is not deleted for good by hand or by the trash's job, and does
+not move to another folder, with `KIT-E-2413` saying why and until when; a rename still works.
+Under a hold no earlier version is pruned. The item's page says what keeps it. A company with no
+rule pays one small indexed read on those changes; otherwise one statement walks up and down
+from the items.
+
 ### Content never left without its row (2026-11-24)
 
 When the content is stored but the row that records it cannot be written (an upload, a copy, a new
@@ -300,6 +312,7 @@ file holds.
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself, with a `Range` answered as 206 so a video seeks; in place (`inline=1`) a picture, PDF, sound, video, plain text or JSON, sandboxed (a PDF without the sandbox, which stops the browser's viewer, but with `default-src 'none'`) |
 | `GET /items/:id/activity` | `files.read`, and Manage on the item (`files.purge` or `files.access` at its place, or a Manage entry) | the last 30 audit rows of the item, of a folder with what it holds (up to 200 items); with `format=csv` (2026-11-24) up to 1,000 as a CSV download (**Export (CSV)** under Activity), a cell that could run as a spreadsheet formula started with a quote mark |
+| `PUT /items/:id/keep` (`keepDays`, `hold`) | `files.access`, and Manage on the item | a folder's days to keep its files; a legal hold on a folder or a file, or none |
 | `GET /access`, bulk `end-access` (`POST /bulk/end-access`, up to 100 ids) | `files.access` | the access review; many entries ended in one batch with an audit row each, each refused alone when out of reach |
 | `GET /shared` | `files.read` | what Manage access gives the person, that they may see |
 | `GET /starred`, `GET /recent`, `PUT /items/:id/star` (`on`) | `files.read` | what the person starred; the newest files at their locations; star an item they see, or take the star off |
@@ -353,7 +366,9 @@ for review (empty when it is not). Migration `0082_files_versions_and_stars.sql`
 `files/<id>`), `files_versions` (each earlier version: its file, key, store, size, type, held
 reason, who changed the file before and when; indexed by file and time) and `files_stars` (one row
 a person and item). Migration `0083_files_requests.sql` (2026-11-23) adds `files_shares.request`, set
-for a file request.
+for a file request. Migration `0084_files_keep.sql` (2026-11-24) adds `files_items.keep_days` (the
+days a folder keeps its files, 0 for none) and `files_items.hold` (a legal hold's reason, empty for
+none), with an index of the company's items that have either.
 
 ## Settings
 
@@ -373,7 +388,8 @@ The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in th
 `KIT-E-2404` only the trash is emptied, `KIT-E-2405` only a file is shared by a link, `KIT-E-2406`
 a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
 `KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up, `KIT-E-2410` the storage where a file is kept refused
-or failed, `KIT-E-2411` a storage connection still in use, `KIT-E-2412` a file held for review. An item that
+or failed, `KIT-E-2411` a storage connection still in use, `KIT-E-2412` a file held for review,
+`KIT-E-2413` kept by a legal hold or a folder's days (409). An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
@@ -416,13 +432,17 @@ refused, a name needed, two files received with one held and the name escaped, a
 program refused, the files past its count refused and the request then gone, one ended by hand,
 its maker emailed once with what came; the access review for whoever manages access only, the
 soonest end first, End access in bulk with an unknown entry refused alone and an audit row each;
-a folder's activity as CSV with a formula cell made plain. The pages,
+a folder's activity as CSV with a formula cell made plain; a folder's days refusing the trash,
+a move and bulk trash until lifted, set only on a folder and by whoever manages access; a legal
+hold refusing delete for good and the trash's job, holding its folder through what is inside and
+keeping all twelve versions. The pages,
 against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
 customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
 after the trash and the trash's days, one file and many files, a link's passcode and email sent
 on, a link's passcode, last download and Locked shown, and the file manager: folders first in the
 order picked, the tree, the upload boxes, the bulk bar, the grid and the details pane with its
-Activity and its Export (CSV) link, the access review with its filters and ticks, and a copy made in the same folder. The client template's
+Activity and its Export (CSV) link, the access review with its filters and ticks, the Keep
+notice and form, and a copy made in the same folder. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.

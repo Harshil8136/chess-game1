@@ -146,4 +146,5 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Files: File requests, batch 6](2026-11-23-files-requests.md) | people outside send files into a folder by link, with an end, a file count, an optional passcode and the upload checks; public hooks may read their own body; migration 0083; P492-P495 |
 | [Files: tidy, safer writes and earlier versions, phase 7](2026-11-24-files-tidy.md) | repeated code folded into helpers; stored content deleted again when its row fails; earlier versions counted in rooms and downloadable; P496-P497 |
 | [Files: access review, request emails and activity export, phase 8](2026-11-24-files-access-review.md) | every extra access at one's locations with End access in bulk; a file request's maker emailed; activity as CSV; P498-P501 |
+| [Files: keep for and legal hold, phase 9a](2026-11-24-files-keep.md) | a folder keeps its files a set time and a legal hold freezes what it covers; trash, delete, move and the trash job refused; migration 0084; P502-P504 |
 | [Verification log, 2 and 3 November](2026-11-02-to-03-verification-log.md) | the log's rows of those days, moved when it passed its size |
