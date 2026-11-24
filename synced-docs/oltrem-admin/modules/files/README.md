@@ -104,6 +104,16 @@ in the company setting `files.location_stores`. A file stays where it was stored
 store (`files_items.store_id`, empty for the portal's bucket), so changing a location's choice moves
 nothing and old files open as before. A copy goes where its location sends new files now.
 
+**Move** (2026-11-24) brings a location's old files after its choice: the Storage page says how
+many files and earlier versions it keeps elsewhere, and each press of Move copies up to ten to the
+storage it uses now, changes their rows, then deletes the old copies (a copy that cannot be
+deleted is reported, never lost; content already gone is counted as missing and its row follows).
+**Bring in** reads up to a hundred objects under a folder of a joined bucket and makes each a file
+of a location, read where it is with no copy: each key once, a name numbered on a clash, an empty
+or folder key skipped, a program by its name held for review, and the room checked first. Deleting
+a brought-in file for good deletes it from the bucket. Both are an Owner's, and audited
+(`files.store-move`, `files.bring-in`, and `files.upload` with `broughtIn` per file).
+
 The Worker passes every byte through itself both ways (`src/stores.ts`): a request signed with
 AWS Signature Version 4 (the providers module's `signV4`, handed in by the client), the upload held
 to its told length, a `Range` passed on for a video's seek, deletes a thousand at a time with
@@ -321,6 +331,7 @@ file holds.
 | `POST /items/:id/release` | `files.access` at the item's location | release a file held for review |
 | `GET /stores` | `files.access` | the storage connections (their bucket and where, last check, files and bytes kept), the S3 services one may join with their fields and steps, each location's choice, and whether the person may change them |
 | `POST /stores` (`service`, `label`, `fields`), `POST /stores/:id/check`, `POST /stores/:id/key` (`fields`), `DELETE /stores/:id` | `files.access` at the company, and an Owner or the Vendor | join a bucket and check it; check again; paste the key again and check; remove a connection no location uses and no file is kept in |
+| `POST /stores/move` (`scope`), `POST /stores/:id/bring-in` (`prefix`, `scope`, `parent`) | `files.access` at the company, and an Owner or the Vendor | move up to ten of a location's files and earlier versions to the storage it uses now (what moved, was missing and is left); bring up to a hundred of a bucket's files under a prefix into a folder (what came in, what was left out and why) |
 | `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), and whether the person may change them (an Owner or the Vendor, through `PUT /api/settings/values/files.room_rules`) |
 | `GET /items/:id/access` | `files.read`, and Manage on the item | its entries and those of the folders above it, whether it is restricted, and the company's people, groups and roles |
 | `POST /items/:id/access` (`whoKind`, `whoId`, `level`, `viewOnly`, `endsAt`), `DELETE /access/:id`, `POST /items/:id/restrict` (`on`) | `files.access`, and Manage on the item | give an entry (a second for the same one replaces the first), end one, restrict a folder or open it again |
@@ -455,7 +466,10 @@ in the bucket and not in the portal's, opened whole and in part, copied there, s
 the choice changed, and deleted there for good; a service down refusing the upload with
 `KIT-E-2410` and no row; the Storage view for an Owner and refused to a clerk, a bucket joined and
 checked, a data service refused, a connection in use refused with `KIT-E-2411` and removed once
-free; the page offering only checked connections and saving the choice as the setting.
+free; the page offering only checked connections and saving the choice as the setting. Move and
+Bring in (2026-11-24): a location's files moved ten a press until none is left, then opening from
+the bucket and gone from the portal's; a bucket's files brought in once, a program held, a second
+press skipping them; both refused to a clerk; the page's Move and Bring in forms and their words.
 
 The limits tests (2026-11-23): a person's own room winning over a role's, a role's over
 everyone's and a role without a limit lifting it; a location's room refusing an upload and a copy
