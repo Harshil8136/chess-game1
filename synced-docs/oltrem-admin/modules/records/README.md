@@ -60,7 +60,7 @@ who added it and when, and who changed it last. The records of a list are search
 text, narrowed by one choice or yes or no field, sorted by when they changed, when they were
 added, or any field, and paged (50 by default, 200 at most).
 
-The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records, oldest first, for a
+The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records (past it, since 2026-11-24, the file's name ends `-first-5000`, so a cut file never passes for a whole one), oldest first, for a
 spreadsheet. Every cell is quoted, and a cell that starts with `=`, `+`, `-`, `@`, a tab or a
 carriage return gets a leading `'`, so a spreadsheet never runs a value as a formula.
 

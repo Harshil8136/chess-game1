@@ -81,7 +81,7 @@ answer's name in the inbox is its first short text, email or phone. Taking an an
 or replying to a new one, opens it. A reply goes by email to the first email address the sender
 gave, from the company's sending address, with the person replying as the address a reply comes
 back to; it is kept beside the notes. The download (`GET /forms/:id/export`) is a CSV file of up
-to 5000 answers, oldest first, with formulas defused as in `@oltrem/records`.
+to 5000 answers (past it, since 2026-11-24, the file's name ends `-first-5000`, so a cut file never passes for a whole one), oldest first, with formulas defused as in `@oltrem/records`.
 
 **Read and unread** (2026-11-21). An answer nobody has opened yet is unread for the whole team:
 the inbox shows it in bold, and its Unread view (`view=unread`) and count (`unread`, beside the

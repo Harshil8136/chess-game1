@@ -80,7 +80,7 @@ who could manage are checked; with more, someone is taken to manage, and it wait
 | `GET /people` | `timeclock.manage` somewhere | the people of the company whose account is on, the reader first, at most 200, for the address field's choices |
 | `GET /entries/:id` | `timeclock.self`, and worked it or manages its place | one stretch, with whether the reader may fix it |
 | `POST /entries/:id/fix` | `timeclock.manage` at its place, one's own as for adding | sets its day and times with why, which closes one still open |
-| `GET /export?from=&to=` | `timeclock.manage` | the stretches that started between the two days at the places the person manages, by person, as a CSV file (hours as decimals, text a spreadsheet would run as a formula defused); 62 days and 5000 rows at most |
+| `GET /export?from=&to=` | `timeclock.manage` | the stretches that started between the two days at the places the person manages, by person, as a CSV file (hours as decimals, text a spreadsheet would run as a formula defused); 62 days and 5000 rows at most, the file's name ending `-first-5000` past it (2026-11-24) |
 | `GET /todo` | `timeclock.manage` | Needs you: who is still clocked in after 12 hours at the places the person manages |
 
 Every step is audited: `timeclock.in`, `timeclock.out`, `timeclock.add`, `timeclock.fix` and

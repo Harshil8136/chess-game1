@@ -106,7 +106,7 @@ sniffed).
 | `POST /claims/:id/answer` | `expenses.decide` at its place, one's own only as an Owner or the Vendor with nobody else deciding there | approves or declines it, a no with its reason; the person who claimed is emailed, unless it is their own |
 | `POST /claims/:id/paid` | `expenses.decide` at its place, one's own as for an answer | marks an approved claim paid; the person who claimed is emailed, unless it is their own |
 | `POST /claims/:id/withdraw` | `expenses.self`, and claimed it | withdraws it while it waits |
-| `GET /export?month=2026-10` | `expenses.decide` | the month's approved and paid claims at the places the person decides, by the day spent, as a CSV file (amounts as plain digits, text a spreadsheet would run as a formula defused); 5000 rows at most |
+| `GET /export?month=2026-10` | `expenses.decide` | the month's approved and paid claims at the places the person decides, by the day spent, as a CSV file (amounts as plain digits, text a spreadsheet would run as a formula defused); 5000 rows at most, the file's name ending `-first-5000` past it (2026-11-24) |
 | `GET /todo` | `expenses.decide` | Needs you: how many claims wait for the person's answer, and how many approved ones wait to be paid, with their sum |
 
 Every step is audited: `expenses.claim`, `expenses.receipt`, `expenses.approve`,
