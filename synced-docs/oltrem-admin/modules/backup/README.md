@@ -57,6 +57,7 @@ tick's own cron trigger. The Worker needs the `nodejs_compat` flag for the age f
 | `claim` | One row in `backup_runs` for the instance, `running`; when another export started less than thirty minutes ago and still runs, the row is `skipped` with `KIT-E-1603` and the run ends. A replayed instance finds its own row and does not run twice |
 | `export and copy` | The export is asked for with `KIT_OPS_TOKEN` and polled once a second, up to 300 times, until Cloudflare hands back a signed address; the dump is downloaded from it, without the token, and encrypted to `BACKUP_PUBLIC_KEY` in the age format. A dump that comes with its length is streamed into the bucket and never whole in memory; one without is held in memory. The step is tried three times, a minute apart and then two, within fifteen minutes each |
 | `verify` | The stored copy is checked: the size and MD5 checksum the bucket computed from what it received must be the size and checksum of what the run sent, or the run fails with `KIT-E-1605`. It proves the copy was stored whole; opening it is the restore drill's job |
+| `copy outside` | Only when a second copy is chosen (below). The stored copy is read back from the bucket and kept again, still encrypted, under the same key in that storage connection, then checked there by its size. A failure never fails the run: the run says so in what its check found and the error is reported, so an alert opens |
 | `files start`, `files 1`, … | Only when the files were chosen. The copy starts where the last files run stopped (`files_after`), else at the bucket's start. Each step checks 100 files (`FILES_PAGE`) and copies the ones not copied whole yet, at most 100 steps (`FILE_STEPS`) a run; a run that runs out of steps records where it stopped, and the next one goes on from there |
 | `record` | The row is `ok`, with the object key, the size before and after encryption, the export's bookmark, the recipient, what the check found and how many files were copied |
 | `record the failure` | The row is `failed`, with the code and the detail, and whatever the run had copied before it stopped; the error is thrown on to the flow runner, which reports it once (reporting it here too opened two alerts for one failure, seen live on 2026-11-14), and the instance fails |
@@ -90,6 +91,16 @@ are under the bucket lock and the lifecycle rule like the database copies: kept 
 deleted after 90, after which the next run copies the file again. They take room in the same
 bucket, which is why the files are not ticked on a new portal.
 
+**A second copy outside Cloudflare** (2026-11-24, the owner's pick: off until a client
+chooses). Every copy above lives in the client's one Cloudflare account, so losing the account
+loses them too. With `outside` given (the client template passes the storage connections of
+Files, `@oltrem/files`, buckets at an S3 service of the client's own), an Owner picks one on the
+Backups page and each database copy is kept there too (`backup.outside_store`, empty on a new
+portal: no second copy, no step). The copy is the same encrypted bytes, so the storage never
+sees the data, and opening it still needs the Vendor's private key. The files are not copied
+there. `GET /outside` lists the choice for the page. Tests: "a second copy outside
+Cloudflare" in `test/backup.test.ts`.
+
 **The nightly backup is an extra** (`backup.nightly` on the Features page, since 2026-11-12), and a
 new portal starts with it switched off, with the restore drill reminder (`backup.drill`): the
 owner's decision that work on the timer is switched on, not found running. While it is off the
@@ -121,6 +132,7 @@ Under `/api/backup`, through the IAM module's sessions and check.
 |---|---|---|
 | `GET /runs` | `backup.read` | The newest thirty runs: when, who, the outcome, the copy and its size, what was copied, where a running run is, what its check found, and the fix of a failed one's code |
 | `GET /status` | `backup.read` | One read for the Backups page: whether the database can be copied (`ready`) and what is missing, whether the nightly backup is on and its schedule, what is ticked (`choice`), and the run going on now, if any |
+| `GET /outside` | `backup.run` | Only with `outside` given: the storage connection a second copy goes to (`chosen`, '' for none) and the company's connections to choose from |
 | `POST /runs` | `backup.run` at the company | Makes a backup now, of `{ parts: ['database', 'files'] }` or the ticked choice when the body names none: refused with `KIT-E-1606` when nothing is chosen, with `KIT-E-1601` when the database is chosen and something is missing (the files alone need nothing), and with `KIT-E-1603` while an export runs; otherwise the flow starts and the answer is `202 { id }`. Audited as `backup.run`, with the parts |
 | `GET /time-travel` | `backup.read` | The database's Time Travel bookmark now, to note before a risky step and restore to with `wrangler d1 time-travel restore` |
 | `GET /home` | `backup.read` | The Home card: how long ago the newest copy started, and how it ended; a quiet Off (`state: 'off'`) while the nightly backup is switched off, whatever the runs before did |
@@ -158,6 +170,7 @@ private key never leaves the vendor's machine, and the client's database is only
 | `backup.database_id` | setting, system layer, vendor only, sensitive | the client's one D1 database |
 | `backup.copy_database` | setting, system layer, owner | whether a run copies the database when it is not told; on |
 | `backup.copy_files` | setting, system layer, owner | whether a run copies the files when it is not told; off |
+| `backup.outside_store` | setting, system layer, owner | the storage connection a second copy of each database copy goes to; empty for none |
 | `KIT_OPS_TOKEN` | Worker secret | an account token with two permissions, Account, D1, Edit for the export and Account, Account Analytics, Read for Status's budgets: the only Cloudflare token inside the Worker; its recipe is `@oltrem/core-health`'s |
 | `BACKUP_PUBLIC_KEY` | Worker secret | the age public key every copy is encrypted to; its private half stays offline with the vendor |
 

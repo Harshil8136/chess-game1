@@ -160,5 +160,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The Audit log remade, and every page full width](2026-11-24-audit-log-remade-and-full-width.md) | one sentence a row under its day in your clock, search and quick filters, repeats folded, a row opens to what changed; a lone card or form fills the page width; P540-P546 |
 | [Sign-in alerts on for everyone](2026-11-24-sign-in-alerts-on.md) | the owner's pick: on from the start, and on every portal but where an admin switched them off; migration 0085; P643 |
 | [API keys: another system calls the portal](2026-11-24-api-keys.md) | an Owner makes a key with a role at a location, never the Owner role; `/hooks/api/...` as its service account; shown once, kept as a hash, revoked at once; migration 0089; P650-P651 |
+| [A second backup copy outside Cloudflare](2026-11-24-backup-second-copy.md) | each database copy also kept, still encrypted, in a storage connection of Files an Owner picks on the Backups page; off until one is picked; P652 |
 | [Layout rules: card grids, no width caps, four page layouts](2026-11-24-layout-rules.md) | cards in a set fill the row as a grid; no page, card or form caps its width (a check refuses it); every page body one of four layouts; each library one job; P547-P548 |
 | [Verification log, 2 and 3 November](2026-11-02-to-03-verification-log.md) | the log's rows of those days, moved when it passed its size |
+| [Verification log, 4 to 21 November](2026-11-04-to-21-verification-log.md) | the log's rows of those days, moved when it reached its size |
