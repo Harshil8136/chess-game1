@@ -192,6 +192,13 @@ door's session too; on this computer to the local door's `/local/sign-out`.
 
 Every page sits in one frame, drawn on the server:
 
+The toolbar is one line (2026-11-24): the page script (`foldFilters` in `client/frame.js`) folds
+the `.ui-filters` rows after a page's search that do not fit on its line behind a Filters button
+there, with how many filters the address narrows by; on a phone every such row folds, hidden by
+the stylesheet before the script runs. A chip that names a state shows its `tone`, one that names
+a thing its `hue`, as a dot before its words (Users' Active and Invited, a role; the Audit log's
+Refused and Failed, each section).
+
 A module switched off on the Features page (the `partsOff` set `@oltrem/core-http` puts on each
 request) is gone for that request: no sidebar entry or tab, no Home card or Needs you, nothing in
 the search; its pages, a module's own by their pattern and a kit section by its address, answer
