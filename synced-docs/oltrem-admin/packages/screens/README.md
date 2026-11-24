@@ -515,10 +515,10 @@ the problem.
 the classes the pages, the primitives and every module's `src/*.tsx` use, under the 80 KiB a
 test allows (64 until the colour pass of 2026-11-04, by the owner's yes). A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()`:
 Tailwind's second copy for browsers without it, about a tenth of the file, is left out
-(2026-11-03), as the theme's own rules use the mix bare. `/ui/app.js` is the frame's
-script, copied from `src/client/frame.js` with its comment lines and indents left out, about
-28 KiB (39 KiB as written). The build refuses a string or template that spans lines, the one case
-where that is not safe, and checks that the result compiles.
+(2026-11-03), as the theme's own rules use the mix bare. `/ui/app.js` is the orb's engine
+and the frame's script (`src/client/frame.js`), each shrunk by esbuild (2026-11-24, the owner's yes:
+whitespace, comments and inner names left out), 88 KiB where the copy without comment lines was
+131 KiB; the build checks that each part still compiles.
 
 **The font** (2026-11-11): Inter Variable, Latin letters only (English first, Spanish's accents
 ready), 47 KiB, from `@fontsource-variable/inter` at build time (SIL Open Font License 1.1, its

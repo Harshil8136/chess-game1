@@ -12,7 +12,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 20 tools (used only to build, check or test) and 11 runtime packages (shipped inside a Worker).
+**Where things stand:** 21 tools (used only to build, check or test) and 11 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
@@ -33,6 +33,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 | class-variance-authority | 0.7.1 | runtime | @oltrem/core-ui | Typed variants for the primitives (a button's look and size as named options checked by TypeScript), the owner's ask of 2026-11-12; about 0.5 KB with clsx. A variant replaces passing classes that set the same property twice, so the kit needs no class merger. | 12.3 |
 | clsx | 2.1.1 | runtime | @oltrem/core-ui | Joins conditional class names (strings, arrays, objects) for cn() in @oltrem/core-ui, and is what class-variance-authority itself uses; a few hundred bytes. tailwind-merge was measured and left out (2026-11-12): 8.4 KB and about 18 ms of CPU on a first page, past the free plan's 10 ms. | 12.3 |
 | daisyui | 5.7.50 | tool | @oltrem/core-ui | The owner's choice (2026-11-08, Look 3): ready components (button, field, toggle, dock, toast, skeleton and others) as a Tailwind plugin, run only when the stylesheet is built. Zero dependencies, CSS only, no script reaches the browser; its theme variables are filled from the kit's own tokens, so looks.ts stays the one colour list. | 12.2 |
+| esbuild | 0.28.2 | tool | @oltrem/screens | Shrinks the screens' browser script when pnpm ui:build writes it (whitespace, comments and inner names), so every first visit downloads about a third less. Already in the tree under wrangler and vitest; the owner said yes on 2026-11-24. | 12.2 |
 | eslint | 10.13.0 | tool | oltrem-tools | The linter; the module-boundary rules run inside it while editing. | 15.6 |
 | eslint-plugin-boundaries | 7.2.0 | tool | oltrem-tools | Refuses a module importing another module's internals, or a core package importing a module; its rule file is the architecture diagram. | 15.6 |
 | hono | 4.13.13 | runtime | @oltrem/core-http, @oltrem/screens | The one request pipeline of a client Worker (plan 4.2): routing, request ids, security headers and the CSRF check; the screens package's pages mount into the same app. Pinned to the 4.x line; 5.0 is a release candidate. | 4.2 |
