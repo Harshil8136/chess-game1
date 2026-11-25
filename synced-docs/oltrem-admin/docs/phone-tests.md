@@ -42,7 +42,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P173 | Open a role, then a module's arrow; scroll to the foot | Levels a segmented control; a module opens without stretching its neighbour; special permissions are rows with a box; the save bar never covers "Who holds it" | [record](records/2026-11-12-bold-look-and-role-pages.md) |
 | P174 | Tap the heading of a sidebar group (Users & access), open another page, then reload | The group folds shut with its arrow turned and stays shut on the next page; the group of the page you are on is always open | [record](records/2026-11-12-bold-look-and-role-pages.md) |
 | P175 | System status and Alerts, an hour after the update | No `iam.door` line; the old "Every email provider refused the message" alerts are under resolved, not open, and Home's Open alerts count dropped to the few still recent | [record](records/2026-11-12-system-status-report-fixes.md) |
-| P176 | Settings, Modules, Audit log: switch **Daily seal** off and save; then System status | No `audit.sealed` line, and `developer.jobs` is OK even though the seal job stays paused | [record](records/2026-11-12-system-status-report-fixes.md) |
+| P176 | Settings, Modules, Audit log: switch **Daily seal** off and save; then System status | No `audit.sealed` line, and `jobs.runs` is OK even though the seal job stays paused | [record](records/2026-11-12-system-status-report-fixes.md) |
 | P177 | System status, the budgets line, before and after setting a new `KIT_OPS_TOKEN` in the Worker's Variables and Secrets | Before: says what key to make; within fifteen minutes after: each budget shows today's figure | [record](records/2026-11-12-system-status-report-fixes.md) |
 | P178 | Users: open someone who is not an Owner, then Change permissions; untick one that says From their roles, tick one that says Not in their roles, Save changes | Boxes ticked as they have it, with why; after Save: Taken away, Given to them, each with Reset | [record](records/2026-11-12-change-permissions-page.md) |
 | P179 | Your inbox and Alerts, a day after the update, with ImprovMX connected on Forwarding | No new "Forwarding addresses not all asked about" email; that alert is under resolved, not open | [record](records/2026-11-12-system-status-report-fixes.md) |
@@ -145,7 +145,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P151 | Developer, Jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
+| P151 | Admin, Scheduled jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
 | P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](records/2026-11-03-optional-extras.md) |
 | P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](records/2026-11-03-get-started.md) |
 | P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot | [record](records/2026-10-31-access-settings-redesign.md) |

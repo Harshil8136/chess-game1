@@ -17,6 +17,12 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P720 | Admin, Scheduled jobs, on the phone and then a computer | Every job grouped by schedule ("Every 5 minutes" first), each row its name, part, status as a dot and a word, last run, next run and a bar an hour; the five figures across the top; nothing wraps or runs off the side | [record](records/2026-11-25-scheduled-jobs-page.md) |
+| P721 | Scheduled jobs: press Needs a look, Paused, Active, then search for "backup" | Each chip keeps only its kind and shows its count; the search keeps the matching jobs; a word that matches nothing says so | [record](records/2026-11-25-scheduled-jobs-page.md) |
+| P722 | Open one job, then each tab | Its name and status at the top; Overview, Activity, Settings and How it works in a sideways row; How it works has a link to copy | [record](records/2026-11-25-scheduled-jobs-page.md) |
+| P723 | A job's Settings: Run soon, confirm | "Done"; within two minutes its last run moves on the list without reloading | [record](records/2026-11-25-scheduled-jobs-page.md) |
+| P724 | A job's Settings: Pause, confirm, then Resume | Paused shows on the list and the job's page; Activity lists both changes with your name | [record](records/2026-11-25-scheduled-jobs-page.md) |
+| P725 | As someone whose role has only "View the scheduled jobs"; then, as the Owner, switch Developer off and press System status, Check again now | One line names the permission running and pausing need, no buttons that refuse; Check again still runs with Developer off | [record](records/2026-11-25-scheduled-jobs-page.md) |
 | P55 | Home on a portal whose backups are set up but have no copy yet: press Make it now | "Started" at the bottom right; within minutes Backups lists the copy and the step is ticked (left alone, it starts by itself within a quarter of an hour) | [record](records/2026-11-03-easier-setup.md) |
 | P150 | Settings, Modules, as the Vendor: switch **Nightly backup**, **Restore drill reminder** and **Daily seal** off and save | Saved; System status lists no backup or seal checks and no backup alert comes back; "Make a copy now" still works | [record](records/2026-11-12-quiet-portal.md) |
 | P201 | Nightly backup off, then Home | Last backup reads Off, last, not counted; Get started has Hide | [record](records/2026-11-14-quiet-off-and-switches.md) |

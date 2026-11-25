@@ -140,7 +140,7 @@ None yet.
 | P314 | Switch Unusual sign-ins on; System status | Unusual sign-ins is listed and OK | [record](records/2026-11-21-safer-and-calmer.md) |
 | P315 | Settings, Files, Allowed types: documents; then upload a photo in Files | Refused: This kind of file is not allowed here; set back to any, the photo uploads | [record](records/2026-11-21-safer-and-calmer.md) |
 | P316 | Files, share a file with a passcode and your email address; open the link from the email | The email names the file and says a passcode is asked; a wrong passcode asks again; the right one downloads | [record](records/2026-11-21-safer-and-calmer.md) |
-| P317 | Developer, Jobs | Each job shows its last 24 hours; Check for work on the trash job (Deletes for good what has been in the trash…) says what waits and deletes nothing | [record](records/2026-11-21-safer-and-calmer.md) |
+| P317 | Admin, Scheduled jobs, the trash job | Each job shows its last 24 hours; Check for work on the trash job (Deletes for good what has been in the trash…) says what waits and deletes nothing | [record](records/2026-11-21-safer-and-calmer.md) |
 | P318 | Switch What changed card on; Home | What others changed since you last looked; Mark as seen leaves Nobody else changed anything | [record](records/2026-11-21-safer-and-calmer.md) |
 | P319 | Forms, Try the form and send an answer; then the inbox | The answer is bold and Unread (1); open it and go back, it is plain; Mark unread makes it bold again | [record](records/2026-11-21-safer-and-calmer.md) |
 | P320 | Switch Service status on; System status, Check again now | Service status is listed, naming Cloudflare and your email service | [record](records/2026-11-21-safer-and-calmer.md) |

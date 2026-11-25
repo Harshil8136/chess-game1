@@ -1,17 +1,10 @@
 # @oltrem/developer
 
-Developer tools (the owner's request of 2026-10-27): the automatic work of the portal made
-visible and steerable, the portal's changes sent out to the company's other services as they
-happen, and the portal's API described from the code that runs it. Three parts behind one
-section of the sidebar, **Developer**:
+Developer tools (the owner's request of 2026-10-27): the portal's changes sent out to the
+company's other services as they happen, and the portal's API described from the code that runs
+it. Two parts behind one section of the sidebar, **Developer**. The jobs page it had until
+2026-11-25 is now its own part, always on: [Scheduled jobs](../jobs/README.md).
 
-- **Jobs**: every job the mounted modules declare, with its schedule, its last run, how long it
-  took, how many database queries it made, what it did in each of the last 24 hours (a strip of
-  bars, 2026-11-21) and what went wrong; **Run soon** makes one due now (the next tick, within a minute or two) and **Pause** keeps it off its
-  schedule until it is resumed. **Check for work** asks a job that declares a check what waits
-  for it, and runs nothing. While a budget of the free plan holds the jobs back, the page says
-  why, above them. A job whose part is switched off in Settings, Modules shows
-  **Switched off** with no Run soon, and the API refuses to run it (`KIT-E-2605`). The flows of the client's one Workflow are listed beside them.
 - **Webhooks**: an https address of the company's is sent each change it asks for, signed as
   [Standard Webhooks](https://www.standardwebhooks.com/) sign them, tried again on a ladder when
   it fails, with a log of every delivery.
@@ -28,25 +21,22 @@ import { withPages } from '@oltrem/core-module';
 const developer = createDeveloper<Env>({
   bindings: (env) => ({ db: env.DB }),
   kek: (env) => env.KEK, // seals each webhook's signing secret
-  scheduler: () => scheduler, // made after the modules it reads
   modules: () => modules, // this module is one of them
 });
 const modules = [iam.module, /* ... */ withPages(developer.module, developerPages)];
-const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), modules });
 ```
 
-`createDeveloper` returns `jobs` and `webhooks` (every function the routes and jobs call) and the
-module manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper), the
-scheduler of `@oltrem/core-jobs` (its `list`, `runSoon` and `setPaused`) and the KEK secret the
-providers module already uses; it adds no binding, secret or variable.
+`createDeveloper` returns `webhooks` (every function the routes and jobs call) and the module
+manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper) and the KEK
+secret the providers module already uses; it adds no binding, secret or variable.
 
 ## Who may do what
 
-Two capabilities on bit plane `14`: `developer.read` sees the jobs, the webhooks with their
-deliveries and the reference; `developer.manage` runs and pauses jobs and adds, changes, tests and
-removes webhooks, and asks for a fresh sign-in. Both are read at the company itself: a role held
-at a place below it is not enough, because a webhook is sent the changes of every place and a job
-works for the whole company.
+Two capabilities on bit plane `14` (version `0.2.0` since the jobs left, 2026-11-25):
+`developer.read` sees the webhooks with their deliveries and the reference; `developer.manage`
+adds, changes, tests and removes webhooks, and asks for a fresh sign-in. Both are read at the
+company itself: a role held at a place below it is not enough, because a webhook is sent the
+changes of every place.
 
 ## Webhooks
 
@@ -68,8 +58,7 @@ works for the whole company.
 
 | Path | Shows |
 |---|---|
-| `/developer` | a row of **Jobs**, **Webhooks**, **API reference** and **API keys** (a link to the keys, 2026-11-25); why the jobs wait, while a budget holds them; the jobs with their state (went through, failed last, running, paused, not run yet), schedule, last run with the last day's strip under it, and next run, and for a manager **Run soon**, **Check for work** where the job has a check, and **Pause** or **Resume**; what the last failures said; the flows and when they start |
-| `/developer?show=webhooks` | the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
+| `/developer`, `/developer?show=webhooks` | a row of **Webhooks**, **API reference** and **API keys** (a link to the keys, 2026-11-25); the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
 | `/developer?show=reference` | a note leading to API keys and its How to use, then each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
 | `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again** |
 
@@ -77,15 +66,11 @@ works for the whole company.
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /jobs` | `developer.read` | the jobs (each with its last day and whether it has a check) and flows, why the jobs wait (`standDown`, null while they run), and whether the person may manage them |
-| `GET /jobs/:id/check` | `developer.read` | what waits for a job that declares a check, as `waiting`; nothing is run; `KIT-E-0404` for a job with none |
-| `POST /jobs/:id/run`, `/pause`, `/resume` | `developer.manage` | made due now, paused, resumed |
 | `GET /webhooks`, `GET /webhooks/:id` | `developer.read` | the webhooks; one with its newest fifty deliveries |
 | `POST /webhooks` (`url`, `events`, `description`, `format`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
 | `GET /reference` | `developer.read` | the API as the mounted modules declare it |
 
-Every change is audited by the module: `developer.job-run`, `.job-pause`, `.job-resume`,
-`.webhook-create` (with its address's host only: a path or query often carries the receiver's own
+Every change is audited by the module: `developer.webhook-create` (with its address's host only: a path or query often carries the receiver's own
 secret, 2026-11-20), `.webhook-update` (what changed, from what to what), `.webhook-delete`,
 `.webhook-rotate`, `.webhook-test` (what came back) and `.delivery-retry`; the system's
 `developer.webhook-off`. Each row names the webhook by its description, or the host it calls; the
@@ -93,9 +78,7 @@ address is kept by its host alone, never its path, which can carry the receiving
 
 ## Health
 
-In the `jobs` lane: `developer.jobs` **warns** naming the jobs whose last run failed and the ones
-paused by hand, passing by a job the Features page switched off (the `off` option, since
-2026-11-12), which does not run anyway; `developer.webhooks` **warns** while a webhook fails or
+In the `jobs` lane: `developer.webhooks` **warns** while a webhook fails or
 was switched off by its failures.
 
 ## Tables
@@ -105,14 +88,14 @@ description and events, on or off, the sealed secret and its wrapped data key, t
 row, the last delivery and its answer, who and when) and `developer_deliveries` (one event for
 one webhook: the audit row it came from, the body, the state, attempts, the next attempt, the last
 answer, its error and time). Migration `0072_developer_chat.sql` adds `developer_webhooks.format`
-(`standard` unless a chat format). The jobs' pause is two columns of `@oltrem/core-jobs`'s table,
-migration `0021_jobs_pause.sql`.
+(`standard` unless a chat format).
 
 ## Errors
 
 The module owns the `2600` to `2699` block: `KIT-E-2601` the address cannot take webhooks,
 `KIT-E-2602` the company has ten webhooks, `KIT-E-2603` the KEK secret is missing, `KIT-E-2604`
-the same webhook was just added (within a minute), `KIT-E-2605` the job is switched off.
+the same webhook was just added (within a minute). `KIT-E-2605` (a job switched off) moved to
+Scheduled jobs as `KIT-E-4201` on 2026-11-25.
 
 ## Not here yet
 

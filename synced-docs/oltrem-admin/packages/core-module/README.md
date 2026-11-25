@@ -40,6 +40,7 @@ export const notes = defineModule({
       id: 'notes.digest',
       every: '1h',
       summary: 'Send the hourly digest',
+      title: 'Send the digest', // optional: its name on the Scheduled jobs page
       run: async (env) => {
         /* ... */
       },
