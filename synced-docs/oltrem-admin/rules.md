@@ -244,3 +244,30 @@ found pages wasting about 40% of the width and much of the top on empty space an
 **Enforced by.** The screen gates of the user-interface package in phase 1 (viewport tests and
 the dialog allow-list), and since 2026-11-24 `scripts/widths.test.mjs` in the `tests` gate: no
 page, card, form, column or grid caps its width. For documents, the owner's review.
+
+## The owner's standing orders
+
+These are the owner's own instructions to every agent, kept here so that every tool reads them
+(Claude Code through CLAUDE.md, Google Antigravity through `.agents/rules/`, the others through
+AGENTS.md). Each says where its detail lives.
+
+- **English first.** Every word a person reads is English; Spanish comes later, other languages
+  only when asked.
+- **One Vendor.** The Vendor works alone: nothing the Vendor does ever waits for a second
+  person's approval.
+- **The free plan, for good.** Under 10 ms of Worker CPU a request, under a thousand key-value
+  writes a day (the database instead), six outbound requests at most at once in one invocation.
+  Scheduled features with a running cost (the backup, the audit seal) are off until the client
+  switches them on, and database use stays small (R-09, docs/architecture.md).
+- **The locked look.** One title size a section, words never wrap inside a control, menus and
+  pop-ups open in the top layer beside their button, a loading state never moves the page, no
+  wasted room, colour that tells things apart, page options in a sideways row, standard
+  well-known words. The detail is the skills `ui-design-system` and `preact-ui` (R-12).
+- **Phone tests.** A change a person can see adds its numbered rows (P and the next free number)
+  to the matching `docs/phone-tests*.md` list (R-07).
+- **Migrations that remove** something go in a later push than the code that stops using it.
+- **Batch, then check once.** Finish a batch, run `pnpm verify` once, push once. Least manual
+  work for the owner: one press does the whole job, and every failure names its fix.
+- **Local work against a real portal** goes through `npm run live`: it copies the portal's data
+  into this computer's own database and never points a binding at production
+  (`packages/cli/README.md`).

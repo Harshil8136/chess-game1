@@ -81,10 +81,19 @@ With Node 22 or newer, from this folder:
 | `npm install` | installs the kit (npm is all you need: it fetches the pnpm version `package.json` names) |
 | `npm start` | the start page above |
 | `npm run dev` | the portal on this computer; [the client template's README](./templates/client/README.md#on-your-own-computer) walks through the first run |
+| `npm run live` | a client's real portal on this computer with a fresh copy of its data, the live portal only read ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker)) |
 | `npm run update` | gets the newest kit and says what is new |
 | `npm run setup` | puts the portal on Cloudflare with the questions and progress in a page |
 | `npm run deploy` | the same, with the questions in the terminal |
 | `npm run verify` | the gate every change passes before it is pushed |
+
+### Working with an AI agent
+
+Every agent starts at [ai.md](./ai.md), with the rules in full and the owner's standing orders in
+[rules.md](./rules.md). Claude Code reaches it through `CLAUDE.md` and `.claude/` (its skills and
+review checklists); Google Antigravity through `AGENTS.md` and `.agents/` (an always-on rule and
+the same skills, copied by `pnpm agents:write`); the others through `AGENTS.md`. For visual work,
+`npm run live` gives the agent a real portal to look at on this computer.
 
 ## Status and licence
 

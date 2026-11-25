@@ -17,7 +17,8 @@ and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3),
 on the kit's packages, free of keys and within the Worker's limits (research 18), and
 **`release`**, the deploy workflow's release on `main` with its health check and step back, and
 **`operate`**, the jobs of the operations menu (research 18 §3.5), and **`fleet`**, which brings
-every client's portal up to date after each push to the kit (2026-11-11).
+every client's portal up to date after each push to the kit (2026-11-11), and **`live`**, a real
+portal on the Vendor's computer with a copy of its data (2026-11-25).
 The tool runs on Node and has no runtime dependency.
 
 ## The look in a terminal
@@ -743,6 +744,38 @@ in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_
 `--check` finds the portals and says what it would do, changing nothing. Exit `0` when every
 portal is current or updated, `1` when one failed or was held or an account could not be read,
 `3` without a key or outside the kit.
+
+## `oltrem live [--portal <worker>]`
+
+A client's real portal on this computer, for visual work in an editor or with an AI agent (the
+owner's ask of 2026-11-25). From the kit's root it is `npm run live`, which builds the tool first.
+
+1. **Signs in.** It takes wrangler's key (`wrangler auth token`); with none, it runs
+   `wrangler login`, which opens Cloudflare's page in the browser. `CLOUDFLARE_API_TOKEN`, when
+   set, is used instead. Sign in with the Cloudflare login that can see the portal's account.
+2. **Finds the portal** the way `fleet` does: every account the login reaches, each portal with
+   the choices its last deploy recorded. With several, it asks which; `--portal <worker>` names
+   one.
+3. **Builds the copy** in `.live/<worker>` beside `templates/` (ignored by git): the client
+   template with those choices written in (its name, Oltrem Mail or not), answering on
+   localhost rather than the portal's address.
+4. **Copies the data, read only.** The portal's database is read through Cloudflare's API with
+   SELECTs only, a page of rows at a time, and written into the copy's local database: the schema
+   as it stands, every row and the migrations ledger, then the indexes and triggers, so no
+   trigger fires on a copied row. Every start takes a fresh copy.
+5. **Runs it** with the template's `npm run dev`: it applies only the migrations newer than the
+   live portal, then starts the portal on localhost. Sign in on its page with your own address:
+   your real roles apply.
+
+**What never happens.** No binding of the copy points at Cloudflare, so nothing done in it
+reaches the live portal, its files or its queue. The keys the live portal sealed do not open on
+this computer (its KEK stays in Cloudflare), so no email or provider call leaves with the
+client's keys. **Not copied:** the files in the bucket (a file's row shows, its contents do not
+open) and Oltrem Mail's search index (made empty; it cannot be read back). The copy holds the
+client's real data on this computer: `.live/` is never committed.
+
+Exit `1` when it could not sign in, find the portal or load the copy, each said with its fix;
+otherwise the exit of the portal's own run.
 
 ## `oltrem operate <operation> [dir] [--target X] [--confirm X]`
 
