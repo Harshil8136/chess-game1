@@ -745,7 +745,7 @@ in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_
 portal is current or updated, `1` when one failed or was held or an account could not be read,
 `3` without a key or outside the kit.
 
-## `oltrem live [--portal <worker>]`
+## `oltrem live [--portal <worker>] [--connected]`
 
 A client's real portal on this computer, for visual work in an editor or with an AI agent (the
 owner's ask of 2026-11-25). From the kit's root it is `npm run live`, which builds the tool first.
@@ -774,8 +774,18 @@ client's keys. **Not copied:** the files in the bucket (a file's row shows, its 
 open) and Oltrem Mail's search index (made empty; it cannot be read back). The copy holds the
 client's real data on this computer: `.live/` is never committed.
 
-Exit `1` when it could not sign in, find the portal or load the copy, each said with its fix;
-otherwise the exit of the portal's own run.
+**Connected (`--connected`).** Instead of a copy, the portal on this computer uses the live
+database, files and cache themselves (wrangler's remote bindings, their ids written only into
+`.live/`), and its events go to the live queue. It first refuses while the live portal's database
+is behind this kit's migrations (its pages would expect columns it lacks: push first, and the
+fleet updates it), then asks for a typed `yes` (`--yes` gives it; the start page's choice says
+what it does). Every save, delete or send is real; a send leaves from the live portal, with its own
+keys. Kept on this computer: no queue consumer, no cron tick (the live portal runs its own) and
+no KEK, so nothing is sealed with a key the live portal could not open (pasting a provider's key
+fails here instead). Key-value writes count against the account's daily allowance.
+
+Exit `1` when it could not sign in, find the portal, load the copy or connect, each said with its
+fix; otherwise the exit of the portal's own run.
 
 ## `oltrem operate <operation> [dir] [--target X] [--confirm X]`
 

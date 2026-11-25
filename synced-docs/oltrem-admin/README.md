@@ -38,27 +38,32 @@ installed for you.
    nothing when a new change would touch one of them, or when this copy has commits of its own,
    and the page says so. It then installs what the new kit needs, builds the `oltrem` tool, and
    runs the template's checks (`oltrem doctor`, a few seconds).
-6. **The start page** opens in your browser: a dashboard of three cards.
+6. **The start page** opens in your browser: a dashboard of two cards.
    - **This computer:** two lines: the kit (the newest, or how many changes it brought in just
      now, which open to show them) and the checks. A check that needs a look says what is wrong
      and how to fix it; a fix you type is one command with **Copy**. **Check again** does the
      whole start again without closing anything.
-   - **On this computer:** the portal at a local address such as <http://localhost:8787>, with no
-     Cloudflare account; it opens on a sign-in page that exists only on your computer. **Who may
-     open it** picks Only this computer, This Wi-Fi or Anywhere: the last two are also open on
-     other devices behind a code shown when it starts, on your network or at a temporary
-     Cloudflare address (this needs `cloudflared` installed, and no account; see
+   - **Try it here:** the portal at a local address such as <http://localhost:8787>. **Which
+     data** picks a new portal (empty, no Cloudflare account), **a copy of your live portal**
+     (`npm run live`: a Cloudflare sign-in, then your real portal with a fresh copy of its data;
+     the live portal is only read) or **connected to your live portal** (the live database, files
+     and cache themselves: every save is real). For a new portal, **Who may open it** picks Only
+     this computer, This Wi-Fi or Anywhere: the last two are also open on other devices behind a
+     code shown when it starts, on your network or at a temporary Cloudflare address (this needs
+     `cloudflared` installed, and no account; see
      [sharing it](./templates/client/README.md#sharing-it-with-other-devices)). While it runs, the
      card shows its address with **Open** and **Stop**.
-   - **On Cloudflare:** where the portal is set up to live, or that it is not there yet, and
-     **Put it live**: it signs you in to Cloudflare in the same browser, lets you pick the account
-     and the domain, opens Cloudflare's key form already filled in, checks the key when you paste
-     it, and sets the door (Cloudflare Access) with Cloudflare's own sign-in, no key. Running it again only does
-     what is missing.
+
+   Putting a portal on Cloudflare is not on this page (since 2026-11-25): it is `npm run setup` or
+   `npm run deploy`, and every push to the kit reaches the live portals by itself (the fleet).
 
    What runs shows its steps under the cards as one log, and **Clear** takes it away; errors the
    portal reports while it runs gather in a small console there, each counted once. The header
    says Ready, Running, or how many things need a look.
+
+**A real client's portal, with a copy of its data:** on Windows, double-click `live-windows.cmd`
+instead. It does the same first steps, brings in the newest kit, then runs `npm run live` (below):
+Cloudflare's sign-in page the first time, then the portal on this computer, the live one only read.
 
 Keep the window the file opened while you use the page: closing it stops everything. If the page
 does not open, the window shows its address, and if no browser opens it within two minutes, the
@@ -81,7 +86,7 @@ With Node 22 or newer, from this folder:
 | `npm install` | installs the kit (npm is all you need: it fetches the pnpm version `package.json` names) |
 | `npm start` | the start page above |
 | `npm run dev` | the portal on this computer; [the client template's README](./templates/client/README.md#on-your-own-computer) walks through the first run |
-| `npm run live` | a client's real portal on this computer with a fresh copy of its data, the live portal only read ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker)) |
+| `npm run live` | a client's real portal on this computer with a fresh copy of its data, the live portal only read; `npm run live -- --connected` uses the live database, files and cache instead ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker---connected)) |
 | `npm run update` | gets the newest kit and says what is new |
 | `npm run setup` | puts the portal on Cloudflare with the questions and progress in a page |
 | `npm run deploy` | the same, with the questions in the terminal |
