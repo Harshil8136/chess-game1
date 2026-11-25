@@ -16,7 +16,7 @@ sources: [the records in this folder]
 
 Earlier months: [October 2026](2026-10.md), the 118 records from the first commit to 31 October.
 
-The records, each dated and frozen once written, with its decisions and how it was verified:
+The records since 1 November:
 
 | Record | What it tells |
 |---|---|
@@ -177,6 +177,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The Audit log in colour, and sign-ins by browser](2026-11-24-audit-log-colour.md) | each row's section in its sidebar colour, refused and failed rows edged red and amber, a sign-in's browser in a few words; P565-P566 |
 | [A real portal on this computer, and the rules for Antigravity](2026-11-25-live-portal-and-antigravity.md) | `npm run live` copies a client's live data into the local database, the live portal only read; `.agents/` gives Antigravity the rule and the skills; the owner's standing orders in rules.md |
 | [The start page for local testing, and connected to live](2026-11-25-start-page-local-and-connected.md) | no deploy on the start page; which data: new, a copy of the live portal, or connected to it after a typed yes; `live-windows.cmd` |
+| [Every dialog remade](2026-11-25-dialogs-remade.md) | head, body, foot |
 | [Verification log, 2 and 3 November](2026-11-02-to-03-verification-log.md) | the log's rows of those days, moved when it passed its size |
 | [Verification log, 4 to 21 November](2026-11-04-to-21-verification-log.md) | the log's rows of those days, moved when it reached its size |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
