@@ -329,19 +329,19 @@ trips before a page's own first read; now a page waits for its slowest read.
   keeps its heading and actions and drops only its icon and line. The document names the phone
   browser's bar colour (light, dark, or both for the device's own).
 - **One sidebar, everywhere** (2026-11-15, the owner: "the double sidebar is not something I am
-  a fan of ... sidebar should be universal"). A page with a menu of its own
-  (Email's folders, from core-ui's `MailShell`) puts it in the sidebar, under its own row, on a
-  computer and in the phone's drawer alike: there is no second pane beside the sidebar and no
-  phone section menu. `Frame` renders the page head and content first inside core-ui's
-  `SideMenu` context; `MailShell` leaves its folders in that slot (`SideMenuData`) instead of
-  drawing them, and `SideNav` draws them with `SideMenuList` under the marked row (the row is
-  `aria-current="true"`, the folder on screen `"page"`). The folders, their counts and the meters
-  are part of the frame's key, so a change sends the sidebar again. Menu on a phone, and Email's
-  folder button over its list, both open the portal's drawer, scrolled so the page on screen is in
-  view; on a computer the script scrolls the sidebar so the nested menu shows. On the closed rail
-  the folders are icons too. Where the browser has no command buttons (`commandfor`: Safari before
-  26.2, Samsung Internet, Firefox before 144) the script does what the button asks, and closes a
-  `closedby="any"` dialog on a press outside it.
+  a fan of ... sidebar should be universal"): there is no second pane beside the sidebar and no
+  phone section menu. The sidebar holds only the sections (2026-11-25, the owner: no sub-rows
+  from Files and Email in it). A page with a menu of its own (Email's folders, from core-ui's
+  `MailShell`) has it drawn in the page: `Frame` renders the page's body first inside core-ui's
+  `SideMenu` context, where `MailShell` leaves its folders (`SideMenuData`) instead of drawing
+  them, then the head, then core-ui's `PageMenu` as a row under the head. A folder or a count
+  changes only the page, so the browser keeps its sidebar. The sidebar's look is solid
+  (2026-11-25): its own colours (`--ui-side`, `--side-fg`, `--side-fg-3`, `--side-fg-strong`,
+  light and dark), each icon bare in its group's colour, the page on screen tinted in that colour
+  with a marker at its edge, each group's name after a dot of its colour. Menu on a phone opens
+  the portal's drawer, scrolled so the page on screen is in view. Where the browser has no
+  command buttons (`commandfor`: Safari before 26.2, Samsung Internet, Firefox before 144) the
+  script does what the button asks, and closes a `closedby="any"` dialog on a press outside it.
 - **The first page of a fresh copy** (2026-11-15): `createScreens` draws the frame once while
   the Worker loads, into nothing (`warmFrame`), so the renderer, the frame, the sidebar and its
   icons are compiled before the first request, whose CPU the Free plan counts; a fault there is
