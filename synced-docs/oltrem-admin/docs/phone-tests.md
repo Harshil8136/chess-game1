@@ -170,7 +170,7 @@ Owed together in [their own list](phone-tests-flows.md), P251 to P294.
 
 ### The Apps page, 22 to 24 November
 
-Owed in [their own list](phone-tests-apps.md), P376 to P385, P468 to P474 and P512 to P514.
+Owed in [their own list](phone-tests-apps.md), P376 to P385, P468-P474, P512-P514 and P797-P798.
 
 ### Alerts, audit and errors
 

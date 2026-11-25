@@ -2,8 +2,8 @@
 title: "Phone tests owed: the Apps page"
 status: living
 owner: vendor
-last_verified: 2026-11-24
-sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-23-apps-logs-connected-look.md; docs/records/2026-11-24-everyones-links.md; modules/connect/README.md]
+last_verified: 2026-11-25
+sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-23-apps-logs-connected-look.md; docs/records/2026-11-24-everyones-links.md; modules/connect/README.md; modules/developer/README.md]
 ---
 
 # Phone tests owed: the Apps page
@@ -47,3 +47,10 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 | P512 | As an Owner, Admin, Integrations, Apps | "Everyone's links" beside the title; it lists every calendar and spreadsheet link, whose it is and when it was last used | [record](records/2026-11-24-everyones-links.md) |
 | P513 | Delete on someone else's link, then Delete link | It asks first, then says the link is deleted; the list no longer has it, and the Audit log has "connect.end" naming whose it was | [record](records/2026-11-24-everyones-links.md) |
 | P514 | As a person without that permission, Apps | No "Everyone's links" button; their own links still under Connected | [record](records/2026-11-24-everyones-links.md) |
+
+### A stopped chat alert on Home, 25 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P797 | Connect a Slack or Discord alert, then delete the channel or the app's link at the other end; wait for the next change in the portal; then Home | Under Needs you: "<name> is failing", which opens the alert's page; after ten failures in a row it reads "<name> stopped sending" | [Developer](../modules/developer/README.md) |
+| P798 | The same Home, as someone who cannot keep the webhooks | No such line | [Developer](../modules/developer/README.md) |
