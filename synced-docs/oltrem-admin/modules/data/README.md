@@ -29,8 +29,9 @@ Bit plane 32 ([architecture](../../docs/architecture.md) lists every plane):
 | `data.delete` | Manage, Owner floor | Delete a row where editing is on; only through the Owner role, with a fresh sign-in |
 | `data.hidden.read` | Manage | See the columns a manager hid or masked ([Hidden and masked columns](#hidden-and-masked-columns)) |
 | `data.questions.run` | Manage | Ask a Neon or Turso database a question in SQL that only reads ([Questions in SQL](#questions-in-sql)); it reads any table and column the key may read |
+| `data.insights.read` | Manage | See a connected Supabase project's users, storage and health ([A Supabase project beyond its tables](#a-supabase-project-beyond-its-tables)) |
 
-All six are held at the company itself: a grant at one place gives none. Reading a table runs with
+All seven are held at the company itself: a grant at one place gives none. Reading a table runs with
 the connection's own key, which reads every row that key may read, whatever place a person works
 at, so `data.read` sits in the Manage level (class `admin`) and no ready-made everyday role hands
 it out: an Owner gives it to the people who should read the company's own databases. Connect a key
@@ -48,6 +49,7 @@ that reads only what those people may see.
 | `/data/connections/<id>/row` | One row found by its key (`k`), read whole. With editing on and `data.edit`: a box for each value (a text box for a long or broken one), No value for a column that may be empty, a locked column's value with why, and Save changes; with `data.delete` also Delete row (one confirm, which says rows the database removes with it are not put back). Otherwise the values, and why they cannot be changed, with a link to the database's page for a manager. A refused save keeps what was typed |
 | `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: "N columns are hidden from you", a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns under the rows (closed until opened): each column but the key on one line with a Shown, Masked, Hidden switch, two or three columns across on a wide screen, and Save columns |
 | `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. Download CSV gives the same answer as a file. Saved questions sit in a row of chips above the box: one opens filled in; a name and Save question keeps the typed one, and Remove saved question takes an opened one away. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon and Turso only |
+| `/data/connections/<id>/users`, `/storage`, `/health` | A Supabase project's other sections, for someone with `data.insights.read`: a row of chips (Tables, Users, Storage, Health) under the head of each and of the database's page. Users: 25 a page, each on one line with their email or phone, how they sign in, when they joined and last signed in (UTC), Confirmed and Blocked, with Next page and First page. Storage: the buckets (Public or Private, made, largest file allowed), then a bucket's folder with its path as links, folders first by name, each file's size, type and when it changed, 100 at a time with Next 100. Health: memory and disk used as shares of their size, connections of the most allowed, the database's size and the load of the last minute, a share past 75% marked to look at and past 90% failing, a figure Supabase does not give as a dash |
 | `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
@@ -86,6 +88,9 @@ audited too (`audited` on the route: `data.read-connections-tables`, `data.read-
 | `GET /connections/:id/questions` | `data.questions.run`, company | The questions saved for the database, `{items: [{name, sql}]}` |
 | `POST /connections/:id/questions` | `data.questions.run`, company | `{name, sql}` saves a question (the same name replaces it; checked as Ask checks it), `{name, remove: true}` takes it away; at most 20 per database, Neon and Turso only; audited as `data.question-saved` or `data.question-removed` with the count, never the question |
 | `POST /connections/:id/ask` | `data.questions.run`, company | `{sql, as?}`: one statement that only reads; `{columns, rows, more, left?}`, at most 100 rows and 60 columns; audited as `data.question` with the row count (and `download: csv` when `as` is `csv`), never the question or its rows |
+| `GET /connections/:id/users` | `data.insights.read`, company | `?page=` (1 up): a page of 25 of a Supabase project's users from its Auth admin API, `{users, next}`; audited as `data.read-connections-users` |
+| `GET /connections/:id/storage` | `data.insights.read`, company | No query: `{buckets}`. `?bucket=&prefix=&offset=`: `{bucket, prefix, files, next}`, 100 at a time; audited as `data.read-connections-storage` |
+| `GET /connections/:id/health` | `data.insights.read`, company | Memory, disk, load, connections and the database's size from the project's metrics page, each `null` when it is not given |
 | `GET /connections/:id/changes` | `data.read`, company | `?after=<change id>`: the next 10 changes still kept, newest first, with `next` (the id to ask after) while more remain; anything past 30 days deleted after the answer |
 | `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
 | `POST /connections/:id/changes/:change/undo` | `data.edit`, company | Undo a change while the row holds what it made, or put a deleted row back; once; `{undone, id, kept, marked}` |
@@ -248,6 +253,27 @@ the connection and no extra call. For a person without the permission:
 Questions in SQL read every column, so give `data.questions.run` only to people who may see them.
 Recent changes still lists which columns a change named. The rules are kept through a new key for
 the same database and dropped with a key for another host.
+
+## A Supabase project beyond its tables
+
+Batch 2 of the Supabase makeover (2026-11-25, the owner's ask to use what Supabase offers). The
+secret key a Supabase connection holds reads more than the Data API, so three more pages read,
+when opened and never kept, one call each:
+
+- **Users** from the Auth admin API (`/auth/v1/admin/users`, 25 a page). Emails and phone numbers
+  are personal data, so the page needs `data.insights.read`, which no ready-made role gives, and
+  each read is audited like a page of rows, never with what it showed.
+- **Storage** from the Storage API: the buckets (`/storage/v1/bucket`), then one folder of a
+  bucket (`/storage/v1/object/list/<bucket>`, sorted by name, 100 at a time). A folder is an entry
+  with no id. Files are listed, not opened or downloaded.
+- **Health** from the project's metrics page (`/customer/v1/privileged/metrics`, Prometheus text,
+  Basic `service_role` and the secret key). Only these lines are read: memory total and available,
+  the `/data` disk's size and space left, the load of the last minute, the `postgres` database's
+  connections and size, and the most connections allowed. A line that is not there leaves its
+  figure out, never a guess.
+
+Another service answers `KIT-E-0422` with "only from Supabase projects". The database's page
+returns `canInsights` so the chips show only to those who may open them.
 
 ## Questions in SQL
 
@@ -438,6 +464,12 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   not every key; each probe; the plan's refusals; a changed cursor refused; a table that is not
   there or not listed; a name two Neon tables share; a row of the wrong width; a typed `%` looked
   for as itself; an answer of the wrong shape; a refusal with its words and the key blanked.
+- `test/supabase.test.ts`: a Supabase project's users, buckets, files and health read from
+  scripted answers (the headers of a secret and a legacy key, Basic for the metrics, a full page
+  with a next one, a folder told from a file, a metrics page with figures missing, answers of the
+  wrong shape refused), and the three routes through the pipeline: the Owner reads them, a
+  manager without `data.insights.read` is refused, a bad page or bucket is refused, another
+  service is refused, and users and storage are marked audited.
 - `test/edits.test.ts`: editing through the pipeline on a Turso database played by a fake libSQL
   server that runs each statement on the test's own D1, so the SQL really runs on SQLite: rows
   linked by their key and a view by none, a row opened whole with its locked columns, editing off
