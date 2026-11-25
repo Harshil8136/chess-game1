@@ -142,7 +142,10 @@ Both are told to `onHook` like any answer.
 Engine dataset, `oltrem_requests`), every answer writes one data point: the route as declared
 (`other` when none matched, so an address that holds a secret is never written), the method and
 the status as blobs, the time taken and the status as doubles, and the first part of the path as
-the index. A write that fails is ignored. Free: 100,000 points a day.
+the index. A write that fails is ignored. Free: 100,000 points a day. A call that names an API
+key (2026-11-25) adds two blobs, the key's subject (`key:<id>`, read from the header whether or
+not the key is let in, so refused calls count) and the caller's address; for a key's call the
+route is the module route it ran. Nothing else writes them.
 
 **API keys** (2026-11-24). With `keys` given (`iam.keys.verify` in the template), another system
 calls the API at `/hooks/api/<module><path>` (`KEY_PATH`), the path the door already leaves open,
@@ -152,6 +155,10 @@ check, schema and audit like any call a person makes; no same-origin check runs,
 browser holds is sent. A missing, wrong, ended or revoked key is refused 401 (`KIT-E-0401`), a
 switched-off module or an unknown route 404; `shed` and `limiter` apply as for a hook, the
 limiter per key (`api|<subject>`). The answer is `no-store`. A module may not take the id `api`.
+Since 2026-11-25 `keys` is also given the call (`address` from `cf-connecting-ip`, `method`, and
+`area`, the module id after `KEY_PATH`) and may answer a `weight`, how many of the limiter's calls
+one call counts (a slower key's pace); a `KitError` it throws (a key that works but may not make
+this call) is the answer as it is, a 403 with its detail and no `Retry-After`.
 
 Every answer carries `frame-ancestors 'self'` in its content security policy, added to the
 policy the handler set when it set one: a file served for download keeps its sandbox.

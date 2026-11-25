@@ -55,7 +55,11 @@ the key is why the budgets go unmeasured, the steps to fix it as `key`), `GET /a
 (2026-11-24: the last day's requests by hour, each hour's count, failures at 500 and up and 95th
 percentile time, with the five slowest routes, read from the `oltrem_requests` Analytics Engine
 dataset through its SQL API with `KIT_OPS_TOKEN`, which Account Analytics Read already covers;
-`readRequests`, kept five minutes per isolate, `problem` saying why there are none), and the Home card's
+`readRequests`, kept five minutes per isolate, `problem` saying why there are none),
+`GET /api/health/requests/key/:subject` (2026-11-25: one API key's last seven days, calls and
+refused or failed ones by day and the latest 50 one by one with route, status, time and address,
+`readKeyCalls`; the subject must be `key:<16 hex>`, the only shape that reaches the SQL text, and
+nothing is kept), and the Home card's
 `GET /api/health/home` (how many checks fail or need a look). The tick runs the job like
 any other job, so a client gets system health by mounting the module, with no cron of its own.
 Each run of the job takes the checks whose time has come, so it fits in the tick's 45 queries

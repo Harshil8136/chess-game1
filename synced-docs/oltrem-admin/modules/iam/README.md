@@ -508,9 +508,29 @@ constant time. A call carries it to `/hooks/api/...` (`@oltrem/core-http`'s `key
 hook takes a key's identity with no device, sign-in row, alert or fresh sign-in, and checks its
 capabilities like anyone's. A key that ends stops at that time; Revoke (`DELETE /keys/:id`)
 switches its account off and ends its session at once. Its last use is written at most once an
-hour (`KEY_USE_EVERY_MS`); a company holds 20 keys at most (`KEYS_MAX`). Making and revoking are
-audited (`iam.key-made`, `iam.key-revoked`); making and revoking need `iam.keys.manage`, held to
-the Owner role (`floor: 'owner'`). Tests: `test/keys.test.ts`.
+hour (`KEY_USE_EVERY_MS`); a company holds 20 keys at most (`KEYS_MAX`). Making and revoking need
+`iam.keys.manage`, held to the Owner role (`floor: 'owner'`). Tests: `test/keys.test.ts`.
+
+**Limits and management** (2026-11-25, migration `0090_iam_api_key_limits.sql`). A key also
+carries, set when it is made and changed later (`PATCH /keys/:id`, the end reaching its grant
+too): calls a minute (`KEY_PACES`, 60, 30, 15 or 6; a slower key's call counts `weight` times
+against the limiter's 60), the internet addresses it may call from (up to `KEY_ADDRESSES_MAX`,
+none for any), a start time, read only (GET and HEAD alone), and the API areas (module ids) it may
+call, none for every one its role reaches. `verify` returns null (401) for a key that is unknown,
+revoked or ended, and refuses one that works but may not make this call with `KIT-E-0403` naming
+why: not started, another address, a change on a read-only key, another area. Rotate (`POST
+/keys/:id/roll`) makes a new secret, shown once, and keeps the previous one working for
+`overlapHours` (`KEY_OVERLAPS`: 0, 1, 24 or 168). Change access (`POST /keys/:id/access`) gives the
+new role first, through the grant rules, then ends the old grant, so a refusal leaves the key as
+it was. Rotate, Change limits and Change access first ask the grant rules whether the person
+could give the key's current role at its place (`governance.mayGive`): an Owner at one location
+never rotates or loosens a company-wide key. Delete (`POST /keys/:id/remove`) takes a revoked or ended key off the list; its account
+stays switched off so the grants and the audit log keep naming it. `GET /keys/:id` returns the key
+with its role and location in words and its last `KEY_ACTIVITY_ROWS` audit rows, what it did and
+what was done to it. Every change is audited (`iam.key-made`, `-changed`, `-rolled`, `-revoked`,
+`-deleted`), the addresses counted, never written. A key's calls, refused ones too, are counted by
+`@oltrem/core-health` (`GET /api/health/requests/key/key:<id>`). The pages are
+`@oltrem/screens`' API keys and a key's own page; a key's account is left out of Users.
 
 ## The routes
 
@@ -568,6 +588,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability, with its `area.thing.verb` `name` beside its id (2026-11-22, for the rows' names to copy), with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be, and `sources`: the grants behind it at that place or above it (`kind` `role` with the role's and the group's name, or `exception`; `effect`, `scopeId`, `expiresAt`), by the compiler's own rules (`sourcesOf`); `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
 | `GET /keys`, `POST /keys`, `DELETE /keys/:id` | `iam.keys.manage` | the API keys: listed without the key, made (the key shown once, 201), revoked (204); see API keys above |
+| `GET /keys/:id`, `PATCH /keys/:id`, `POST /keys/:id/roll`, `POST /keys/:id/access`, `POST /keys/:id/remove` | `iam.keys.manage` | one key with its activity; its name and limits changed (204); rotated (the new key shown once, 200); its role or location changed (204); a revoked or ended key deleted (204) |
 | `POST /invitations`, `POST /invitations/many`, `POST /invitations/:id/again`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`, a refusal naming the account or the waiting invitation as `personId` or `invitationId`); with `send`, each link is emailed; send a pending invitation again with a new link; withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
 | `POST /roles`, `PATCH /roles/:id`, `DELETE /roles/:id` | `iam.roles.manage` | roles below your standing, with capabilities you hold |

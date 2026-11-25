@@ -17,6 +17,14 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; docs
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P658 | Users and access, API keys, Make a key: a name, a role, Read only, 15 calls a minute, More limits: one part, an end in 7 days | The key is shown once with Copy; the list shows okey_ and its id, the role, Works until the date; Users does not list it | [record](records/2026-11-25-api-keys-management.md) |
+| P659 | Tap the key | Details: state, role, Read only, 15, the part, Any address, Never used; Rotate, Change limits, Change access, Revoke in one row | [record](records/2026-11-25-api-keys-management.md) |
+| P660 | On a computer, run the curl line from How to use with the key | A JSON answer; a minute later Calls shows a column and the call with its status and your address | [record](records/2026-11-25-api-keys-management.md) |
+| P661 | Run a POST with the read-only key, then add an address in Change limits that is not yours and call again | 403 saying the key only reads, then 403 naming your address; both refused calls show in Calls | [record](records/2026-11-25-api-keys-management.md) |
+| P662 | Rotate, keep the old secret 1 hour | The new key shown once; calls work with both until the hour is up; Details shows until when the old one works | [record](records/2026-11-25-api-keys-management.md) |
+| P663 | Change access to another role | The role in Details changes; History lists every step in plain words | [record](records/2026-11-25-api-keys-management.md) |
+| P664 | Revoke, then Delete | After Revoke only Delete is offered; after Delete the key leaves the list and the Audit log keeps both | [record](records/2026-11-25-api-keys-management.md) |
+| P665 | Open the old key account link you had in Users | It says it belongs to an API key and links to the key's page | [record](records/2026-11-25-api-keys-management.md) |
 | P643 | Settings, Modules, Access (a portal where nobody switched Sign-in alerts off) | Sign-in alerts on; signing in from another browser brings the email | [record](records/2026-11-24-sign-in-alerts-on.md) |
 | P640 | My access, Your sign-ins | Report a sign-in, then Sign out everywhere, in one row; Report a sign-in asks first and says whoever looks after access is told | [record](records/2026-11-24-report-a-sign-in.md) |
 | P641 | Signed in on two browsers: press Report a sign-in on one, then Report and sign out | Signed out on both; the alert recipients get a Critical email naming you and the other browser | [record](records/2026-11-24-report-a-sign-in.md) |
