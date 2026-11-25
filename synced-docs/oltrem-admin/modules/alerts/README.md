@@ -5,9 +5,10 @@ people the settings name. A problem raised again while it is open counts up and 
 again. In the quiet hours a warning is held and sent with the others in one message when they
 end; a critical alert is sent at once. People see the open alerts and the recent ones on the
 Alerts page and say they are on one by acknowledging it; the check or the code that raised it
-resolves it, and a server error can be marked resolved by hand once it is fixed (2026-11-15), as
-can a person's report (`report.*`, 2026-11-24: a sign-in someone says was not them; since
-2026-11-25 also a sign-in used from another country or browser), which no check would ever close.
+resolves it, and since 2026-11-25 anyone who may manage alerts can mark any open one resolved by
+hand (before, only a server error, from 2026-11-15, and a person's report, `report.*`, from
+2026-11-24). A check's alert resolved by hand while the check still fails opens again on its next
+run, and is emailed again unless its emails are muted.
 Every alert email opens with "Hello," (2026-11-22), names each alert with its severity, its
 detail and when it opened ("Opened on 2026-11-22 at 06:00 UTC."), and ends with the address of the
 portal's Alerts page: `address` when given, else `https://` and the Worker's `PUBLIC_HOST`, else no
@@ -86,6 +87,26 @@ through a partial index (migration `0060`), so the job reads the waiting rows on
 every alert ever raised on each run. Status's last resolved alerts are read the same way
 (migration `0064`, 2026-11-13), newest first from an index of the resolved ones.
 
+## Managing alerts (2026-11-25)
+
+The Alerts page (`packages/screens/src/alerts.tsx`) lists every alert as one row under its day,
+in the viewer's time zone, with a severity edge: the title, how many times it was seen, Critical
+or Warning, the section in its sidebar colour, who is on it and what became of its email. Chips
+pick the view (Open, Nobody on it, Mine, Critical, Resolved, Everything) and the kind (Checks,
+Errors, Sign-ins and reports), and a search reads the title, detail, section, key, who is on it
+and the note. A row opens in place to what was seen, what to do (a kit error's own words, else
+what fits its kind), when, who, the email, the alert's key, the technical details folded, and a
+note. Its actions, for whoever holds `alerts.manage`: I am on it or Let go, Mark resolved, Mute
+emails for 1, 7 or 30 days or Unmute, and Copy (the title and detail, to paste to whoever fixes
+it). Ticked rows are taken, resolved or deleted together. A resolved one has Delete, through the
+kit's confirm dialog, for whoever holds `alerts.delete`. One line above the list says who is
+emailed and the quiet hours, with a link to change them (only for whoever may manage).
+
+A mute belongs to the problem, not the one alert: a new alert under the same key, raised while
+the mute lasts, is listed but not emailed, and one waiting to be sent is dropped. Unmuting ends
+the mute for every alert under the key. The release job deletes resolved alerts 90 days after
+they ended, so the table stays small.
+
 ## Settings
 
 All three are system settings an Owner changes on the Settings page; each takes effect at once.
@@ -98,22 +119,32 @@ All three are system settings an Owner changes on the Settings page; each takes 
 
 ## Routes
 
-Under `/api/alerts`, through the IAM module's sessions and check. Capabilities are on bit plane 8.
+Under `/api/alerts`, through the IAM module's sessions and check. Capabilities are on bit plane 8:
+`alerts.read` (view the alerts), `alerts.manage` (take, resolve and mute them) and, since
+2026-11-25, `alerts.delete` (delete resolved ones), which every Owner role is given and any other
+role can be.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /items` | `alerts.read` | the open alerts, newest first, and the thirty latest resolved ones, with `manage`: whether the caller holds `alerts.manage`, so the page offers "I am on it" and "Mark resolved" only to them (a reader sees "Nobody yet") |
+| `GET /items` | `alerts.read` | the open alerts, last seen first, and the latest resolved ones (`limit`, 30 by default, at most 100; `before`, a resolved time, pages back; `more` says older ones are left), with `manage` and `remove`: whether the caller holds `alerts.manage` and `alerts.delete`, so the page offers each action only to them; `emailing` (the recipients, quiet hours and their time zone) only for whoever may manage |
 | `GET /home` | `alerts.read` | the Home card: how many are open, and how many of those are critical |
 | `GET /todo` | `alerts.manage` | Home's Needs you: how many open alerts nobody has acknowledged, and the worst of them |
 | `POST /items/:id/acknowledge` | `alerts.manage` | keeps the caller's address and the time on an open alert not yet acknowledged; audited as `alerts.acknowledge`; another alert is 404 |
-| `POST /items/:id/resolve` | `alerts.manage` | marks an open server error (`error.*`) or a person's report (`report.*`, since 2026-11-24) resolved by hand, once it is dealt with, keeping the caller as who took it when nobody had; audited as `alerts.resolve`; any other alert is 404, since a check resolves its own and would open it again while the problem lasts |
+| `POST /items/:id/release` | `alerts.manage` | lets go of an open alert someone took, so it shows as nobody's again; audited as `alerts.release`; one nobody took is 404 |
+| `POST /items/:id/resolve` | `alerts.manage` | marks any open alert resolved by hand (since 2026-11-25), keeping the caller as `resolvedBy`, and as who took it when nobody had; audited as `alerts.resolve`; a resolved one is 404 |
+| `POST /items/:id/note` | `alerts.manage` | `{ note }`, at most 500 characters: keeps a note with who wrote it and when; empty clears it; audited as `alerts.note` |
+| `POST /items/:id/mute` | `alerts.manage` | `{ days }`: 1, 7 or 30 mutes the problem's emails until then, 0 unmutes every alert under its key; audited as `alerts.mute` |
+| `POST /items/:id/delete` | `alerts.delete` | deletes a resolved alert for good; audited as `alerts.delete`; an open one is 404 |
+| `POST /bulk` | `alerts.manage` | `{ action, ids }`: `acknowledge`, `resolve` or `delete` (resolved ones only, and `alerts.delete`) up to 100 alerts; one audit entry with the count; answers how many changed (`done`) |
 
 ## The table
 
 `oltrem_alerts` (migration `0015`): one row per alert, with its key, source, severity, title,
 detail, state, what became of its email, how many times it was raised, and the times it opened,
 was last raised, emailed, acknowledged and resolved. At most one row per key is open, held by a
-unique index, so a raise that finds one counts it up in the same statement.
+unique index, so a raise that finds one counts it up in the same statement. Migration `0096`
+(2026-11-25) adds `resolved_by`, `note`, `note_by`, `note_at` and `muted_until`, with an index on
+the key and the mute that a new alert reads to stay muted.
 
 ## Not here yet
 
