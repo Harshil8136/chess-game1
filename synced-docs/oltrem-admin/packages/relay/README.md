@@ -128,7 +128,7 @@ and the person presses again.
 5. **Supabase.** In supabase.com/dashboard open your organization's settings, OAuth Apps, Add
    application. Give it a name and the redirect URL `https://<relay>/back/supabase`, and under
    permissions set Projects to Read and Secrets to Read, and, for the project's other sections in
-   the data part, Database, Edge Functions, Analytics and Organizations to Read where Supabase lists them (Organizations gives the Usage tab the plan and its limits); nothing
+   the data part, Database, Edge Functions, Analytics, Auth and Organizations to Read where Supabase lists them (Organizations gives the Usage tab the plan and its limits, Auth the Settings tab's sign-in settings); nothing
    else, and never Write. Copy its Client ID and secret. Connections made before these permissions
    were added sign in again to read those sections.
 6. **Airtable.** At airtable.com/create/oauth press Register new OAuth integration. Give it a name
