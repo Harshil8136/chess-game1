@@ -197,6 +197,14 @@ the project's secret key with Supabase's token, used once there and never sent o
 - **Anything else** (cancelled, too slow, refused): back on the Supabase page with the reason in
   fixed words.
 
+Since 2026-11-25 the relay also sends back the Management API's access token, its refresh token
+and how many seconds it lasts. The portal holds them with the key only when all three read right
+(printable, no spaces, at most 4,096 characters, a lifetime of at most a day), and Connect saves
+them as `access`, `refresh` and `expires` (ms) beside the key, so the project's logs, requests,
+advisors, backups and functions read without pasting a token; the data part renews them through
+the relay (its README, "Sign in with Supabase gives the token"). Otherwise the key alone is saved,
+as before.
+
 Starting it is refused at once, before the trip to Supabase, without `data.manage` held at the
 company.
 

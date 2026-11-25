@@ -281,9 +281,8 @@ Batch 3 (the same day) reads what the project's key cannot, through Supabase's M
 (`api.supabase.com`), with an access token a manager may add to the connection (Access token, an
 optional field on the form and on Change key: a personal access token made at
 supabase.com/dashboard/account/tokens). Only the token goes there, never the project's key, and
-the portal only reads with it; a personal access token reaches every project of its account, so a
-token from Sign in with Supabase, scoped by the sign-in app, comes next. Read, each when a page
-opens:
+the portal only reads with it; a personal access token reaches every project of its account, so Sign in
+with Supabase is the narrower way (below). Read, each when a page opens:
 
 - **Requests**: `/analytics/endpoints/usage.api-counts?interval=`, by service, oldest first.
 - **Logs**: `/analytics/endpoints/logs` with ClickHouse SQL the portal writes itself
@@ -299,6 +298,19 @@ opens:
 
 An answer of another shape is refused, never guessed. With no access token, each says
 `KIT-E-0422` with how to add one.
+
+**Sign in with Supabase gives the token (batch 3b, 2026-11-25).** A project connected by Sign in
+with Supabase also holds the Management API's tokens from that sign-in, scoped by the Vendor's
+sign-in app: `access` (an hour), `refresh` and `expires` (ms), all sealed, never asked for on a
+form (`DERIVED`). The refresh token needs the app's secret, which only the connect relay holds,
+so before a Management API read `supabaseDue` asks whether the token ends within five minutes and,
+when it does and the relay is set, `supabaseRenew` posts the refresh token to the relay's
+`/renew/supabase` (https only) and the new tokens are kept with `registry.renew` before the read.
+Table, user, storage and health reads use the project's key and never wait on it. The relay's 400
+means Supabase refused the refresh token: the stored tokens are read back first, in case another
+request renewed them a moment before, and otherwise the read says `SUPABASE_SIGN_IN_ENDED` (paste
+an access token with Change key, or remove the database and sign in again). Tokens that cannot be
+kept still serve the read and are logged. With no relay set, the token is used as it is.
 
 ## Questions in SQL
 
@@ -457,7 +469,7 @@ description kept in Cloudflare's cache (today every page of a Supabase table rea
 again, which a large schema makes slow; left out on 2026-11-24, since a cached description can be
 out of date after a table changes or follow a key that was replaced, for one request saved); AWS, Google Cloud, Azure and
 Snowflake through the portal's own identity (no key at all); Postgres and MySQL through
-Hyperdrive; an approval before an edit (optional in the owner's plan); Sign in with Supabase giving the Management API's token (today a person pastes one); editing
+Hyperdrive; an approval before an edit (optional in the owner's plan); editing
 Airtable and Upstash.
 
 Left on purpose, to come back to:
@@ -499,6 +511,11 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   wrong shape refused), and the three routes through the pipeline: the Owner reads them, a
   manager without `data.insights.read` is refused, a bad page or bucket is refused, another
   service is refused, and users and storage are marked audited.
+- `test/supabase-sign-in.test.ts`: Sign in with Supabase's tokens: when one is due (within five
+  minutes or an unknown end; never a pasted token), a renewal through the relay (new fields, the
+  relay's 400 as the sign-in ended, any other answer as try again, a relay that is not https), and
+  through the pipeline: a due token renewed, kept and read with, then not renewed again; table
+  reads never renewing; a refresh token another request just spent read back; no relay, no renewal.
 - `test/edits.test.ts`: editing through the pipeline on a Turso database played by a fake libSQL
   server that runs each statement on the test's own D1, so the SQL really runs on SQLite: rows
   linked by their key and a view by none, a row opened whole with its locked columns, editing off

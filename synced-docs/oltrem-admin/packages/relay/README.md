@@ -32,10 +32,19 @@ with the start it must have.
 | Slack | `incoming-webhook` | the webhook address of the channel the person picked, its name, the workspace's name (Slack's access token is dropped) |
 | Discord | `webhook.incoming` | the webhook address of the channel the person picked (no bot joins the server; the webhook's own name is not the channel's, so it is not sent) |
 | Google | `https://www.googleapis.com/auth/drive.file`, online access, PKCE | only the new sheet's address: the relay creates the Google Sheet itself, with the access token used once and never sent on; no refresh token is asked for |
-| Supabase | none sent (the OAuth app is registered with Projects read and Secrets read), PKCE, the app's id and secret as HTTP Basic | only the picked project's address, name and secret key (`sb_secret_…`): the relay reads them with the Management API token, used once and never sent on; the refresh token is dropped. With several projects and none picked, the list of projects (ref and name) instead |
+| Supabase | none sent (the OAuth app is registered with Projects read and Secrets read), PKCE, the app's id and secret as HTTP Basic | the picked project's address, name and secret key (`sb_secret_…`), read by the relay with the Management API token; beside them that token (an hour), its refresh token and how many seconds it lasts, so the portal can read the project's logs, requests, advisors, backups and functions (2026-11-25). With several projects and none picked, the list of projects (ref and name) instead, and no token |
 | Airtable | `data.records:read schema.bases:read`, PKCE, the integration's id alone (it has no secret) | the access token (an hour), the refresh token (60 days, replaced on each use), how many seconds the access token lasts, and the integration's public id: Airtable has no lasting key an app can make, so the portal keeps these and renews them itself (the data part's README, "Sign in with Airtable"). The one service whose refresh token goes back |
 
 A new service is one more entry with its two secrets (and their rows in `tokens.registry.json`).
+
+**Renewals (Supabase).** Supabase's access token lasts an hour and its refresh token needs the
+app's secret, which only the relay holds. An entry marked `relayRenews` answers
+`POST /renew/<id>` with a form `refresh_token`: the relay exchanges it at the service's token
+endpoint with the app's id and secret as HTTP Basic and answers `{token, refresh, expires}` in
+plain JSON, keeping nothing. The refresh token is itself the credential, so nothing else is
+asked. A refusal by the service (400 or 401) is `400 {error: 'refused'}`, which the portal reads
+as the sign-in having ended; no app secrets set is 503; anything else 502. Another service, or a
+GET, is refused.
 
 **The sheet.** For Google the portal puts the spreadsheet link's address and the sheet's title in
 the state, sealed to the relay's own key (they open the portal's list to whoever reads them, and
@@ -118,8 +127,10 @@ and the person presses again.
    redirect URI `https://<relay>/back/google`. Copy its Client ID and secret.
 5. **Supabase.** In supabase.com/dashboard open your organization's settings, OAuth Apps, Add
    application. Give it a name and the redirect URL `https://<relay>/back/supabase`, and under
-   permissions set Projects to Read and Secrets to Read, nothing else. Copy its Client ID and
-   secret.
+   permissions set Projects to Read and Secrets to Read, and, for the project's other sections in
+   the data part, Database, Edge Functions and Analytics to Read where Supabase lists them; nothing
+   else, and never Write. Copy its Client ID and secret. Connections made before these permissions
+   were added sign in again to read those sections.
 6. **Airtable.** At airtable.com/create/oauth press Register new OAuth integration. Give it a name
    and the redirect URL `https://<relay>/back/airtable`, then under Scopes tick only
    `data.records:read` and `schema.bases:read`. Do not generate a client secret: the portals renew
@@ -149,7 +160,8 @@ starts as it must. Supabase: no scope sent and a PKCE challenge, the code exchan
 Basic and no secret in the form; the only project's address, name and secret key read once, the
 token never sent on; several projects answered as a list with no key read; a sealed project read
 only when it is the account's; a project without a secret key answered with its address and name;
-no project, or a refusal, failed. Airtable: its read-only scopes and a PKCE challenge, a state in
+no project, or a refusal, failed; the Management API's tokens sent back with the key, and a
+renewal through `/renew/supabase` answered with new ones, a refused refresh token as 400. Airtable: its read-only scopes and a PKCE challenge, a state in
 Airtable's own rules; the code exchanged with the id alone, no secret and no Basic header, with
 the verifier whose challenge went out; the tokens, their lifetime and the id sealed back, nothing
 else; not set up without its id; an answer without a refresh token failed. A service it does not

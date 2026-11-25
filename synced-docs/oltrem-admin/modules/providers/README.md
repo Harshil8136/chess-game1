@@ -408,7 +408,9 @@ it, not part of its key. `edits` (`on`, or `null` to take it away): a connected 
 rows the portal may change. `columns` (JSON of 2 to 8,000 characters, no control characters):
 the data part's hidden and masked columns. A new key for the same host keeps the options.
 
-`registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable) seals
+`registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable; since
+2026-11-25 also Sign in with Supabase's Management API tokens, so `access` is one of the fields it
+may write beside `token`, `refresh` and `expires`) seals
 secrets the service itself renewed over the credential `from` was opened from, and writes them only
 while that credential is still the one stored (`UPDATE … WHERE credential = <the one read>`): it
 answers false when another request renewed it first, so two renewals at once never overwrite each
