@@ -456,7 +456,10 @@ access review with grants they may keep or remove, their own grants ending withi
 since 2026-11-22, for whoever may renew them (`standingAt`) how many other people's own grants end
 within 7 days (one links to that person's page, more to People), and for whoever holds
 `iam.bindings.manage` at the company "An access review is due" when none is open, none was opened
-for 90 days and someone else holds a grant (a company of one has nobody to review).
+for 90 days and someone else holds a grant (a company of one has nobody to review). Since
+2026-11-25, for whoever holds `iam.keys.manage`, the working API keys that end within 7 days and
+those nothing has called with for 90 days (`KEY_IDLE_DAYS`; never called counts from when it was
+made), one linking to its key page, more to the keys.
 `waitingFor` counts with the rules the decisions check (`standingAt`, `can`, never one's own
 request, approval or grant), so a person is never sent to a decision the API would refuse.
 

@@ -68,7 +68,7 @@ changes of every place.
 |---|---|---|
 | `GET /webhooks`, `GET /webhooks/:id` | `developer.read` | the webhooks; one with its newest fifty deliveries |
 | `POST /webhooks` (`url`, `events`, `description`, `format`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
-| `GET /reference` | `developer.read` | the API as the mounted modules declare it |
+| `GET /reference` | `developer.read` | the API as the mounted modules declare it; `?schemas=all` or `?schemas=iam,files` adds those modules' route bodies (a GET's query) as JSON Schema, written once per isolate (a whole portal's at once takes longer than 10 ms of CPU, so a page asks for the part it shows) |
 
 Every change is audited by the module: `developer.webhook-create` (with its address's host only: a path or query often carries the receiver's own
 secret, 2026-11-20), `.webhook-update` (what changed, from what to what), `.webhook-delete`,
