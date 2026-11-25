@@ -74,7 +74,30 @@ const app = createApp({
 | `action` | `<module>.<verb>`: the route's `action`, or its method and fixed path segments |
 | `target` | the route's last parameter, the thing changed |
 | `outcome` | `ok` below status 400, `failed` from 500, `refused` between: the permission check's and the schema's refusals are recorded too |
-| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the caller's `ip`, `country` and `browser` (the browser and system, as `Chrome on Android`) |
+| `actor` | the caller; `outside` (as the system) for a call refused before anyone was let in, such as a key that is not one |
+| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the refusal's `reason` and `fields`, the `download` and `bytesOut` a read handed over, `notLoggedBefore` (below), and what the pipeline noted for the request (next table) |
+
+What every row of a request carries, a module's own included (2026-11-25, the owner: rows rich
+enough to trace a breach or a stolen API key, modelled on Okta's `client` and `securityContext`,
+CloudTrail's `userIdentity`, GitHub's `actor_location` and token id, and Elastic's `source.as`):
+
+| Fact | What it is |
+|---|---|
+| `ip`, `country`, `region`, `city` | the address and where the edge placed it, never finer than a city |
+| `asn`, `network` | the network the address belongs to, by number and owner: a home provider, a phone company or a cloud host |
+| `browser`, `agent` | the browser or program in words (`Chrome on Android`, `curl (a command-line program)`) and the user agent as sent, 160 characters at most |
+| `via`, `key` | `key` and the API key's public id for a key's call (never its secret); `local` on the owner's computer |
+| `session` | the sign-in the call rode on, its second: the IAM module's device id, so every row of one sign-in can be listed |
+
+Which calls are rows: every change; a read refused outside a page's own render (a page asking what
+to show is not an attempt); a read that handed over a file; a read marked `audited` (connected
+data, and the audit log itself: `audit.read`, PCI DSS 10.2.1.3); and every call made with an API
+key, reads included. A person's ordinary read is not a row: it would be most of the log and of the
+free plan's daily writes. Reads have a share so a stolen key cannot spend those writes: the same
+read of the same record stays quiet for ten minutes (`SAME_READ_QUIET_MS`), a caller writes at
+most `READ_ROWS_A_MINUTE` (10) rows of reads a minute in one isolate, and calls refused from
+outside share the same limit per address; what is held back is counted on the caller's next row
+as `notLoggedBefore`. Changes, downloads and a known caller's refusals are never held back.
 
 A module that writes its own row for the request (`record` or `after` with the request id) keeps
 its richer row, and the automatic one is not written beside it: the writer remembers, in the
@@ -124,7 +147,7 @@ const audit = createAuditModule<Env>({
 
 | Route | Capability | What it answers |
 |---|---|---|
-| `GET /entries?outcome=&module=&actor=&target=&action=&since=&until=&kind=&q=&count=1&offset=&countSince=&before=` | `audit.read` at the company | 50 rows, newest first, narrowed by outcome, module, person, time (`since`), people or the portal (`kind`), words (`q`, up to 100 characters; the Audit log page's search), with `counts` by result and `days` (each day's counts by result, in the reader's clock when `offset` gives their minutes from UTC; over `countSince` when given, so a page can list one day and still count the range) when `count=1`, an end time (`until`), what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
+| `GET /entries?outcome=&module=&actor=&target=&action=&since=&until=&kind=&ip=&asn=&key=&session=&signal=&q=&count=1&offset=&countSince=&before=` | `audit.read` at the company | each reading is itself a row (`audit.read`); 50 rows, newest first, narrowed by outcome, module, person, time (`since`), people, the portal or API keys (`kind`), one address (`ip`), network (`asn`), API key (`key`) or sign-in (`session`), the signals (`signal=downloads` or `flagged`: sign-ins from a new country or browser), words (`q`, up to 100 characters; the Audit log page's search), with `counts` by result, `signals` (key calls, downloads, new places) and `days` (each day's counts by result, in the reader's clock when `offset` gives their minutes from UTC; over `countSince` when given, so a page can list one day and still count the range) when `count=1`, an end time (`until`), what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
 | `GET /since?at=` | `audit.read` at the company | Home's What changed card (2026-11-21): what others did since `at` (the person's last Mark as seen; a day back without it, a week back at most, `SINCE_DAYS`), the kinds of change by action, the most made first, the first six (`SINCE_KINDS`) with their counts, and the total. Only a person's changes that went through count: not the person asking, not refusals or failures, not the system's own rows (the Vendor's count), and not coming and going (`iam.sign-in`, `iam.sign-out`, `iam.sign-out-everywhere`, `iam.device-end`). One grouped read on `oltrem_audit_log_at`, which reads the rows since that time, a week's at most; the card is an extra that starts off (`audit.since`, `@oltrem/core-config`) |
 | `GET /seals` | `audit.read` at the company | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) at the company | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |

@@ -32,15 +32,24 @@ a bare cross-site POST is refused with `KIT-E-0440`. Every response carries `x-r
 `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: same-origin` and a content security policy
 that allows framing by the same origin only. Routes mount at `/api/<module id><path>`.
 
-**Every change is told.** With `onChange` given, each POST, PUT, PATCH or DELETE that reached a
-route is handed over once it answered or threw, as a `RouteChange` (`@oltrem/core-module`): the
+**Every change is told, and every read that matters** (2026-11-25: a read refused outside a
+page's own render, a read that handed over a file, named from `content-disposition`, a read marked
+`audited`, and every call made with an API key, reads included). With `onChange` given, each POST,
+PUT, PATCH or DELETE that reached a route, and each such read, is handed over once it answered or
+threw, as a `RouteChange` (`@oltrem/core-module`): the
 module, the action (the route's `action`, or one made from its method and fixed path segments,
 `POST /lists/:id/items` as `create-lists-items`), the route as declared, the last parameter as the
-target, the status, `ok` below 400, `failed` from 500, `refused` between, the error code, the time
+target, the status, `ok` below 400, `failed` from 500, `refused` between, the error code, the
+refusal's own words (`reason`) and the fields a refused input named (`fields`), the file and size an
+answer handed over (`download`, `bytesOut`), the time
 taken, the identity and session, the caller's address and country as the edge gave them, and the
-browser and system read from the user-agent (`deviceName`). The same address, country and browser
-are noted for the request (`noteRequest`, `@oltrem/core-module`) before the route runs, so a row a
-module writes itself says from where too. The
+browser and system read from the user-agent (`deviceName`). The same address and country, the
+region, city and network the edge placed it in (`request.cf`), the browser, the user agent as sent,
+and the API key or the sign-in the call rode on are noted for the request (`noteRequest`,
+`@oltrem/core-module`) before the route runs, so a row a module writes itself says them too. A
+call to `/hooks/api/` refused before it reaches a route (no key, a key that is not one or was
+revoked, a key refused by its own rules, past its limit, or a path it does not have) is told as
+`iam.key-refused`, with the key's public id as the target and `outside` when no key let it in. The
 session hook's, the capability check's and the schema's refusals are told too; what the door or
 the same-origin check refuses never reaches a route and is not. A hook that throws goes to
 `report` and leaves the answer as it was. The client template passes the audit module's

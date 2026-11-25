@@ -436,9 +436,12 @@ export them under the same names.
 
 ## Where a request came from
 
-`deviceName(userAgent)` names a browser and system in plain words (`Chrome on Android`), for the
+`deviceName(userAgent)` names a browser and system in plain words (`Chrome on Android`), and a
+program or robot for what it is (`curl`, `A Python script`, `Headless Chrome (automated)`,
+2026-11-25), for the
 sign-in alerts and lists (`@oltrem/iam/device` passes it on) and the audit log; its own entry, `@oltrem/core-module/device`, holds no Workers type. The pipeline (`@oltrem/core-http`) calls `noteRequest(requestId,
-{ ip, country, browser })` for each change request before its route runs, and the audit writer
+{ ip, country, region, city, asn, network, browser, agent, via, key, session })` for each call its
+routes run (`RequestWhere`; notes for one request add up), and the audit writer
 reads it back with `requestWhere(requestId)`, so every row of the request says from where. The
 isolate keeps the newest 512 requests; nothing is stored.
 
