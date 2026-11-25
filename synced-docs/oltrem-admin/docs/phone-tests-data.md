@@ -56,3 +56,6 @@ sources: [docs/records/2026-11-23-connected-data-edits.md; docs/records/2026-11-
 | P571 | Press the chip | The box filled with that question, and Remove saved question | [README](../modules/data/README.md#questions-in-sql) |
 | P572 | Remove saved question | Removed; the chip gone | [README](../modules/data/README.md#questions-in-sql) |
 | P573 | Home and a signed-in Airtable database whose sign-in ended | Home says signed out, sign in again; the database says Signed out, with Sign in with Airtable again | [README](../modules/data/README.md#the-pages) |
+| P670 | On a computer, open a Supabase table with IDs, emails and times | Every row on one line; IDs as 8 characters with a copy button, times as 29 Apr 2026 16:49, Yes and No as dots; the first column stays put when scrolling sideways | [README](../modules/data/README.md#the-pages) |
+| P671 | Press an ID's copy button and paste it somewhere | The whole ID | [README](../modules/data/README.md#the-pages) |
+| P672 | As an Owner, open Hide or mask columns under a table's rows | A compact grid, each column's name and a Shown, Masked, Hidden switch on one line | [README](../modules/data/README.md#the-pages) |
