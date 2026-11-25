@@ -98,6 +98,17 @@ policy version once, so every other sign-in is refused within one recheck (five 
 session record read or written for each person; the Vendor and service accounts are not touched.
 Audited as `users.sign-out-everyone` with how many accounts it reached.
 
+**Sign-in history and the downloads** (2026-11-25). `GET /sign-ins` lists every sign-in the
+audit log still holds (90 days, the audit module's `KEEP_DAYS`), newest first, fifty a page
+(`SIGN_INS_PAGE`, `before` the next page's `seq`), narrowed by `outcome` (`ok`, `refused`) and an
+address (`q`): who, the account it let in, when, the browser, the country and the flags; a sign-in
+let in only when its account is the company's. `GET /export` answers the company's users as a CSV
+file (address, name, state, blocked until, last sign-in, member since) and `GET
+/sign-ins/export?days=` the sign-ins of the last 1 to 90 days (30 unless given), at most
+`EXPORT_ROWS` (5,000) rows each, cells guarded against spreadsheet formulas (`csvCell`). The three
+are for whoever manages people at the company, as Signed in today; each download is audited
+(`users.export` with how many rows, `users.export-sign-ins` with the days and rows).
+
 ## Search
 
 The portal's search (`GET /api/users/search?q=`, `users.read`) finds people by address or display
@@ -110,6 +121,13 @@ under the address (its address, display name, language, whether it is on, when i
 every role given to it, with the place, the effect and the days it starts and ends, and what
 modules told them (each notification's module, subject, day and whether it was read). The
 person's page is linked.
+
+The two downloads (2026-11-25) take personal data out of the portal: the users file holds each
+account's address, display name, state and sign-in times; the sign-ins file each sign-in's
+address, name, time, browser and country, and the addresses refused. Nothing new is kept: both
+read rows the portal holds already, and the audit row of each download names who took it, when,
+and how many rows. Whoever downloads one is responsible for the file from then on, as with the
+audit log's own export.
 
 ## Notifications
 
@@ -142,6 +160,8 @@ audited.
 | `GET /signed-in?probe=` | `users.manage` at the company | who signed in within the last day, by person, with the refused addresses (above); `probe=1` answers `{ may: true }` and reads nothing, for the screens' tab, which asks on every page of its row |
 | `POST /sign-out-everyone` | `users.manage`, an Owner or the Vendor | end every sign-in in the company but your own; answers `{ people }` |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
+| `GET /sign-ins?before=&outcome=&q=` | `users.manage` at the company | every sign-in kept, newest first, fifty a page (above) |
+| `GET /export`, `GET /sign-ins/export?days=` | `users.manage` at the company | the users, and the sign-ins of the last days, as CSV files; audited |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
 | `GET /me/seen`, `POST /me/seen` | `users.self` | when I last marked Home's What changed card as seen (`{ at }`, null before the first time); mark it now (no body, answers 204). Personal, like the theme: not audited |
 | `GET /me/views?path=`, `POST /me/views`, `DELETE /me/views/:id` | `users.self` | my saved views of one page: list, save under a name (the same name replaces), remove; another person's id removes nothing |
@@ -201,7 +221,7 @@ grant at the root, refused for oneself and for an Owner, needing a reason, done 
 to change the second time, the sessions following each switch, and the Vendor standing above a
 manager; blocking for an hour and for good, refused to a clerk, for oneself, for an Owner and for
 a time past, the door's refusal with the time, unblocking with the ended sign-in staying ended,
-and a session's end time set, refused below standing or past, and cleared; the audit rows with their actors, reasons and refusals; Signed in today by person with the flags, the refused addresses and nothing older than a day, refused to a clerk; Sign everyone else out refused to a manager, done by an Owner, their own sign-in kept and a new sign-in let in, and the What changed mark, empty before the first press, kept for each person apart, a profile row made on the first press (`test/signed-in.test.ts`); saved views; notifications kept
+and a session's end time set, refused below standing or past, and cleared; the audit rows with their actors, reasons and refusals; Signed in today by person with the flags, the refused addresses and nothing older than a day, refused to a clerk; Sign everyone else out refused to a manager, done by an Owner, their own sign-in kept and a new sign-in let in, and the What changed mark, empty before the first press, kept for each person apart, a profile row made on the first press; the sign-in history paged and narrowed, refused to a clerk and a manager of one location; the two CSV downloads, their columns, the days limit and their audit rows (`test/signed-in.test.ts`); saved views; notifications kept
 and emailed as each person chose (an inactive account and an address of nobody emailed only, a
 key kept once, off keeps and sends nothing), the link taken from the text and never another
 site's, opened by its owner only, all read, the privacy rows, pages of thirty by a cursor that
