@@ -50,7 +50,7 @@ that reads only what those people may see.
 | `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: "N columns are hidden from you", a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns under the rows (closed until opened): each column but the key on one line with a Shown, Masked, Hidden switch, two or three columns across on a wide screen, and Save columns |
 | `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. Download CSV gives the same answer as a file. Saved questions sit in a row of chips above the box: one opens filled in; a name and Save question keeps the typed one, and Remove saved question takes an opened one away. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon, Turso and Supabase (which needs the connection's access token) |
 | `/data/connections/<id>/users`, `/storage`, `/functions`, `/logs`, `/health`, `/advisors` | A Supabase project's other sections, for someone with `data.insights.read`: a row of chips (Tables, Users, Storage, Functions, Logs, Health, Advisors) under the head of each and of the database's page. Users: 25 a page, each on one line with their email or phone, how they sign in, when they joined and last signed in (UTC), Confirmed and Blocked, with Next page and First page. Storage: the buckets (Public or Private, made, largest file allowed), then a bucket's folder with its path as links, folders first by name, each file's size, type and when it changed, 100 at a time with Next 100. Health: memory and disk used as shares of their size, connections of the most allowed, the database's size and the load of the last minute, a share past 75% marked to look at and past 90% failing, a figure Supabase does not give as a dash; then Requests (a column chart by service, Data API, Auth, Storage and Realtime, over the last hour, day or 7 days) and Backups (point-in-time recovery on or off, each daily copy with its state). Functions: each Edge Function with its state, version, when it changed and whether it needs a sign-in. Logs: a chip per log (API, Database, Auth, Storage, Functions, Realtime) and per stretch (last hour, last day), a search of the messages, the newest 100 lines with their level. Advisors: how many findings to fix now, look at or note, then each with its kind (Security or Speed), what, the detail and a link to Supabase's guide. Functions, Logs, Advisors, Requests and Backups need the connection's access token; without one each says how to add it (Health says it once) |
-| `/data/connections/<id>/usage` | A Neon or Turso database's usage, for someone with `data.insights.read`, under a row of chips (Tables, Usage) on it and on the database's page. Neon: this period's compute time, active time, storage, data written and data sent out, the project, region, Postgres version and the period counted; the compute's state, size in compute units, when it sleeps and when it was last active; each branch with its size, state and when it changed. Turso: this month's rows read and written, storage and bytes synced, the database's organization, plan, group and region, and delete protection; blocked reads or writes said first. Without the connection's API key it says how to add one |
+| `/data/connections/<id>/usage` | A Supabase project's allowance (the plan, compute and read-only state, then a card with a meter each for the database, disk, file storage, monthly active users and Edge Functions against their limits, then the plan's other limits and a link to Supabase's usage page for egress and the bill; see [the usage section](#a-databases-usage-neon-and-turso)), its tab last in the Supabase row. A Neon or Turso database's usage, for someone with `data.insights.read`, under a row of chips (Tables, Usage) on it and on the database's page. Neon: this period's compute time, active time, storage, data written and data sent out, the project, region, Postgres version and the period counted; the compute's state, size in compute units, when it sleeps and when it was last active; each branch with its size, state and when it changed. Turso: this month's rows read and written, storage and bytes synced, the database's organization, plan, group and region, and delete protection; blocked reads or writes said first. Without the connection's API key it says how to add one |
 | `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
@@ -94,7 +94,7 @@ audited too (`audited` on the route: `data.read-connections-tables`, `data.read-
 | `GET /connections/:id/health` | `data.insights.read`, company | Memory, disk, load, connections and the database's size from the project's metrics page, each `null` when it is not given |
 | `GET /connections/:id/project` | `data.insights.read`, company | `?part=requests&span=1hr, 1day or 7day` `{requests}`, `advisors` `{advice}`, `backups` `{pitr, backups}`, `functions` `{functions}`, `overview` `{name, region, status, postgres, size, tables}` (each table's schema, kind, estimated rows, size, row security, policies and columns, from one read-only question to the project's catalogue that leaves Supabase's own schemas out and stops at 500), from the Management API with the access token |
 | `GET /connections/:id/logs` | `data.insights.read`, company | `?source=&hours=1 or 24&search=`: the newest 100 lines of one log, `{logs}`; audited as `data.read-connections-logs` |
-| `GET /connections/:id/usage` | `data.insights.read`, company | A Neon database's `{neon}` or a Turso database's `{turso}` usage, from the service's API with the connection's API key; another service `KIT-E-0422` |
+| `GET /connections/:id/usage` | `data.insights.read`, company | A Supabase project's `{supabase}` usage and plan allowance with the access token, or a Neon database's `{neon}` or a Turso database's `{turso}` usage with the connection's API key, from the service's API; another service `KIT-E-0422` |
 | `GET /connections/:id/changes` | `data.read`, company | `?after=<change id>`: the next 10 changes still kept, newest first, with `next` (the id to ask after) while more remain; anything past 30 days deleted after the answer |
 | `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
 | `POST /connections/:id/changes/:change/undo` | `data.edit`, company | Undo a change while the row holds what it made, or put a deleted row back; once; `{undone, id, kept, marked}` |
@@ -336,8 +336,23 @@ the Usage page opens (`dialects/usage.ts`), never kept.
   (`…/databases/<name>/usage`).
 
 A key that reaches no matching project or organization says how to make one that does. The
-Usage tab shows to someone with `data.insights.read` on a Neon or Turso connection; Supabase's
-own usage is its Health page.
+Usage tab shows to someone with `data.insights.read` on a Neon or Turso connection.
+
+- **Supabase** (batch 7, the owner's ask of 2026-11-25 for its allowance): with the connection's
+  access token, the project (`/v1/projects/<ref>`, for its organization), then side by side the
+  organization's plan and entitlements (`/v1/organizations/<slug>`, `…/entitlements`, which need
+  Organizations read), the disk (`/config/disk/util`), read-only mode (`/readonly`), the compute
+  size (`/billing/addons`), the Edge Functions, and one read-only question for the database's
+  size, the files in Storage and their size, all users and those signed in since the first of the
+  month (UTC). A part the token may not read is left out and named; the project and the question
+  must answer. The page shows the plan, compute and whether the database takes changes, then a
+  card with a meter for the database, the disk, file storage, monthly active users and Edge
+  Functions, each against its limit where one is known: the disk's size and the functions' limit
+  from the API, and for the database (Free only), file storage and monthly active users the
+  plan's allowance as Supabase publishes it, kept in `PLAN_ALLOWANCE` in `pages.tsx`; then the
+  plan's other limits (largest upload, logs and backups kept, point-in-time recovery, Realtime,
+  branches, custom domain). Egress, function calls and the bill are not in Supabase's API: a link
+  opens its usage page for them. Supabase's live memory, load and connections stay on Health.
 
 ## Questions in SQL
 
@@ -533,7 +548,8 @@ Inside the Workers runtime, every service answered from a script so nothing leav
 - `test/supabase.test.ts`: the Management API with the access token (only the token sent, its
   words blanked from a refusal, the logs' SQL and time range, advisors sorted, backups,
   functions, a question wrapped and cut to 100 rows, the overview's one catalogue question and
-  its refusal, the fix said without a token), a Supabase
+  its refusal, the usage read part by part (the organization's parts named when refused, the
+  question needed), the fix said without a token), a Supabase
   project's users, buckets, files and health read from scripted answers (the headers of a secret and a legacy key, Basic for the metrics, a full page
   with a next one, a folder told from a file, a metrics page with figures missing, answers of the
   wrong shape refused), and the three routes through the pipeline: the Owner reads them, a
