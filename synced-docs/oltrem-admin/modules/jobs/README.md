@@ -30,36 +30,36 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 ```
 
 It stands on the IAM module (sessions, the authorizer, the audit wrapper) and the scheduler's
-`list`, `runSoon`, `setPaused` and `standDown`; it adds no binding, secret, variable, table or job.
+`list`, `runSoon`, `runNow`, `setPaused` and `standDown`; it adds no binding, secret, variable,
+table or job (migration `0094` gives the scheduler's own table one column, `paused_until`).
 
 ## Who may do what
 
-Two capabilities on bit plane `33`, both read at the company itself (a role held at a place below
+Three capabilities on bit plane `33`, all read at the company itself (a role held at a place below
 it is not enough, because every job works for the whole company):
 
 | Capability | Lets a person |
 |---|---|
-| `jobs.read` (read) | open the page and each job's page, and **Check for work** (it only reads) |
-| `jobs.manage` (admin, asks for a fresh sign-in) | **Run soon**, **Pause** and **Resume**, and System status's **Check again now** |
+| `jobs.read` (read) | open every view and each job's page, and **Check for work** (it only reads) |
+| `jobs.run` (operate) | **Run now**, **Run soon**, and System status's **Check again now** |
+| `jobs.manage` (admin, asks for a fresh sign-in) | **Pause** (for an hour, a day, a week or until resumed) and **Resume** |
 
-The Owner and the Vendor hold both by their floors. Whoever holds only `jobs.read` is told once,
-in words, which permission running and pausing need, rather than shown buttons that refuse.
+The Owner and the Vendor hold all three by their floors. Whoever lacks one is told once, in
+words, which permission the missing buttons need, rather than shown buttons that refuse; a job's
+**Access** tab lists the three with whether the person holds each.
 
 ## The pages
 
-After the model portal's Scheduled jobs page, written in the kit's own look (one title size, words that do
-not wrap, status as a dot and a word, no boxes round small facts, filters as chips with a dot of
-their state's colour).
-
 | Path | Shows |
 |---|---|
-| `/jobs` | a search box and the filters **All**, **Needs a look** (failed last, or held back by the free plan), **Paused** (by hand, or the part off) and **Active**, each with its count; the figures (active, needs a look, paused, the last 24 hours, the next tick with why the jobs wait); then the jobs by schedule, most frequent first, each schedule in words with its count and when its next job runs; each row the job's name (its page) and part, its status, last run ("Worked 3 min ago", "Failed 2 h ago" in red, "Looked 4 min ago"), next run ("in 4 min", or what it waits for) and the last 24 hours as one bar an hour; the Workflow's flows after them. The figures and rows refresh every minute while the page is open (`data-live`), never while a dialog is open or someone types |
-| `/jobs/:id` | the job's name, its status and why, its part and schedule, then four tabs (`?tab=`): **Overview** (a paused note, next and last run with its time and queries, runs, failures and the share that went through, the last 24 hours with the key, the last failure's words, **Check for work** where it has a check); **Activity** (the hours it ran in, newest first, and the changes made to it by hand from the audit log); **Settings** (**Run soon**, **Pause** or **Resume**, each confirmed in a dialog, or the permission they need); **How it works** (what it does, its schedule, what it does with nothing to do, whether it has a check, its part, the last run's cost, its id and a link to copy) |
+| `/jobs` | the health first: "All 31 jobs are fine" or how many need a look, the next tick and the hours of work today, one bar segment a job in its state's colour, and the three counts as links. Then four views (`?view=`): **Overview** (**Needs you**: failing, held back or paused jobs, each with Run now or Resume in place; **Up next**; **Just ran**, with each run's time and queries); **All jobs** (search, the filters **All**, **Needs a look**, **Paused or off**, **Active** as chips with counts, then a section a part in that part's colour, a row a job: name and schedule, status, last run, next run, the last 24 hours; the Workflow's flows after them); **Timeline** (every job's last 24 hours as one grid, a cell an hour); **History** (the newest 50 changes by hand to any job). The health and the views refresh every minute while the page is open (`data-live`), never while a dialog is open or someone types |
+| `/jobs/:id` | the job's name, status and why, part and schedule, then its actions (**Run now**, **Check for work**, **Pause** or **Resume**, each confirmed in a dialog) and five tabs (`?tab=`): **Overview** (next and last run, the last run's cost, runs and the share that went through, the last 24 hours, the last failure's words); **Runs** (its changes by hand and the hours it ran in); **Schedule** (the schedule, the next five runs, what it does with nothing to do, the pause, and **Run soon** for the next tick); **Access** (the three permissions and whether the person holds each); **About** (what it does, its part, its id and a link to copy) |
 
 The status, in the order that says why a job is not working: **Off** (its part switched off),
-**Paused**, **Failing** (its last run failed), **Held back** (due while a free-plan budget is past
-its pause line), **Running**, **Sleeping** (a job that declares `idle` and found nothing), and
-**Active**. `src/words.ts` words every cell, and the tests pin each sentence.
+**Paused** (and when it resumes by itself), **Failing** (its last run failed), **Held back** (due
+while a free-plan budget is past its pause line), **Running**, **Sleeping** (a job that declares
+`idle` and found nothing), and **Active**. `src/words.ts` words every cell, and the tests pin each
+sentence.
 
 ## The routes
 
@@ -67,21 +67,25 @@ Under `/api/jobs`:
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /` | `jobs.read` | every declared job (part, name, schedule, idle pace, last run, its last 24 hours, paused or off, whether it has a check), the flows, why the jobs wait (`standDown`), the server's time and whether the person may run and pause |
-| `GET /:id` | `jobs.read` | one job and the newest twenty changes made to it by hand, read from the audit log |
+| `GET /` | `jobs.read` | every declared job (part, name, schedule, idle pace, last run, its last 24 hours, paused and until when, or off, whether it has a check), the flows, why the jobs wait (`standDown`), the server's time and whether the person may run and pause |
+| `GET /history` | `jobs.read` | the newest 50 changes by hand to any job, read from the audit log |
+| `GET /:id` | `jobs.read` | one job and the newest twenty changes made to it by hand |
 | `GET /:id/check` | `jobs.read` | what waits for a job that declares a check, as `waiting`; nothing is run; `KIT-E-0404` for a job with none |
-| `POST /:id/run`, `/pause`, `/resume` | `jobs.manage` | made due now (the next tick, within a minute or two, runs it; refused with `KIT-E-4201` while its part is off), paused, resumed |
+| `POST /:id/run-now` | `jobs.run` | runs the job now, inside the request, under the tick's own lease (`busy` while a tick holds it), keeping its schedule; answers the outcome, its time and its queries |
+| `POST /:id/run` | `jobs.run` | made due now: the next tick, within a minute or two, runs it |
+| `POST /:id/pause`, `/resume` | `jobs.manage` | paused (`for`: `1h`, `1d` or `7d`, else until resumed; the first tick after the end resumes it), resumed |
 
-Each change is audited: `jobs.run`, `jobs.pause`, `jobs.resume`, the job's id as the target. A
-job's Activity reads those rows (through the audit log's index on target), and the Developer
-part's `developer.job-run`, `.job-pause` and `.job-resume` from before 2026-11-25, so no history
-is lost and nothing new is written to show it.
+A run or a run soon is refused with `KIT-E-4201` while its part is off. Each change is audited:
+`jobs.run-now` (with its outcome, time and queries), `jobs.run`, `jobs.pause`, `jobs.resume`, the
+job's id as the target. A job's Runs tab and the History view read those rows through the audit
+log's indexes, and the Developer part's `developer.job-run`, `.job-pause` and `.job-resume` from
+before 2026-11-25, so no history is lost and nothing new is written to show it.
 
 ## What it costs
 
 The list is one read of the scheduler's table and the Features page's switches, the same as the
 Developer page made before; a job's page adds one indexed read of the audit log. A page open with
-its live rows refreshes once a minute, as the tick runs. Nothing is written by looking.
+its live rows refreshes once a minute, as the tick runs; History is one more indexed read. Nothing is written by looking.
 
 ## Health
 
@@ -95,8 +99,6 @@ The module owns the `4200` to `4299` block: `KIT-E-4201` the job is switched off
 
 ## Not here yet
 
-The model page has three things this one does not, because the kit's scheduler has none of them:
-a throttle (at most once every N minutes), a pause that ends by itself, and a run that starts at
-once with its log streamed to the page. Here **Run soon** makes the job due and the next tick, a
-minute away, runs it within the free plan's 10 ms; its result shows on the page when the rows
-refresh.
+The model page has a throttle (at most once every N minutes) and a run whose log streams to the
+page; the kit's scheduler has neither. **Run now** answers once the run ends, within the free
+plan's CPU, with what it did, how long it took and how many queries it made.
