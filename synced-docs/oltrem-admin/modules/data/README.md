@@ -29,7 +29,7 @@ Bit plane 32 ([architecture](../../docs/architecture.md) lists every plane):
 | `data.delete` | Manage, Owner floor | Delete a row where editing is on; only through the Owner role, with a fresh sign-in |
 | `data.hidden.read` | Manage | See the columns a manager hid or masked ([Hidden and masked columns](#hidden-and-masked-columns)) |
 | `data.questions.run` | Manage | Ask a Neon, Turso or Supabase database a question in SQL that only reads ([Questions in SQL](#questions-in-sql)); it reads any table and column the key may read |
-| `data.insights.read` | Manage | See a connected Supabase project's users, storage, functions, logs, health and advisors ([A Supabase project beyond its tables](#a-supabase-project-beyond-its-tables)) |
+| `data.insights.read` | Manage | See a connected Supabase project's users, storage, functions, logs, health and advisors ([A Supabase project beyond its tables](#a-supabase-project-beyond-its-tables)), and a Neon or Turso database's usage ([A database's usage](#a-databases-usage-neon-and-turso)) |
 
 All seven are held at the company itself: a grant at one place gives none. Reading a table runs with
 the connection's own key, which reads every row that key may read, whatever place a person works
@@ -50,6 +50,7 @@ that reads only what those people may see.
 | `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: "N columns are hidden from you", a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns under the rows (closed until opened): each column but the key on one line with a Shown, Masked, Hidden switch, two or three columns across on a wide screen, and Save columns |
 | `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. Download CSV gives the same answer as a file. Saved questions sit in a row of chips above the box: one opens filled in; a name and Save question keeps the typed one, and Remove saved question takes an opened one away. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon, Turso and Supabase (which needs the connection's access token) |
 | `/data/connections/<id>/users`, `/storage`, `/functions`, `/logs`, `/health`, `/advisors` | A Supabase project's other sections, for someone with `data.insights.read`: a row of chips (Tables, Users, Storage, Functions, Logs, Health, Advisors) under the head of each and of the database's page. Users: 25 a page, each on one line with their email or phone, how they sign in, when they joined and last signed in (UTC), Confirmed and Blocked, with Next page and First page. Storage: the buckets (Public or Private, made, largest file allowed), then a bucket's folder with its path as links, folders first by name, each file's size, type and when it changed, 100 at a time with Next 100. Health: memory and disk used as shares of their size, connections of the most allowed, the database's size and the load of the last minute, a share past 75% marked to look at and past 90% failing, a figure Supabase does not give as a dash; then Requests (a column chart by service, Data API, Auth, Storage and Realtime, over the last hour, day or 7 days) and Backups (point-in-time recovery on or off, each daily copy with its state). Functions: each Edge Function with its state, version, when it changed and whether it needs a sign-in. Logs: a chip per log (API, Database, Auth, Storage, Functions, Realtime) and per stretch (last hour, last day), a search of the messages, the newest 100 lines with their level. Advisors: how many findings to fix now, look at or note, then each with its kind (Security or Speed), what, the detail and a link to Supabase's guide. Functions, Logs, Advisors, Requests and Backups need the connection's access token; without one each says how to add it (Health says it once) |
+| `/data/connections/<id>/usage` | A Neon or Turso database's usage, for someone with `data.insights.read`, under a row of chips (Tables, Usage) on it and on the database's page. Neon: this period's compute time, active time, storage, data written and data sent out, the project, region, Postgres version and the period counted; the compute's state, size in compute units, when it sleeps and when it was last active; each branch with its size, state and when it changed. Turso: this month's rows read and written, storage and bytes synced, the database's organization, plan, group and region, and delete protection; blocked reads or writes said first. Without the connection's API key it says how to add one |
 | `/data/connections/<id>/changes/<change>` | One change: by whom, when, the row, each column before and after, whole (a deleted row's values), Open the row, and Undo change or Undo delete while it can be undone, or why not |
 
 A connection made from the paste box or a card is checked at once, and the connection page opens
@@ -93,6 +94,7 @@ audited too (`audited` on the route: `data.read-connections-tables`, `data.read-
 | `GET /connections/:id/health` | `data.insights.read`, company | Memory, disk, load, connections and the database's size from the project's metrics page, each `null` when it is not given |
 | `GET /connections/:id/project` | `data.insights.read`, company | `?part=requests&span=1hr, 1day or 7day` `{requests}`, `advisors` `{advice}`, `backups` `{pitr, backups}`, `functions` `{functions}`, from the Management API with the access token |
 | `GET /connections/:id/logs` | `data.insights.read`, company | `?source=&hours=1 or 24&search=`: the newest 100 lines of one log, `{logs}`; audited as `data.read-connections-logs` |
+| `GET /connections/:id/usage` | `data.insights.read`, company | A Neon database's `{neon}` or a Turso database's `{turso}` usage, from the service's API with the connection's API key; another service `KIT-E-0422` |
 | `GET /connections/:id/changes` | `data.read`, company | `?after=<change id>`: the next 10 changes still kept, newest first, with `next` (the id to ask after) while more remain; anything past 30 days deleted after the answer |
 | `GET /connections/:id/changes/:change` | `data.read`, company | One change, its values before and after, and whether this person may undo it |
 | `POST /connections/:id/changes/:change/undo` | `data.edit`, company | Undo a change while the row holds what it made, or put a deleted row back; once; `{undone, id, kept, marked}` |
@@ -312,6 +314,31 @@ request renewed them a moment before, and otherwise the read says `SUPABASE_SIGN
 an access token with Change key, or remove the database and sign in again). Tokens that cannot be
 kept still serve the read and are logged. With no relay set, the token is used as it is.
 
+## A database's usage (Neon and Turso)
+
+Batch 4 of the Supabase makeover (2026-11-25): Neon and Turso say what a database used through
+their own management APIs, which the database's key cannot reach. A manager may add an API key to
+the connection (an optional field on the form and on Change key): a Neon API key, best a
+project-scoped one made under Organization settings, API keys, or a Turso API token from
+`turso auth api-tokens mint`. Neither service has a read-only management key, so the portal only
+reads with it: GETs to `console.neon.tech` or `api.turso.tech`, the API key alone as the bearer
+(never the database's own key or connection string), its words blanked from a refusal. Read when
+the Usage page opens (`dialects/usage.ts`), never kept.
+
+- **Neon**: the endpoint's id from the host (`ep-…`, without `-pooler`); the key's projects
+  (`/api/v2/projects`), at most 10, five read at a time for their endpoints until one has it (more
+  than 10 asks for a project-scoped key); then the project (`/projects/<id>`: Neon's usage figures
+  for the period, "not for billing" in Neon's words) and its branches. The owner's email Neon
+  sends with the project is not kept.
+- **Turso**: the token's organizations (`/v1/organizations`); the organization is the longest slug
+  the host's first label ends with (`<database>-<organization>`), the rest is the database's
+  name; then the database (`…/databases/<name>`) and its usage this calendar month
+  (`…/databases/<name>/usage`).
+
+A key that reaches no matching project or organization says how to make one that does. The
+Usage tab shows to someone with `data.insights.read` on a Neon or Turso connection; Supabase's
+own usage is its Health page.
+
 ## Questions in SQL
 
 Phase 3, batch 8 (2026-11-23). Someone with `data.questions.run` types one statement on a Neon or Turso
@@ -511,6 +538,12 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   wrong shape refused), and the three routes through the pipeline: the Owner reads them, a
   manager without `data.insights.read` is refused, a bad page or bucket is refused, another
   service is refused, and users and storage are marked audited.
+- `test/usage.test.ts`: Neon's endpoint from its host and its project found among the key's,
+  the figures read with no owner's email kept, only the API key sent and only GETs; Turso's
+  organization and database from its host (the longest slug first), its usage and blocks; no key,
+  too many projects, another account and answers without the usage refused in words; and the route
+  through the pipeline: the Owner reads both, a key added with Change key keeping the database's
+  token, a manager without `data.insights.read` refused, the key marked optional.
 - `test/supabase-sign-in.test.ts`: Sign in with Supabase's tokens: when one is due (within five
   minutes or an unknown end; never a pasted token), a renewal through the relay (new fields, the
   relay's 400 as the sign-in ended, any other answer as try again, a relay that is not https), and

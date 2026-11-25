@@ -83,7 +83,7 @@ module ([`@oltrem/data`](../data/README.md)). Each names the dialect it is read 
 smallest key the service offers, read-only where there is one (Turso's `--read-only` token, a Neon
 role made with `--access read_only`, Upstash's Read Only token, an Airtable token with
 `data.records:read` and `schema.bases:read`); Supabase has no read-only key, so its guide says the
-secret key passes row level security and that the portal only reads with it. Supabase also takes an optional access token, for its Management API (the data module's README). The steps were
+secret key passes row level security and that the portal only reads with it. Supabase also takes an optional access token, for its Management API, and Neon and Turso an optional API key (`api`, after the database's own key, which stays the one the database is read with), for their usage (the data module's README). The steps were
 checked against each service's own documentation that day. The Email services page lists none of
 them: a database is connected under Connected data. The routes below, held by whoever runs email,
 refuse a connection of the kind `data` too: setting one up is refused as an unknown definition,
