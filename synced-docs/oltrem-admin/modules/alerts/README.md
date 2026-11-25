@@ -6,8 +6,8 @@ again. In the quiet hours a warning is held and sent with the others in one mess
 end; a critical alert is sent at once. People see the open alerts and the recent ones on the
 Alerts page and say they are on one by acknowledging it; the check or the code that raised it
 resolves it, and a server error can be marked resolved by hand once it is fixed (2026-11-15), as
-can a person's report (`report.*`, 2026-11-24: a sign-in someone says was not them), which no
-check would ever close.
+can a person's report (`report.*`, 2026-11-24: a sign-in someone says was not them; since
+2026-11-25 also a sign-in used from another country or browser), which no check would ever close.
 Every alert email opens with "Hello," (2026-11-22), names each alert with its severity, its
 detail and when it opened ("Opened on 2026-11-22 at 06:00 UTC."), and ends with the address of the
 portal's Alerts page: `address` when given, else `https://` and the Worker's `PUBLIC_HOST`, else no

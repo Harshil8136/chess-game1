@@ -186,7 +186,22 @@ the row `new: true`; another country within 60 minutes (`TWO_COUNTRIES_MINUTES`)
 `unusual: true`, with `countries`, the new one first. A first sign-in has nothing to compare
 with, and a row without a country compares by browser alone. Either flag calls the `signedIn`
 option with a `SignInEvent` (the person, the device, the browser, the country, the time, the
-portal's address); `createIam` turns it into the **sign-in alert** below. A sign-in refused
+portal's address and, since 2026-11-25, the time zone Cloudflare placed it in, `timeZoneOf`,
+kept on the device); `createIam` turns it into the **sign-in alert** below.
+
+**A sign-in used from another country or browser** (2026-11-25, after the first client's portal): the door's token travels with a copy of its cookie, so each request of a known sign-in
+is compared with where it was made (`movedTo`): another country (both known) or another browser
+by name (`deviceName`, so an update of the same browser is not one) is another place, kept on the
+device as `"<country> <browser>"` in `moved`, so each is told once, at most three
+(`MOVED_LIMIT`: each is one write to the record). It writes an `iam.sign-in-moved` row (where it
+was used, and `began`, where it was made) and calls `signInMoved` with a `SignInMovedEvent`, after
+the answer; the request itself still answers. `createIam` emails the person
+(`signInMovedAlert`, whatever the Modules page says, since it may be a copied sign-in: where it was
+made and where it was used, both in the sign-in's local time, and Report a sign-in; keyed by the
+sign-in and the place) and hands the event to its `moved` option. The client template raises an
+alert from it (`report.sign-in-moved.<person>.<device>.<country>`, words from
+`signInMovedReport`): critical for another browser, a warning for another country alone, which a
+VPN or travel can make; no check closes it, so it is resolved by hand. A sign-in refused
 because the address has no active account here is recorded too: an `iam.sign-in` row with outcome
 `refused`, target empty and details `{reason: 'no account', country}`, at most once an hour for
 each address in an isolate, so a door left knocking costs a write an hour, not one a request.
@@ -417,7 +432,7 @@ the two added that day are added to a saved list as off (migration `0067`, `@olt
 |---|---|---|
 | Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, with the count and the first cause in its words (since 2026-11-17; the count alone hid why), and the next run sends what is missing. Without `mail`, it does nothing. Its check (the jobs page's **Check for work**, 2026-11-21) counts the grants it would notice, by the same rule, and sends nothing. |
 | Health check, lane `access` | `iam.reviews` | Warns when an open access review is past its due date, or when none was opened for 90 days (`REVIEW_EVERY_DAYS`), counted from the company's creation until the first one. |
-| Email, at sign-in | `iam.sign-in-alerts` | Sign-in alerts (2026-11-21): a sign-in compared as new or unusual (above) emails the person, after the answer: the browser by name (`deviceName`, also its own entry `@oltrem/iam/device`, with no Workers type, which the customers' sign-ins read; the Users pages keep their own copy of the same names, the screens depending on core-ui alone), the country in English, the time in UTC, and, since 2026-11-24, "If it was not you, open" My access, its sign-ins (`MY_SIGN_INS`) "and press Report a sign-in": it signs the person out everywhere and tells whoever looks after access, who can block the account (`POST /me/sign-ins/report`). An unusual one says "two countries within an hour" in the subject. Since 2026-11-22 it opens with "Hello," and ends with the main-inbox line (`mainInbox(origin)`, below the table). Keyed `iam.sign-in:<person>:<device>`, so once. Without `mail`, or while the extra is off, nothing is sent; the row is written either way. The extra is on from the start since 2026-11-24 (the owner's pick: staff hear of every new sign-in), and core-config's migration `0085` switched it on where it was off only because it started off. |
+| Email, at sign-in | `iam.sign-in-alerts` | Sign-in alerts (2026-11-21): a sign-in compared as new or unusual (above) emails the person, after the answer: the browser by name (`deviceName`, also its own entry `@oltrem/iam/device`, with no Workers type, which the customers' sign-ins read; the Users pages keep their own copy of the same names, the screens depending on core-ui alone), the country in English, the time in UTC (since 2026-11-25 in the sign-in's own time zone first, "2026-10-20 at 17:30 Kolkata time (12:00 UTC)", `localTime`, and the browser and country in the subject, "New sign-in to Acme: Firefox on Android, from Mexico"), and, since 2026-11-24, "If it was not you, open" My access, its sign-ins (`MY_SIGN_INS`) "and press Report a sign-in": it signs the person out everywhere and tells whoever looks after access, who can block the account (`POST /me/sign-ins/report`). An unusual one says "two countries within an hour" in the subject. Since 2026-11-22 it opens with "Hello," and ends with the main-inbox line (`mainInbox(origin)`, below the table). Keyed `iam.sign-in:<person>:<device>`, so once. Without `mail`, or while the extra is off, nothing is sent; the row is written either way. The extra is on from the start since 2026-11-24 (the owner's pick: staff hear of every new sign-in), and core-config's migration `0085` switched it on where it was off only because it started off. |
 | Health check, lane `access`, hourly | `iam.unusual` | Unusual sign-ins (2026-11-21): over the last 7 days, warns when a sign-in came from two countries within the hour, or when 10 or more sign-ins were refused for addresses with no account (`REFUSED_WARN`); fewer refused ones are only counted in its words (someone who left, a mistyped address). One query on the audit log's action index. |
 
 **The main-inbox line** (2026-11-22). Gmail files a notice it sees as automatic (a sign-in alert,
