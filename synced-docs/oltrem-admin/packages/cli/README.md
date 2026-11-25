@@ -784,6 +784,13 @@ keys. Kept on this computer: no queue consumer, no cron tick (the live portal ru
 no KEK, so nothing is sealed with a key the live portal could not open (pasting a provider's key
 fails here instead). Key-value writes count against the account's daily allowance.
 
+**When something stops (2026-11-25).** A saved sign-in Cloudflare refuses (it ran out or was taken
+back) is renewed once by itself with `wrangler login`. A copy folder an earlier, still running
+portal holds (Windows keeps its files open) is said with its fix: close that window or press Stop.
+A copy that does not load says wrangler's last line and keeps the whole output in
+`.live/<worker>/.oltrem/live-load.log`. From a terminal or `live-windows.cmd` the browser opens on
+the portal by itself once it answers; on the start page, **Open** does it.
+
 Exit `1` when it could not sign in, find the portal, load the copy or connect, each said with its
 fix; otherwise the exit of the portal's own run.
 
