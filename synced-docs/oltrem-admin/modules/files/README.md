@@ -89,8 +89,10 @@ asks the person who manages the location.
 
 Each location keeps its new files in the portal's own bucket (`FILES`, 10 GB on the free plan,
 shared with the backups) or in a bucket of the company's own at a service that speaks Amazon S3's
-API: Amazon S3, Cloudflare R2 in another account, Backblaze B2, Wasabi, DigitalOcean Spaces, or any
-other by its endpoint (MinIO, Storj, Scaleway and the like). **Files, Storage**
+API: Amazon S3, Cloudflare R2 in another account, Backblaze B2, Wasabi, DigitalOcean Spaces,
+Supabase Storage, or any other by its endpoint (MinIO, Storj, Scaleway and the like). For Supabase
+Storage (2026-11-25), each project joined under Data is offered by name, and pressing it fills in
+the project ref; Bring in then makes the files already in its bucket files of a location. **Files, Storage**
 (`/files?show=storage`, shown to whoever holds `files.access`; changes are an Owner's) joins one:
 pick the service in a sideways row, follow its steps, paste the bucket, where it is and the key.
 The key is a storage connection of the providers module ([`@oltrem/providers`](../providers/README.md)):

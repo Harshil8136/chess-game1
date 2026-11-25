@@ -95,9 +95,12 @@ Since 2026-11-23 it also ships six definitions of the kind `storage`, in
 location's files in ([`@oltrem/files`](../files/README.md), Storage locations). Each speaks S3 with
 `sigv4` (transport `s3`: the endpoint and region built from config fields) and takes the secret
 fields `accessKeyId` and `secretAccessKey`: Amazon S3 (the bucket in the host name), Cloudflare R2
-in another account, Backblaze B2, Wasabi, DigitalOcean Spaces and any other S3 service by its
-endpoint (the bucket in the path). A storage definition whose address is built from a field without
-a `pattern` is refused, as for data. Each guide asks for a key limited to the one bucket. They are
+in another account, Backblaze B2, Wasabi, DigitalOcean Spaces, Supabase Storage (2026-11-25, at the
+project's own storage host, signed for its region) and any other S3 service by its endpoint (the
+bucket in the path). A storage definition whose address is built from a field without a `pattern`
+is refused, as for data. Each guide asks for a key limited to the one bucket where the service has
+one; Supabase's keys open every bucket of the project and pass by row level security, which its
+recipe says. They are
 joined on Files, Storage by an Owner; like a data connection, the routes below neither make, list
 nor touch one, and the Email services page and its Home card leave them out.
 
@@ -446,7 +449,7 @@ field refused; a pattern matched against the whole value only, and a value past 
 refused (2026-11-22); the five data definitions each naming its dialect, with a pattern that
 takes the service's own address and refuses another, Neon's connection string checked, a data
 definition without a pattern on its host refused; a data connection neither made, listed nor
-touched through these routes; the six storage definitions speaking S3 with their key fields, a
+touched through these routes; the seven storage definitions speaking S3 with their key fields, a
 host pattern refusing a scheme or a path, and a storage connection neither made, listed nor touched
 here (2026-11-23); activation and the failover order, `pick`, the active instance not removable, a
 suggestion not activatable; a client's definition added by the Vendor, replacing the kit's and

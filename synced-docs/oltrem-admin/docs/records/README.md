@@ -74,6 +74,7 @@ The records since 16 November:
 | [Files: the whole page reviewed and fixed](2026-11-25-files-review.md) | nothing clipped; panel slides in below the phone bar; compact upload and trash boxes; P576-P586 |
 | [Files: Type chips, Previous and Next](2026-11-25-files-type-and-steps.md) | Type chips with counts, panel steps by arrows or swipe, drop into a folder row; P592-P594 |
 | [Files: room for files and Cloudflare use](2026-11-25-files-storage-management.md) | Room for all files, most per person, warning share, `files.limits.manage`; R2 Class A, B and storage on Files, Storage; P595-P599 |
+| [Files: a Supabase project's storage](2026-11-25-files-supabase-storage.md) | Supabase Storage joined from a project under Data, ref filled in; P600-P601 |
 | [The Alerts page remade](2026-11-25-alerts-page-remade.md) | sign-in alert emails no longer refused; chips, search, rows that open, ticks, notes, mute, resolve any, delete resolved, 90 days kept; a sidebar that fits its names; the search list in colour; P810-P826 |
 | [Files: menu in the page, trash, moving several](2026-11-25-files-menu-trash-move.md) | Menu row, Empty the trash, Move ticked, confirm ends, search all; P587-P591 |
 | [API key pages made over](2026-11-25-api-key-pages-made-over.md) | How to use as coloured cards: Quick start in cURL, JS, Python, endpoints open to a ready call, errors with their fix, the checks in order; the list, Details, Calls and History with figures and coloured tags; P667-P669, P678, P679 |
