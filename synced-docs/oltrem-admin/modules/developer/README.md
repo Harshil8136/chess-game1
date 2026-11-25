@@ -68,9 +68,9 @@ works for the whole company.
 
 | Path | Shows |
 |---|---|
-| `/developer` | a row of **Jobs**, **Webhooks** and **API reference**; why the jobs wait, while a budget holds them; the jobs with their state (went through, failed last, running, paused, not run yet), schedule, last run with the last day's strip under it, and next run, and for a manager **Run soon**, **Check for work** where the job has a check, and **Pause** or **Resume**; what the last failures said; the flows and when they start |
+| `/developer` | a row of **Jobs**, **Webhooks**, **API reference** and **API keys** (a link to the keys, 2026-11-25); why the jobs wait, while a budget holds them; the jobs with their state (went through, failed last, running, paused, not run yet), schedule, last run with the last day's strip under it, and next run, and for a manager **Run soon**, **Check for work** where the job has a check, and **Pause** or **Resume**; what the last failures said; the flows and when they start |
 | `/developer?show=webhooks` | the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
-| `/developer?show=reference` | each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
+| `/developer?show=reference` | a note leading to API keys and its How to use, then each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
 | `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again** |
 
 ## The routes
