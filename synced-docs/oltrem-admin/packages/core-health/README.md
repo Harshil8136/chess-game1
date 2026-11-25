@@ -156,6 +156,14 @@ Given `budgets`, the module adds a job, a check and a key recipe (plan 10). On t
 | Worker CPU time of a typical request today (median) | 10 ms | 70% | never: no job spends it |
 | Worker CPU time per request, 95th percentile today | shown, not judged | never | never |
 | Requests Cloudflare stopped today for going over a limit | 10 | the first one | never |
+| R2 storage kept (2026-11-25) | 10 GB | 80% | never |
+| R2 Class A operations this month (writes, lists) | 1,000,000 | 70% | never |
+| R2 Class B operations this month (reads) | 10,000,000 | 70% | never |
+
+The three R2 budgets are the free allowance every plan includes, so they are measured on the paid
+plan as well; a month's operations count from the first of the month (UTC), the storage is the
+newest day's size of each bucket. Deletes and aborted uploads are free and not counted. Files,
+Storage shows them beside the other budgets.
 
 **CPU time is judged by what Cloudflare does with it** (2026-11-15). Cloudflare's limits page says
 an isolate has some flexibility for a Worker that runs over the 10 ms now and then, and that one

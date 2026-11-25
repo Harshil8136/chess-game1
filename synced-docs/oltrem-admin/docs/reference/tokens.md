@@ -238,8 +238,8 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account; account-owned, not tied to a person |
-| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for Status's budgets: the day's use of the free plan) |
-| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; Status's measure job: the day's use of the free plan, from the GraphQL Analytics API |
+| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for Status's budgets: the day's use of the free plan, and R2's storage and operations this month) |
+| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; Status's measure job: the day's use of the free plan and R2's month, from the GraphQL Analytics API, shown on Status and Files, Storage |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |
 | Created | not yet |

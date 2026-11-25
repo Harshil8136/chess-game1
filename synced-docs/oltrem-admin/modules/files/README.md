@@ -39,11 +39,13 @@ a Worker-typed client sees of them, held to the implementation by `test/pages-ty
 
 ## Who may do what: the place of a file
 
-Five capabilities, on bit plane `12`: `files.read` sees the places' files and opens them;
+Six capabilities, on bit plane `12`: `files.read` sees the places' files and opens them;
 `files.write` uploads, makes folders, renames, moves within the place, puts in the trash and
 restores; `files.share` makes and ends links; `files.access` (2026-11-23, "Change who has access
 to folders and files", alias `files.access.manage`) changes who has access and sees everything at
-the place; `files.purge` deletes from the trash for good, and asks for a fresh sign-in. They join
+the place; `files.purge` deletes from the trash for good, and asks for a fresh sign-in;
+`files.limits.manage` (2026-11-25, held for the company) sets the room for files on Files, Limits,
+and asks for a fresh sign-in. They join
 every Owner role when the Worker starts.
 
 An item sits at one place (an IAM scope), at its top or in one of its folders. A role held at
@@ -229,6 +231,18 @@ A location's limit counts every file kept there, by anyone, the trash included: 
 copy past it is refused (`KIT-E-2409`), before it is stored when its length is known. The roles
 are read only when a role limit is set, and the location's sum only when it has one.
 
+Since 2026-11-25 the page also sets, for whoever holds `files.limits.manage` (an Owner or the
+Vendor always): the **room for all files** (`files.total_room_mb`, 10 GB by default, the free R2
+allowance), counted over what is kept in the portal's own bucket, so an upload past it is refused
+(`KIT-E-2414`) while a location kept in a storage connection is not counted; the **room per
+person** for everyone (`files.person_room_mb`); the **most room for one person**
+(`files.person_room_max_mb`), which caps every person's and role's limit, 0 for no cap; and the
+**warning share** (`files.room_warn_percent`, 80 by default) at which a bar turns amber. A
+**People** card lists each person by the share of their room used, with a Change link that opens
+their own limit. A change is one audited row, `files.room-set`. Files, Storage shows the
+**Cloudflare use** core-health measures (R2 storage, Class A and Class B operations this month,
+and the other budgets), linking to the status page.
+
 ## Links that end
 
 A link hands one file to anyone who has it, for one to thirty days, and optionally for a number
@@ -343,7 +357,8 @@ file holds.
 | `GET /stores` | `files.access` | the storage connections (their bucket and where, last check, files and bytes kept), the S3 services one may join with their fields and steps, each location's choice, and whether the person may change them |
 | `POST /stores` (`service`, `label`, `fields`), `POST /stores/:id/check`, `POST /stores/:id/key` (`fields`), `DELETE /stores/:id` | `files.access` at the company, and an Owner or the Vendor | join a bucket and check it; check again; paste the key again and check; remove a connection no location uses and no file is kept in |
 | `POST /stores/move` (`scope`), `POST /stores/:id/bring-in` (`prefix`, `scope`, `parent`) | `files.access` at the company, and an Owner or the Vendor | move up to ten of a location's files and earlier versions to the storage it uses now (what moved, was missing and is left); bring up to a hundred of a bucket's files under a prefix into a folder (what came in, what was left out and why) |
-| `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), and whether the person may change them (an Owner or the Vendor, through `PUT /api/settings/values/files.room_rules`) |
+| `GET /limits` | `files.access` | the limits set, the company's people (with what each uploaded), roles and the locations where the person holds `files.access` (with what each keeps), the room for all files and what the portal's bucket keeps, the most per person, the warning share, each person's room, and whether the person may change them (`files.limits.manage`) |
+| `PUT /limits` | `files.limits.manage` | sets any of `totalMb`, `everyoneMb`, `personMaxMb`, `warnPercent` and `rules` at once, audited as `files.room-set`; 204 |
 | `GET /items/:id/access` | `files.read`, and Manage on the item | its entries and those of the folders above it, whether it is restricted, and the company's people, groups and roles |
 | `POST /items/:id/access` (`whoKind`, `whoId`, `level`, `viewOnly`, `endsAt`), `DELETE /access/:id`, `POST /items/:id/restrict` (`on`) | `files.access`, and Manage on the item | give an entry (a second for the same one replaces the first), end one, restrict a folder or open it again |
 | `POST /items/:id/copy` (`parentId`), bulk `trash` (`POST /bulk/trash`, up to 100 ids) | `files.write` | a copy of a file, numbered like an upload, counted against the person's room; many items to the trash in one batch with an audit row each, each refused alone when out of reach |
@@ -399,7 +414,10 @@ none), with an index of the company's items that have either.
 | `files.max_upload_mb` | 25 (1 to 100) | an Owner |
 | `files.trash_days` | 30 (1 to 365) | an Owner |
 | `files.allowed_types` | `any` (or `documents and pictures`, `documents`) | an Owner |
-| `files.person_room_mb` | 0, no limit (0 to 10240) | an Owner |
+| `files.person_room_mb` | 0, no limit (0 to 10240) | an Owner, or on Files, Limits |
+| `files.person_room_max_mb` | 0, no cap (0 to 10240) | an Owner, on Files, Limits |
+| `files.total_room_mb` | 10240 (0 to 1048576, 0 for no limit) | an Owner, on Files, Limits |
+| `files.room_warn_percent` | 80 (50 to 100) | an Owner, on Files, Limits |
 | `files.location_stores` | every location in the portal's bucket (location id to a storage connection's id) | an Owner, on Files, Storage (the Settings tab links there: `setOn`) |
 | `files.room_rules` | no limits (`people`, `roles`, `places`, each id to MB, 0 to 10240) | an Owner, on Files, Limits (the Settings tab links there: `setOn`) |
 
@@ -411,7 +429,8 @@ The module owns the `2400` to `2499` block: `KIT-E-2401` the name is taken in th
 a program dressed as another kind of file, `KIT-E-2407` a kind of file the setting does not allow,
 `KIT-E-2408` the person's room is used up, `KIT-E-2409` the location's room is used up, `KIT-E-2410` the storage where a file is kept refused
 or failed, `KIT-E-2411` a storage connection still in use, `KIT-E-2412` a file held for review,
-`KIT-E-2413` kept by a legal hold or a folder's days (409). An item that
+`KIT-E-2413` kept by a legal hold or a folder's days (409), `KIT-E-2414` the room for all files
+is used up (413). An item that
 is not there or not visible is the core's `KIT-E-0404`; a change the person may not make at the
 item's place is the core's `KIT-E-0403`.
 
