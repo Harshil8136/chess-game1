@@ -54,6 +54,29 @@ flowchart LR
   I --> J[Delete, or gone after 90 days]
 ```
 
+## Then: the sidebar and the search list
+
+The same evening the owner asked for a more compact sidebar and called the search box's list
+"really ugly, no color, completely blend". The sidebar, open, is now as wide as its longest row,
+between 12 and 16 rem, on a computer and a phone. The search list had lost its look: the frame
+script named it `ui-finder`, a class with no style, so it showed bare. It is `.ui-go` again, and
+each row now has its section's icon on a coloured tile, the page's name over its section, the
+selected row in its colour with Enter, suggestions when nothing was opened yet, and a line of key
+hints on a computer. The stylesheet cap rose from 184 to 185 KiB for it (P819 to P822).
+
+Then the owner asked to "completely wipe" the separate search page for something more compact.
+It is gone: every Search (the sidebar's box, its folded icon, the phone bar's button, Ctrl K)
+opens one pop-up over the page with the same coloured list, and the "Search everything" row went
+with the page. `/search` now answers only the pop-up's JSON; an old link to it goes Home. Files'
+"Search all of Files" opens the pop-up with its words (P821 to P825).
+
+Last, the owner found an open alert bland and hard to read: "everything looks same", with small
+gaps and parts out of line. Every fact stays, arranged better: What was seen and What to do are
+two tinted panels (the alert's colour and blue); When, Who, Email and The alert are four lined-up
+columns in one card, each headed in its own colour with the labels one width; the note's box and
+button are one height; the actions are one bar, with Mark resolved solid, the mute choices one
+track and Copy and Delete at its end (P826). The stylesheet cap rose to 188 KiB for both.
+
 ## Verified
 
 - `modules/alerts` tests: let go, note, mute that survives a new alert and unmute, delete only
@@ -62,5 +85,8 @@ flowchart LR
 - `modules/iam` test: the sign-in-moved key passes Email's message-key rule.
 - `packages/screens` tests: the views and kinds, the actions and ticks for a manager only,
   Delete only on a resolved alert for whoever may delete, the empty states.
-- `pnpm verify` before the push. Not checked: the live portal's page on a phone (phone tests
-  P810 to P816).
+- `packages/screens` and the client template's tests: one palette outside the sidebar, opened
+  by every Search, no link to a search page, `/search` sending a page request Home and answering
+  the pop-up's JSON; Files' link opening the palette with its words.
+- `pnpm verify` before the push. Not checked: the live portal on a phone (phone tests P810 to
+  P826).
