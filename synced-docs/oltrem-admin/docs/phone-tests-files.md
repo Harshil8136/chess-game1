@@ -105,3 +105,6 @@ sources: [docs/records/2026-11-23-files-explorer.md; modules/files/README.md; th
 | P589 | In a folder tick two files, press Move, choose a folder by its path | Both land in that folder and the page says It was moved | [record](records/2026-11-25-files-menu-trash-move.md) |
 | P590 | On Shared links (or a file's Links) press End it | A question names the link and says it cannot be undone; Keep it leaves it open | [record](records/2026-11-25-files-menu-trash-move.md) |
 | P591 | Search a folder for a word that is elsewhere | Search all of Files opens the portal search with that word | [record](records/2026-11-25-files-menu-trash-move.md) |
+| P592 | Open a folder with pictures and PDFs, press Pictures in the Type row | Only the pictures stay; All shows everything again; the counts match | [record](records/2026-11-25-files-type-and-steps.md) |
+| P593 | Press a file's name, then the right arrow beside Close, then swipe sideways on the panel | The panel shows the next file, then the one before; no arrow at either end | [record](records/2026-11-25-files-type-and-steps.md) |
+| P594 | On a computer, drop a file from the desktop onto a folder's row | It uploads into that folder, and that folder opens | [record](records/2026-11-25-files-type-and-steps.md) |

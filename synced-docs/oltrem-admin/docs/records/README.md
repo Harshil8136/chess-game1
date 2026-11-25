@@ -72,6 +72,7 @@ The records since 16 November:
 | [Files: the file page, the details panel and New made over](2026-11-25-files-file-page-makeover.md) | New opens under itself; no blank preview box (text files show their text, served as plain text); the page's and the panel's head in the file's colour, a coloured tile on every card; P567-P569 |
 | [API keys: limits, rotation, a page per key](2026-11-25-api-keys-management.md) | read only, parts, addresses, pace, start and end; rotate with an overlap, change access, delete; every call and change logged; How to use |
 | [Files: the whole page reviewed and fixed](2026-11-25-files-review.md) | nothing clipped; panel slides in below the phone bar; compact upload and trash boxes; P576-P586 |
+| [Files: Type chips, Previous and Next](2026-11-25-files-type-and-steps.md) | Type chips with counts, panel steps by arrows or swipe, drop into a folder row; P592-P594 |
 | [Files: menu in the page, trash, moving several](2026-11-25-files-menu-trash-move.md) | Menu row, Empty the trash, Move ticked, confirm ends, search all; P587-P591 |
 | [API key pages made over](2026-11-25-api-key-pages-made-over.md) | How to use as coloured cards: Quick start in cURL, JS, Python, endpoints open to a ready call, errors with their fix, the checks in order; the list, Details, Calls and History with figures and coloured tags; P667-P669, P678, P679 |
 | [Scheduled jobs](2026-11-25-scheduled-jobs-page.md) | a page per job; P720-P725 |
