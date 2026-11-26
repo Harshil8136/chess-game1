@@ -95,9 +95,11 @@ Since 2026-11-26 it also ships four definitions of the kind `analytics`, in
 connected on the Apps page and read by [`@oltrem/connect`](../connect/README.md) (Website
 analytics) for the Analytics page. PostHog (a personal API key with Query Read, its region and
 project), Plausible (a Stats API key, its address and site), Umami (an API key, Cloud's address
-or its own server's, and the website's ID) and Cloudflare Web Analytics (a token with Account
-Analytics Read, the account ID and the site tag), each read with its key as a bearer token and
-capable of `web-report`. As with a data definition, the field an address is built from must carry
+or its own server's, and the website's ID), Cloudflare Web Analytics (a token with Account
+Analytics Read, the account ID and the site tag), Google Analytics 4 (a service account's JSON
+key and the property ID), Matomo (an auth token, its address and the site ID) and Fathom (an API
+key and the site ID), each capable of `web-report`. Google's and Matomo's say auth `none`: the
+reader asks Google for a token with the key, and sends Matomo's token in the body of a POST. As with a data definition, the field an address is built from must carry
 a `pattern`, so a key is never sent elsewhere. The routes below treat one as they treat a data
 connection: not listed, not counted on Home, 404 on every instance route.
 

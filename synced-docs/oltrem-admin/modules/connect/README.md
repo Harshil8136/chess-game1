@@ -26,8 +26,8 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
   the data part").
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
 - **Analytics.** The website analytics app the company already counts its visitors with:
-  PostHog, Plausible, Umami (Cloud or its own server) or Cloudflare Web Analytics, connected with
-  a read-only key (below, "Website analytics"). Its figures feed the Analytics page.
+  PostHog, Plausible, Umami (Cloud or its own server), Cloudflare Web Analytics, Google Analytics
+  4, Matomo (Cloud or its own server) or Fathom, connected with a read-only key (below, "Website analytics"). Its figures feed the Analytics page.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
   work (a retired Teams connector, a Slack Workflow link, n8n's test address) is refused with what
@@ -253,6 +253,9 @@ an app does not keep is left out, never estimated.
 | Plausible | the Stats API v2, `POST /api/v2/query`, at most 10 calls (its limit is 600 an hour) | nothing; events are its goals |
 | Umami | `stats`, `pageviews`, `metrics`, `active` (Cloud under `api.umami.is/v1`; an older server's answers and its `url` page list read too) | nothing |
 | Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups`, a token with Account Analytics Read | visitors, the share that left, the average visit, events, people on the site now |
+| Google Analytics 4 | the Data API, `batchRunReports` twice and `runRealtimeReport` (the last five minutes), with a token Google gives for the service account's JSON key, signed in the Worker with WebCrypto (scope `analytics.readonly`); the account a Viewer of the property | nothing; its own events (`page_view`, `session_start`, `first_visit`, `user_engagement`) left out of the list |
+| Matomo | one `API.getBulkRequest` POST carrying all 13 reports, the token in its body (a token limited to POST works); a part switched off, such as Events or Live, leaves only its figure out | visitors over a range where its owner has not turned that on |
+| Fathom | `/aggregations` and `/current_visitors`, nine calls in turns of five, the most an account may run at once | visits apart from visitors, events |
 
 A report is kept ten minutes in the Cache API, keyed by the connection, the window and the key's
 last change, so a page opened again calls no one and a new key is read at once; nothing is
@@ -291,7 +294,7 @@ The registry audits each as `providers.create`, `providers.probe`, `providers.cr
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
-| `/connect?show=analytics` | PostHog, Plausible, Umami and Cloudflare Web Analytics, each opening `/connect/analytics/new/<app>`, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
+| `/connect?show=analytics` | PostHog, Plausible, Umami, Cloudflare Web Analytics, Google Analytics, Matomo and Fathom, each opening `/connect/analytics/new/<app>`, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
 | `/connect/analytics/new/<app>` | the steps in the app with links to its pages, then Name and its fields, "Connect <app>"; a refusal keeps what was typed but never the key |
 | `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title |
 | `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Everyone's links" beside the Apps title |
@@ -300,7 +303,7 @@ The registry audits each as `providers.create`, `providers.probe`, `providers.cr
 ## The logos
 
 Slack, Discord, Google Chat, Google Calendar, Google Sheets, Zapier, Make, n8n, PostHog, Plausible,
-Umami and Cloudflare show their own
+Umami, Cloudflare, Google Analytics, Matomo and Fathom show their own
 one-colour mark from the Simple Icons project (CC0 data; each brand keeps its trademark), drawn in
 the brand's colour on the logo tile (`src/brands.ts`, the design system's one exception for logos):
 white in the light theme, clear in the dark one, where a brand colour too dark to see
@@ -370,7 +373,9 @@ relay opens it, the link written only once the sheet's address comes back, none 
 could not make the sheet or names another address, and no second one when the way back is
 replayed. The Data filter's cards, drawn where the data part answers and absent where it does not
 (`test/pages.test.ts`). Website analytics (`test/analytics.test.ts`): each app's answer read into
-one report, Umami's older answers and Cloudflare's missing window before, a refusal in plain
+one report, Umami's older answers and Cloudflare's missing window before, Google's token checked
+against the account's public key, Matomo's one request with a part switched off, Fathom never
+past five calls at once, a refusal in plain
 words with the fix only where a key fixes it, a report kept and read again at once after a new
 key; through the pipeline, the routes behind `connect.analytics.manage`, connecting, a second
 connection of the same site and an address of another shape refused, no key shown back, a new key

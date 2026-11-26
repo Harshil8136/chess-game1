@@ -101,3 +101,4 @@ The records since 16 November:
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Website analytics apps on the Apps page](2026-11-26-website-analytics-apps.md) | PostHog, Plausible, Umami and Cloudflare Web Analytics connected with a read-only key under Apps, Analytics; the last 7 days on the connection's page; one report for the Analytics page, kept ten minutes; P910-P916 |
+| [Google Analytics, Matomo and Fathom on the Apps page](2026-11-26-more-analytics-apps.md) | three more website analytics apps: a GA4 service account signed in the Worker, Matomo in one request, Fathom five calls at a time; P917-P919 |
