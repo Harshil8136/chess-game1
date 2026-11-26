@@ -1,88 +1,62 @@
 ---
-title: "@oltrem/campaigns: The Cloudflare plan; Leaving the list; The pages; Search; Reports; Personal data"
+title: "@oltrem/campaigns: the Cloudflare plan, leaving the list, the pages"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/campaigns/src; split from modules/campaigns/README.md]
+sources: [modules/campaigns/src/campaigns.ts, pages.tsx, module.ts]
 ---
 
-# @oltrem/campaigns: The Cloudflare plan; Leaving the list; The pages; Search; Reports; Personal data
+# @oltrem/campaigns: the Cloudflare plan, leaving the list, the pages
 
 > Part of [the @oltrem/campaigns README](../README.md).
 
 ## The Cloudflare plan
 
-The client's plan is the setting `health.cloudflare_plan` of Status (free or Workers
-Paid), and the run follows it: on the free plan a run hands out 50 messages at most and makes at
-most 40 calls to the provider (50 outside calls a run, 10 kept for the rest), and it stops before
-the database writes left today run out (about ten rows written a message, measured by System
-health when the operations token is set); on Workers Paid a run hands out up to 1,000 messages
-and makes up to 9,990 calls, and writes past the plan's monthly allowance are billed, not
-refused. `GET /room` and the **Room today** panel show what is left today: the messages under the
-daily limit, the database writes and the messages they leave room for, the run size, and the
-events queue's backlog.
-
-A run never hands the provider more than it says is left (`left` from the email module's
-`bulk.route`): past its allowance some providers drop the mail. When it says none are left, the
-campaign waits with words such as "Resend says no emails are left today; it goes on at 2026-10-29
-00:00 UTC", until the time the provider gave, or tomorrow when it gave none.
+The run follows Status's `health.cloudflare_plan`. Free: at most `RUN_MAX.free` (50) messages and
+the plan's outside calls less `CALLS_KEPT` (10), stopping before the day's database writes run out
+(`WRITES_PER_EMAIL`, about ten rows a message, measured when System health has the operations
+token). Workers Paid: up to 1,000 messages, and writes past the allowance are billed, not refused.
+`GET /room` and **Room today** show the messages left under the daily limit, the writes and the
+messages they allow, the run size and the queue's backlog. A run never hands a provider more than
+its `left`; at none, the campaign waits until the time given, else tomorrow.
 
 ## Leaving the list
 
 Every message carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
-headers, and a link in its footer, to `/hooks/campaigns/u/<token>`, outside the door. The token is
-the person's row and an HMAC of it under the campaign's own random secret, so a link cannot be made
-up and nothing secret is sent. Opening the link shows a page that asks, because mail scanners open
-links; nothing changes until a button is pressed. The page offers three scopes (mail law M-4), each
-one press:
+and a footer link to `/hooks/campaigns/u/<token>`, outside the door: the person's row and an HMAC
+under the campaign's own secret. Opening it only asks (mail scanners open links); each scope is
+one press (M-4):
 
-| Button                             | What it does                                                                                                                                                                                          |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Only “the list's name”**         | Shown when the campaign came from a saved list. A mark in `email_list_left`: the person stays on the list, is skipped by any campaign still sending from it, and is not added from it again.           |
-| **All campaigns** (the main button) | The do-not-mail list as `unsubscribed`, for bulk mail only. A mail app's one-click `POST` (RFC 8058) does this one.                                                                                     |
-| **Every email**                    | The do-not-mail list as `unsubscribed` for every message; a later "all campaigns" never narrows it.                                                                                                     |
+| Button | What it does |
+| --- | --- |
+| **Only “the list's name”** | From a saved list: a mark in `email_list_left`; skipped and not added again from that list |
+| **All campaigns** (main) | Do-not-mail as `unsubscribed`, bulk only; what a mail app's one-click `POST` (RFC 8058) does |
+| **Every email** | `unsubscribed` for every message; never narrowed later |
 
-Each says what it did and offers **Mail me again**, which takes back the person's own choices (the
-`unsubscribed` row and their list marks) with no one at the company needed; a bounce, a spam report
-or an address added by hand is not the person's to undo, and the page says the address stays off.
-Each press is audited as the system's `campaigns.unsubscribe` with its scope, or
-`campaigns.resubscribe`. A test message's link only says it was a test.
+Each offers **Mail me again**, undoing only the person's own choices (a bounce, spam report or
+manual entry stays). Audited as the system's `campaigns.unsubscribe` with its scope, or
+`campaigns.resubscribe`. A test's link only says it was a test.
 
-The list is the email module's `email_donotmail` (its README says who is put there and what each
-reason stops): the delivery reports add bounces for good, three temporary bounces in 30 days,
-refusals by the provider and spam reports the moment they arrive, for every message the portal
-sends, so the hourly `campaigns.listen` job of before is gone. Messages a campaign hands out are
-marked as bulk mail. On the page an Owner may add addresses by hand (bulk mail only) and take off
-one that was added by hand, bounced or refused; an unsubscribe or a complaint stays for good
-(`KIT-E-2505`): that person signs up again through a form of the company's.
+The list is the email module's `email_donotmail`, filled by delivery reports; campaign messages are
+marked bulk. On the page an Owner adds addresses (bulk only) and takes off a manual, bounced or
+refused one; an unsubscribe or complaint stays (`KIT-E-2505`).
 
 ## The pages
 
-| Path                         | Shows                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/campaigns`                 | a row of stages (all, drafts, scheduled, sending, sent, archived) and **Never mailed**; **New campaign** for a writer, with a row of places when there is more than one; **Archive finished** and **Delete blank drafts** with their counts, each asking first; the campaigns of the places the person may see; then (since 2026-11-11, the list first on a phone) **Blank CSV template** and **Room today** (messages left, database writes, the events queue, the run size) |
-| `/campaigns?show=suppressed` | the do-not-mail list, found by part of an address, with **Add addresses** and **Take off**                                                                                                                                                                                                                                                |
-| `/campaigns/:id`             | the stage and the address it goes out from; the approval it waits for, with **Yes, send it** and **No, send it back** and a note for whoever may approve; under the title a row of chips (the stage, the location, who started it and when, the address it goes from, the wording version and who approved it, each with its icon); on a draft, **Four steps to send it** (since 2026-11-15 two by two on a phone, and the last says which step it waits for ("Waiting for step 2.") with that step's link, **Choose a sender** for a sender; since 2026-11-08; four cards, each with its icon, its state in colour (done in green, the first one open marked **Next** in the primary colour, one that needs something with **Needs you**, the last **Later**) and a bar of how many are done, a press opening that step): who gets it, what it says and from whom, check it, when it goes, each done or what it still needs with a link to where it is done; the steps are also a row of tabs and a draft shows one step at a time (`?step=who`, `what`, `check`, `send`), opening on the first that still needs something, with **Next** at its foot; a missing campaign footer is written in step 3 itself (**Save the footer**, saved to the `campaigns.footer` setting by whoever may change it), not looked for in Settings; the commands (send me a test, send it or ask to send it, **Back to draft to change it** while it waits for its start time, pause, resume, cancel, delete the draft, **Archive** or **Take out of the archive** once sent or cancelled); **Run now** for whoever holds `campaigns.run`; the progress (people, sent, unclear, failed, today against the limit, the next run's size, the **Run log**, why it waits, when it should be done), refreshed every ten seconds while it sends; the unclear people and the three decisions; delivered, clicked, problems and who left the list; **From**; **Message** (a template or plain text, while a draft or paused); over the preview, which of Gmail's tabs it will most likely reach and why (**Gmail will most likely put this under Promotions**, or **It reads like a letter**); the preview; **Pace** with the sending hours as a row of days; the list from a file or a saved list, or **Add people** and **Take people off** while it runs; **Files**, with whom each goes to and how many people have none of their own; the first hundred people with a row of their states, unclear among them. Since 2026-11-15: a refused **Save** of the message draws the name, subject and words that were typed; **Send me a test** says it is on its way only when `/api/email/ready` answers ready, otherwise that it is queued for the person's own address, with the Delivery log and Email settings; a large send whose starter is an Owner or the Vendor nobody else here may approve is **Send it** (the dialog says their yes is recorded as the approval), and one already asked shows **Waiting for your yes**; the last step with no Send for this person says why (what is missing, or that someone who may send campaigns at this location sends it); with no address to pick, **From** names each address and the domain whose check it waits for, linked to that domain; the sending hours name the time zone they are read in; deleting a draft says the saved list it came from stays under Lists |
-| `/campaigns/:id` (sent)      | after the figures, **By mailbox provider**: Gmail, Microsoft, Yahoo and AOL, Apple and the others, with the people, sent, delivered, opened, clicked, bounced, spam reports and who left, read from each address's domain (on a phone card: sent, bounced and spam); **Download the results** for whoever may send; ten minutes after the last run with no delivery, open, click, bounce or spam report back for any of its messages, a notice above the figures says the email service took them but the portal has not heard what became of them, with **Register delivery reports** (`/email/connect#reports`, one press there) and where to look meanwhile (the service's own list, the Spam and Promotions folders) |
-| `/campaigns/:id/live`        | the progress alone: what an open campaign page fetches every ten seconds (one row read) and swaps in place, through the frame script's `data-live` blocks |
+| Path | Shows |
+| --- | --- |
+| `/campaigns` | Stage chips (all, drafts, scheduled, sending, sent, archived) and **Never mailed**; **New campaign** (places as a row when several); **Archive finished** and **Delete blank drafts** with counts, each asking first; then **Blank CSV template** and **Room today** |
+| `/campaigns?show=suppressed` | The do-not-mail list, searched by address, with **Add addresses** and **Take off** |
+| `/campaigns/:id` | Chips under the title (stage, place, starter, sender, version, approver). A draft has **Four steps to send it** as cards and tabs (`?step=who`, `what`, `check`, `send`), one at a time, opening on the first that needs something, **Next** at the foot; the footer is written in step 3 (**Save the footer**, to `campaigns.footer`). The commands (test, send or ask, back to draft, pause, resume, cancel, delete, archive, **Run now**); an approval with **Yes, send it** and **No, send it back**; the progress and **Run log**, live every 10 s; unclear people and the three decisions; **From** (with no address, each one and the domain check it waits for); **Message**; the Gmail tab line and preview; **Pace** with days as a row; people (or **Add people** and **Take people off**); **Files**; the first 100 people. A refused save keeps what was typed; **Send me a test** says "on its way" only when `/api/email/ready` is ready |
+| `/campaigns/:id` (sent) | **By mailbox provider** (Gmail, Microsoft, Yahoo and AOL, Apple, others: people, sent, delivered, opened, clicked, bounced, spam, left); **Download the results**; ten minutes after the last run with no report back, a notice with **Register delivery reports** (`/email/connect#reports`) |
+| `/campaigns/:id/live` | The progress alone, one row read, swapped in by `data-live` |
 
-## Search
+## Search, reports, personal data
 
-The portal's search (`GET /api/campaigns/search?q=`, `campaigns.read`) finds campaigns by name, at
-the places the person may see, with their state.
-
-## Reports
-
-The section on the Reports page's Email tab (`GET /api/campaigns/report?days=&to=`,
-`campaigns.read`, 2026-11-26): the people campaigns were handed to in the period against the period
-before, one line a day, the share that opened and clicked once a provider has reported an open, the
-unsubscribes, and each campaign with its own shares, at the places the person may read.
-
-## Personal data
-
-For a privacy request (`personal`, read by the privacy module) the module answers each campaign
-the address was on, with the name and merge fields it
-was sent with, its state and when it was sent; the email module answers the address's row on the
-do-not-mail list. The Campaigns page is linked. A campaign's files (an invoice, a statement) are
-personal data too: they stay with the campaign in the client's bucket, reached only by a link
-that lasts a day, and go when the draft is deleted.
+- **Search:** `GET /api/campaigns/search?q=` (`campaigns.read`), by name, at visible places.
+- **Reports:** `GET /api/campaigns/report?days=&to=` (`campaigns.read`), the Reports page's Email
+  tab: people handed out against the period before, a line a day, open and click shares once opens
+  are reported, unsubscribes, and each campaign.
+- **Personal data** (`personal`): each campaign the address was on, with its name, merge fields,
+  state and send time. A campaign's files stay in the bucket behind day-long links and go when the
+  draft is deleted.

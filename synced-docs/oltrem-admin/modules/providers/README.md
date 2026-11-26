@@ -15,7 +15,6 @@ This README is split by section, so each part can be read whole.
 | Part | Sections |
 |---|---|
 | [using-it](docs/using-it.md) | Using it |
-| [definitions](docs/definitions.md) | The definitions: Send, Key, Probe, Reports, Allowance |
-| [definitions-2](docs/definitions-2.md) | The definitions, continued (2) |
-| [routes](docs/routes.md) | Routes; The adapters |
-| [delivery-reports](docs/delivery-reports.md) | Delivery reports; Detection; Status and the failover order; The connections check; The checkup; Credentials; Tables and errors; Not here yet; Tests |
+| [definitions](docs/definitions.md) | What the kit ships; what a definition holds; providers with limits; the contract |
+| [routes](docs/routes.md) | Routes; the adapters |
+| [delivery-reports](docs/delivery-reports.md) | Delivery reports; detection; status and failover; the checks; credentials; tables and errors; tests |

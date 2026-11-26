@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/providers: Routes; The adapters"
+title: "@oltrem/providers: routes, the adapters"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/providers/src; split from modules/providers/README.md]
+sources: [modules/providers/src/module.ts, adapters/]
 ---
 
-# @oltrem/providers: Routes; The adapters
+# @oltrem/providers: routes, the adapters
 
 > Part of [the @oltrem/providers README](../README.md).
 
@@ -21,7 +21,7 @@ instances and pastes their keys.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
-| `GET /report?days=&to=` | read, at the company | the section on Reports' Services tab: each connection's last check, the failing first, and the allowance used where a provider tells it; today's state only |
+| `GET /report?days=&to=` | read, at the company | Reports' Services tab: each connection's last check, failing first, and allowance used; a module part |
 | `PUT /definitions/:id` | definitions, at the company | the client's own definition, or its change to the kit's; checked, then a row |
 | `DELETE /definitions/:id` | definitions, at the company | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
 | `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set; never a data connection, a storage bucket or an analytics app |
@@ -35,8 +35,8 @@ instances and pastes their keys.
 | `POST /detect` | manage, at the company | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
 | `DELETE /instances/:id` | manage, at the company | removes it with its credential; the active one is refused (`KIT-E-1405`) |
 | `POST /keys/rewrap` | manage, at the company | after the KEK secret changed: every tenant's data key wrapped again under the current key |
-| `GET /home` | read | the Home card: how many connected instances are active and working; one active whose last check failed is not counted and the card says so; a connected database (kind `data`) is not counted, as it is the data part's |
-| `GET /onboarding` | manage | Home's Get started: "Connect an email service", done while an email instance is active and its last check did not fail |
+| `GET /home` | read | The Home card: active, working instances (a failing one named, never data, storage or analytics); a module part |
+| `GET /onboarding` | manage | Get started's "Connect an email service", done while an email instance is active and passing; a module part |
 
 Instances belong to a tenant; the Vendor, who has none, is refused. A field the definition does
 not list, or an empty one, is `422`; a listed field that is missing is `KIT-E-1403` naming it.
@@ -57,9 +57,7 @@ email module never names a provider.
   Mailgun its `h:<header>` fields).
 - **The message's own headers** (the unsubscribe pair of campaigns, a reply's `In-Reply-To` and
   `References`) are named by every HTTP definition that sends, and a test refuses one that
-  forgets them. Mailgun and Amazon SES left them out until 2026-11-17, so a campaign through
-  either went without one-click unsubscribe: Mailgun now gets `h:<name>` fields and SES
-  `Content.Simple.Headers` (fifteen at most, its limit).
+  forgets them (Mailgun as `h:<name>` fields, SES as `Content.Simple.Headers`, fifteen at most).
 - **Each provider's own features**, from three optional fields of the message. A `tag` (made by
   `tagOf(text)`: letters, digits, `_` and `-`, at most 64) groups the message in the provider's
   own reports: Resend's and SES's tags (as `category`), Brevo's tags, Postmark's `Tag`,
@@ -67,11 +65,9 @@ email module never names a provider.
   `tracking: false` asks the provider not to track opens and clicks, in its own words: Postmark
   `TrackOpens` and `TrackLinks`, SendGrid `tracking_settings`, Mailgun `o:tracking`, Mailjet
   `TrackOpens` and `TrackClicks`; the others track by their account setting. A definition that
-  tracks every message with no way to stop it says `alwaysTracks: true` (Brevo, Sender and Sender
-  SMTP, 2026-11-11): Gmail reads an open pixel and links sent through the provider's own address
-  as signs of marketing mail, so the email module sends everyday mail through another route first
-  when there is one. `bulk: true` sends
-  campaigns the provider's bulk way: Postmark's broadcast stream, the instance's
+  tracks every message with no way to stop it says `alwaysTracks: true` (Brevo, Sender, Sender
+  SMTP), which Gmail reads as marketing, so the email module sends everyday mail elsewhere first.
+  `bulk: true` sends campaigns the provider's bulk way: Postmark's broadcast stream, the instance's
   `broadcastStream` field, read in the template as `{{bulk.broadcastStream}}` (the `bulk` scope is
   the config, present only for a bulk message). A definition's `send.bulkNeeds` lists the config
   fields campaigns needs; while one is empty a bulk message is refused before any call
@@ -92,13 +88,14 @@ email module never names a provider.
   upgrades with STARTTLS before any credential is sent, and refuses a server that does not offer
   it or sends bytes before the handshake; AUTH PLAIN or LOGIN; the message written as MIME here,
   base64 bodies, encoded words for text outside ASCII, a `Message-ID` made from the kit's message
-  key. Port 25 is refused: Cloudflare blocks it.
+  key. Port 25 is refused (Cloudflare blocks it).
 - **The message** (`EmailMessage`) is checked once before any request: addresses well formed, no
   line break where a header goes, at most fifty recipients, no header a message may not set
   (`From`, `Bcc` and the like).
 - **A refusal** is `KIT-E-1407` with the provider's status and its answer cut to one line, every
   secret value of the instance blanked; its `details` carry the status (`null` when no answer
-  came) and the seconds of a `Retry-After`. A send or a probe waits 20 seconds for the answer, a batch 30.
+  came) and the seconds of a `Retry-After`. A send or probe waits `SEND_TIMEOUT_MS` (20 s), a batch
+  `BATCH_TIMEOUT_MS` (30 s).
   `failureOf(error)` sorts it for the bulk engine: `network` (no answer: it may have been sent),
   `speed` (429), `allowance` (402, or a 429 that names a quota or credits), `account` (401, 403:
   the key, the account or the sending domain), `message` (another 4xx), `provider` (5xx) or

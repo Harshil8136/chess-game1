@@ -21,12 +21,11 @@ This README is split by section, so each part can be read whole.
 | Part | Sections |
 |---|---|
 | [using-it](docs/using-it.md) | Using it |
-| [pages](docs/pages.md) | The pages: `/`, `/search`, `/look`, `/notifications`, `/settings`, `/start`, `/setup`, `/accept` and more |
-| [pages-2](docs/pages-2.md) | The pages: `/people`, `/access` |
-| [pages-3](docs/pages-3.md) | The pages: `/access`, `/providers`, `/email`, `/backup`, `/github`, `/health` |
-| [pages-4](docs/pages-4.md) | The pages: `/settings`, `/alerts`, `/audit` |
-| [pages-5](docs/pages-5.md) | The pages: Withdraw an invitation (asked first), Send an invitation again, Give the group a role, end one, Paste the key again |
-| [pages-6](docs/pages-6.md) | The pages, continued (6) |
+| [pages](docs/pages.md) | The pages: Home, search, look, notifications, settings tabs, Features, start, records, forms |
+| [pages-2](docs/pages-2.md) | The pages: Users |
+| [pages-3](docs/pages-3.md) | The pages: access, integrations, email, backups, status |
+| [pages-4](docs/pages-4.md) | The pages: settings, alerts, audit log |
+| [pages-5](docs/pages-5.md) | The forms |
 | [frame](docs/frame.md) | The frame: toolbar, reads, saved views, record panel, bell, bulk, sidebar, groups, tabs, width |
 | [frame-2](docs/frame-2.md) | The frame: account, phone bar, one sidebar; no reloads; the page alone; live blocks |
 | [frame-3](docs/frame-3.md) | The frame: compose boxes, the composer, what the script leaves to the browser, Not found |

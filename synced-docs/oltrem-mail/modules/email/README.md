@@ -16,15 +16,13 @@ This README is split by section, so each part can be read whole.
 
 | Part | Sections |
 |---|---|
-| [using-it](docs/using-it.md) | Using it; Settings; Templates; Sending, the lease and failover |
-| [write](docs/write.md) | Write |
-| [write-2](docs/write-2.md) | Write: The template picker, A letter, A design, Fields, Write in HTML, The composer's HTML, Preview, Address suggestions and more |
-| [write-3](docs/write-3.md) | Write, continued (3) |
-| [senders-and-sending-domains](docs/senders-and-sending-domains.md) | Senders and sending domains: Which address each kind of mail comes from, A sending domain, The check, Passing, Ready for Gmail, Yahoo and Outlook, Read from the provider, Another address, from Write, A sender address and more |
-| [senders-and-sending-domains-2](docs/senders-and-sending-domains-2.md) | Senders and sending domains: Delivery reports, registered by themselves, Add an address, **Addresses** (the first), **Domains**, **Kinds of mail**, Cancel |
+| [using-it](docs/using-it.md) | Using it; settings; templates; sending, the lease and failover |
+| [write](docs/write.md) | Write, the Email pages and the composer; what is kept |
+| [write-2](docs/write-2.md) | Write's parts: templates and HTML; addresses, sending, files, Sent |
+| [senders-and-sending-domains](docs/senders-and-sending-domains.md) | Senders and sending domains; the SPF limit; the simple provider card |
+| [senders-and-sending-domains-2](docs/senders-and-sending-domains-2.md) | Delivery reports set up by API; the Addresses page |
 | [saved-templates](docs/saved-templates.md) | Saved templates; Saved lists |
-| [bulk-mails-pipe](docs/bulk-mails-pipe.md) | Bulk mail's pipe; Allowance; Ready to send |
-| [routes](docs/routes.md) | Routes: Confirm it's you |
-| [routes-2](docs/routes-2.md) | Routes, continued (2) |
-| [delivery-reports](docs/delivery-reports.md) | Delivery reports; The do-not-mail list; Health; Personal data; Not here yet |
+| [bulk-mails-pipe](docs/bulk-mails-pipe.md) | Bulk mail's pipe; the allowance; Ready to send |
+| [routes](docs/routes.md) | Every route, by area |
+| [delivery-reports](docs/delivery-reports.md) | Delivery reports; do-not-mail; health; personal data |
 | [tables-and-the-error-codes](docs/tables-and-the-error-codes.md) | The tables and the error codes |

@@ -18,7 +18,7 @@ This README is split by section, so each part can be read whole.
 
 | Part | Sections |
 |---|---|
-| [using-it](docs/using-it.md) | Using it; The Cloudflare route; Records on Cloudflare; Routes |
-| [capabilities-settings-jobs-health](docs/capabilities-settings-jobs-health.md) | Capabilities, settings, jobs, health |
+| [using-it](docs/using-it.md) | Using it; the Cloudflare route; records on Cloudflare; routes |
+| [capabilities-settings-jobs-health](docs/capabilities-settings-jobs-health.md) | Capabilities, settings, jobs, health, errors |
 | [inbox](docs/inbox.md) | The inbox |
-| [pages](docs/pages.md) | Pages; The tables |
+| [pages](docs/pages.md) | Pages; tables |

@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/providers: Delivery reports and more"
+title: "@oltrem/providers: delivery reports, detection, checks, credentials, tables, tests"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/providers/src; split from modules/providers/README.md]
+sources: [modules/providers/src/webhooks, detection, registry.ts, module.ts, errors.ts]
 ---
 
-# @oltrem/providers: Delivery reports and more
+# @oltrem/providers: delivery reports, detection, checks, credentials, tables, tests
 
 > Part of [the @oltrem/providers README](../README.md).
 
@@ -32,160 +32,93 @@ bounced is not said, and the first is not assumed.
 | `hmac-body` | Mailtrap | HMAC-SHA256 of the body alone, hex, in the header the definition names (`signatureHeader`); it carries no time, so a copy sent again verifies again | secret `webhookSecret` |
 | `none` | Brevo, Mailjet, SMTP2GO | nothing: the token in the hook's address is the only guard | none |
 
-A signed timestamp more than five minutes from the clock is refused, SNS's signed `Timestamp`
-(when the message was published) included. An SNS subscription is
-answered with its confirmation address only when that address is an AWS one. A refusal is
-`KIT-E-1409` naming the check. The public address the reports arrive at,
-`/hooks/email/<instance>/<token>`, is the email module's; its token is the one sealed with the
-instance's credential (below).
+A signed timestamp more than five minutes off is refused (SNS's `Timestamp` too). An SNS
+subscription is answered only at an AWS confirmation address. A refusal is `KIT-E-1409` naming the
+check. The public address, `/hooks/email/<instance>/<token>`, is the email module's; its token is
+sealed with the credential (below).
 
 ## Detection
 
-`detect(domain, definitions, resolve)` asks DNS over HTTPS (Cloudflare's resolver, JSON form) for
-the domain's TXT and MX records and one TXT question per DKIM selector the definitions name, so a
-CNAME on the way is seen too, then matches each definition's fingerprint. Evidence is **strong**
-when a record names the provider (an SPF include of its domain or under it, a DKIM CNAME to its
-suffix, an MX host, its verification record) and **weak** when it only shows a DKIM key at a
-common selector; a provider with only weak evidence is a weak suggestion. A look-alike include
-(`notmailgun.org`) is not a match, and an IP address or a bare name is not a domain.
-
-`POST /detect` writes one `suggested` instance per provider found that the tenant has no
-instance of, labelled "(found in DNS)", with no credential and its evidence in `detectedBy`; a
-second run adds nothing. A suggestion never sends: it becomes `confirmed` when a person pastes its
-key and is activated by a person. The job `providers.refingerprint` reads every detected domain
-again once a day and keeps what it saw (`now`, `evidence`, `checkedAt`); `drift` is true when it
-saw less than the first time. The health check `providers.dns` (lane `email`) warns while any
-instance that is not disabled has drifted.
+`detect(domain, definitions, resolve)` asks DNS over HTTPS (Cloudflare's resolver) for TXT, MX and
+one TXT per DKIM selector named (CNAMEs seen on the way), then matches fingerprints. **Strong**
+evidence names the provider (an SPF include of its domain, a DKIM CNAME to its suffix, an MX host,
+its verification record); **weak** only shows a DKIM key at a common selector. A look-alike include
+(`notmailgun.org`) is no match. `POST /detect` writes one `suggested` instance per new provider,
+"(found in DNS)", no credential, evidence in `detectedBy`; it never sends until a person pastes its
+key and activates it. `providers.refingerprint` rereads detected domains daily (`now`, `evidence`,
+`checkedAt`, `drift` when less is seen), and `providers.dns` (lane `email`) warns on drift.
 
 ## Status and the failover order
 
-`suggested` is what the detection writes; `confirmed` is an instance a person
-set up or a suggestion whose credential was pasted; `active` sends; `failover` stands in, in
-order; `disabled` is out. `registry.pick(db, tenant, kind)` is what the email module will ask:
-the active instance, else the first failover. Activating an instance needs its credential, and a
-suggestion is never activated by itself (plan 8.3).
+`suggested` (detected), `confirmed` (set up or pasted), `active` (sends), `failover` (in order),
+`disabled` (out). `registry.pick(db, tenant, kind)` answers the active one, else the first
+failover. Activating needs a credential; a suggestion is never activated by itself.
 
-## The connections check
+## The checks
 
-`providers.connections`, in the email lane of Status, every hour (`CONNECTIONS_EVERY`,
-2026-11-22, the owner's health watch): it probes each email instance set to send (the active one
-and its failovers, 5 at most, `CONNECTIONS_MAX`) through the adapter's `probe`, side by side,
-each within 4 seconds (`CONNECTION_WAIT_MS`, opening the key included), keeps each result on the
-instance as the probe route does (`last_probe`, without an audit row, since the system asked;
-no answer in time is kept as a failed probe), and says what it found
-in words (`connectionSaid`). A 401 or 403 is a refused key, with what to do: make a new key and
-paste it on Integrations. A 429 is a service asking the portal to wait, and only warns. Anything
-else, or no answer in time, did not work, with the provider's words. The active instance failing
-fails the check, so two hours in a row open a problem and an alert; a failover one only warns.
-A key that can no longer be opened fails, named. The result is written to the instance only when
-it changed, or once a day: one row a day for a service that keeps working. A write that fails
-turns an OK into a warning that says the answer could not be kept, so a database fault is never
-blamed on the service.
-
-## The checkup
-
-`providers.checkup`, a job every hour (2026-11-26, the owner's Vendor checkup): the three
-connections of this part's own kinds (not data, storage or analytics, which their parts check)
-with a key and no check in the last 20 hours (`CHECKUP_BATCH`, `CHECKUP_DUE_MS`), the never
-checked first. Each is probed; a passing failure (`passingFailure`: no answer in time, a lost
-connection, 408, 425, 429 or 5xx, never a refused key) is asked once more after 2 seconds
-(`CHECKUP_RETRY_MS`), and an answer then is kept with `fixed`. The result goes on the row as the
-probe route keeps it, and in the audit log as `providers.checkup` (actor `providers.checkup`,
-outcome ok or failed, the service, its words, `fixed`, `sunset`, `deprecated`). `GET /checkup`
-lists every kind for the screens' Checkup page.
+| Check | What it does |
+| --- | --- |
+| `providers.connections` (Status, email lane, `CONNECTIONS_EVERY` 1 h) | Probes each email instance set to send (`CONNECTIONS_MAX` 5) side by side within `CONNECTION_WAIT_MS` (4 s), keeps `last_probe` (only when changed, or daily) without an audit row, and says it in words (`connectionSaid`): 401 or 403 a refused key with the fix, 429 a warning. The active one failing fails the check (two hours open a problem); a failover only warns. A failed write warns, never blaming the service |
+| `providers.checkup` (job, hourly) | The `CHECKUP_BATCH` (3) connections of this part's kinds with a key and no check in `CHECKUP_DUE_MS` (20 h), never-checked first. A passing failure (`passingFailure`: timeout, lost connection, 408, 425, 429, 5xx) is retried after `CHECKUP_RETRY_MS` (2 s) and kept as `fixed`. Audited as `providers.checkup`; `GET /checkup` lists every kind |
 
 ## Credentials
 
-The secret fields are sealed together under the tenant's data key to the instance's row, so a
-sealed value copied to another row refuses to open; the other fields are config in the clear.
-`registry.open(env, tenant, id)` returns the fields to an adapter inside the request that uses
-them, and a credential that did not open is written to the audit log as `providers.open`,
-`failed`, with the error code and never the value. Beside the pasted fields the seal holds one
-the kit makes, `HOOK_FIELD`: the secret token of the instance's address for delivery reports,
-made when a key is first pasted and kept when one is pasted again. A secret field left out of a
-new paste keeps the stored value, so a signing secret is added without pasting the key again.
+Secret fields are sealed together under the tenant's data key to the instance's row (a copy on
+another row refuses to open); other fields are config in the clear. `registry.open(env, tenant,
+id)` hands them to an adapter for one request; a failed open is audited `providers.open`, never
+with the value. The seal also holds:
 
-A stored key goes only to the host it was saved for. The seal also holds `ORIGIN_FIELD`: the host
-the definition sent to when the key was pasted (`originOf`: its base URL's host, SMTP host or
-endpoint, rendered with the instance's fields, such as Mailgun's `apiHost` or the SMTP host a person
-types). `open` refuses the credential (`KIT-E-1411`, naming both hosts) when the definition, or the
-instance's own fields, now name another host, so a changed definition cannot send a stored key
-elsewhere; putting the definition back opens it again. A new paste that moves the instance to
-another host keeps no stored secret: every secret field is pasted again, and the key is then saved
-for the new host. A key sealed before hosts were recorded opens only where the kit's own definition
-of that id sends; for a client's own definition it is pasted again. `registry.instance(db, id)`
-finds an instance by its id alone, for that public address. Every write is audited under the person
-who made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
-`rename` (the new name, for the data part), `option`, `remove` and `rewrap`, with the field names
-and never a value.
+- `HOOK_FIELD`: the report address's token, made at the first paste and kept.
+- `ORIGIN_FIELD`: the host the key was saved for (`originOf`: base URL host, SMTP host or endpoint
+  as rendered). `open` refuses (`KIT-E-1411`, both hosts named) when the definition or fields now
+  name another; a paste to a new host keeps no stored secret. A key from before hosts were kept
+  opens only where the kit's own definition sends.
 
-`registry.setOption(env, actor, id, name, value)` (for the data part's editing) keeps one of
-`OPTIONS` on the instance's config beside its fields: a choice about how the portal uses it, not
-part of its key. `edits` (`on`, or `null` to take it away): a connected database whose rows the
-portal may change. `columns` (JSON of 2 to 8,000 characters, no control characters): the data part's
-hidden and masked columns. A new key for the same host keeps the options.
+A secret left out of a new paste keeps the stored one. `registry.instance(db, id)` finds one by id
+for the public address.
 
-`registry.setCredential(env, actor, id, fields, { replace: true })` (for Sign in with PostHog and
-Google Analytics) keeps none of the stored secrets: the pasted fields are the whole credential, so a
-key pasted over a sign-in drops its tokens and signing in again drops a key. The audit row says
-`replaced: true`. Without `replace`, a secret left out keeps the stored value, as above.
+| Function | What it does |
+| --- | --- |
+| `registry.setOption(env, actor, id, name, value)` | One of `OPTIONS` beside the fields, kept across new keys: `edits` (`on` or `null`), `columns` (2 to 8,000 characters of JSON) |
+| `registry.setCredential(..., { replace: true })` | The pasted fields are the whole credential (a sign-in drops a key and the reverse); audited `replaced: true` |
+| `registry.renew(env, tenant, id, from, secret)` | Seals `token`, `refresh`, `expires` or `access` a service renewed, only while `from` is still stored (false when another request won); never moves the host; the one unaudited write (Airtable's and Supabase's hourly renewals) |
+| `registry.recordUsage(db, id, usage)` | Keeps the provider's used and left |
 
-`registry.renew(env, tenant, id, from, secret)` (for Sign in with Airtable; since 2026-11-25 also
-Sign in with Supabase's Management API tokens, so `access` is one of the fields it may write beside
-`token`, `refresh` and `expires`) seals secrets the service itself renewed over the credential
-`from` was opened from, and writes them only while that credential is still the one stored (`UPDATE
-… WHERE credential = <the one read>`): it answers false when another request renewed it first, so
-two renewals at once never overwrite each other. It cannot move the key to another host. It is the
-one write that is not audited: the data part's timed check renews a signed-in Airtable connection
-every hour, and no person's access changes.
+Audited by the person: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`,
+`disable`, `rename`, `option`, `remove`, `rewrap`, with field names and never a value.
 
 ## Tables and errors
 
-Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (one wrapped data
-key per tenant, with the id of the key that wrapped it and when it was rotated) and
-`providers_instances` (indexed by tenant, kind, status and failover order). Migration `0051`
-adds `usage` to the instance: what its provider last said was used and left, as JSON, written by
-`registry.recordUsage(db, id, usage)`. Error codes
-`KIT-E-1401` to `1411`: a bad definition, an unknown one, a missing field, an instance not ready
-to activate, the active instance in use, the kit's definition that has no row to remove, a
-provider that did not take the message, what the definition asks for that this kit version
-cannot do, a delivery report that failed its check, a provider that refused a domain call
-(`KIT-E-1410`), and a stored key whose definition now names another host (`KIT-E-1411`).
+Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (a wrapped data key
+per tenant, its wrapping key's id, rotation time) and `providers_instances` (indexed by tenant,
+kind, status, order). `0051` adds `usage`.
 
-## Not here yet
+| Code | When |
+| --- | --- |
+| `KIT-E-1401` to `1403` | A bad definition, an unknown one, a missing field |
+| `KIT-E-1404`, `1405` | Not ready to activate; the active instance in use |
+| `KIT-E-1406` | No client row to remove |
+| `KIT-E-1407` | The provider did not take the message |
+| `KIT-E-1408` | The definition asks what this kit cannot do |
+| `KIT-E-1409` | A report failed its check |
+| `KIT-E-1410` | The provider refused a domain call |
+| `KIT-E-1411` | A stored key's definition now names another host |
 
-The Integrations page exists and live portals send through it; a definition no portal has sent
-through yet stands on the provider's public reference. A batch for Postmark (500 a call, on a broadcast message stream),
-SendGrid, Mailgun and Amazon SES: until then they send campaigns one message a call.
+## Not built yet
+
+A batch for Postmark (500 a call, broadcast stream), SendGrid, Mailgun and SES; until then they send
+campaigns one call a message.
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module: the seven definitions pass
-the contract and a bad one is refused with its path; an instance set up with its credential sealed
-to its row and the key nowhere in a response or the table; a missing, unknown or empty field
-refused; a pattern matched against the whole value only, and a value past 500 characters refused;
-the five data definitions each naming its dialect, with a pattern that takes the service's own
-address and refuses another, Neon's connection string checked, a data definition without a pattern
-on its host refused; a data connection neither made, listed nor touched through these routes; the
-seven storage definitions speaking S3 with their key fields, a host pattern refusing a scheme or a
-path, and a storage connection neither made, listed nor touched here; activation and the failover
-order, `pick`, the active instance not removable, a suggestion not activatable; a client's
-definition added by the Vendor, replacing the kit's and removed, and refused to the Owner and to
-whoever sets up integrations; a stored key refused when its definition or its host field names
-another host, opened again when put back, bound to the new host only when pasted again, and an older
-key without a host held to the kit's definition; the audit rows with field names and no value; a
-credential moved to another row refused and recorded; the data keys wrapped again after the KEK
-changed, and opened under the new key alone; the probe route with the sealed key, its result kept
-and audited. The adapters without the network: the template engine against every kit definition
-(nothing left unrendered, no field the definition does not list); one request shape per HTTP
-provider against a scripted fetch; a refusal with the key blanked; a bad message refused before any
-request; SigV4 against AWS's published vector and one computed apart; the SMTP client against a
-scripted server on a fake socket, on 587 and 465, refusing to sign in without TLS. The webhooks
-against reports signed outside the kit: the Standard Webhooks published vector, a Mailgun HMAC made
-in Python, SendGrid and SNS signatures made with openssl (SNS with SHA-256 and SHA-1); a changed
-body, an old timestamp (SNS's publish time too), another key or topic, a certificate address that is
-not AWS's and a missing key field refused; every provider's events read by its field map; an
-unmapped or inherited event name ignored. The detection against small zones: strong and weak
-evidence, a look-alike include refused, the resolver's TXT chunks, CNAMEs, missing names and
-failures; through the route, the suggestions written once, refused to activate, audited, and the
-daily re-check marking the one whose records went, with the health check warning.
+In the Workers runtime beside IAM. `definitions.test.ts`: every kit definition passes the contract,
+a bad one fails with its path, data and storage patterns and dialects. `providers.test.ts`: sealed
+credentials never in a response or the table; fields missing, unknown, empty or not matching;
+data, storage and analytics connections untouched by these routes; activation, failover, `pick`;
+client definitions by the Vendor only; host pinning; audit rows; a moved credential refused; rewrap
+after a KEK change; the probe. `adapters.test.ts`: the template engine against every definition,
+request shapes, blanked refusals, SigV4 against AWS's vector, the SMTP client on 587 and 465
+refusing to sign in without TLS. `webhooks.test.ts`: signatures made outside the kit (Standard
+Webhooks' vector, Python HMAC, openssl ECDSA and SNS), tampering, old timestamps, wrong keys, the
+field maps. `detection.test.ts`: strong and weak evidence, look-alikes, DNS shapes, suggestions and
+drift. `domains.test.ts`: the domain client.

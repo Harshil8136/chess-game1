@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/campaigns: Using it; Who may do what"
+title: "@oltrem/campaigns: using it, who may do what"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/campaigns/src; split from modules/campaigns/README.md]
+sources: [modules/campaigns/src/module.ts, campaigns.ts]
 ---
 
-# @oltrem/campaigns: Using it; Who may do what
+# @oltrem/campaigns: using it, who may do what
 
 > Part of [the @oltrem/campaigns README](../README.md).
 
@@ -32,26 +32,23 @@ const campaigns = createCampaigns<Env>({
 const modules = [iam.module, email.module, withPages(campaigns.module, campaignsPages)];
 ```
 
-`createCampaigns` returns the `store` (every function the routes and jobs call) and the module
-manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper) and sends
-through the email module: the client adds `CAMPAIGN_TEMPLATE` to the email module's templates. Each
-of its audit rows names the campaign (`name`), so the Audit log's To what reads it after the
-campaign is gone, and says from where (the kit's audit writer adds it). Its pages come from
-`@oltrem/campaigns/pages`, type-checked against the DOM like the files module's, and give it a
-**Campaigns** entry in the sidebar's Email group, after Email, with the email module's Mailing lists
-as its tab.
+`createCampaigns` returns the `store` and the module manifest. It stands on IAM and sends through
+the email module, to whose templates the client adds `CAMPAIGN_TEMPLATE`. Each audit row names the
+campaign (`name`). Its pages (`@oltrem/campaigns/pages`) give **Campaigns** in the sidebar's Email
+group, with Mailing lists as its tab.
 
 ## Who may do what
 
-Five capabilities on bit plane `13`: `campaigns.read` sees the campaigns and their figures;
-`campaigns.write` starts a draft, writes its message, picks its template, uploads its list or
-picks a saved one, adds people and sends a test to oneself; `campaigns.send` starts, pauses,
-resumes and cancels a campaign, sets its pace and decides about unclear people once it runs, and
-asks for a fresh sign-in; `campaigns.approve` (class admin, fresh sign-in) answers a large send
-someone else asked for, never one the person asked for themselves; `campaigns.run` (class operate,
-since 2026-11-10) presses **Run now** on a sending campaign: its next run at once, instead of at the
-next five minutes, then the Run log shows what it did. Each is read at the campaign's place, or a place above it; a campaign the person may
-not read is not found. The sender address a campaign goes out from is one the person may use for
-bulk mail: `email.senders.use` at the address's place, on a passing domain; the person who
-starts it needs that too. The do-not-mail list is the company's, so reading it and changing it need
-`campaigns.send` held at the company itself.
+Five capabilities on bit plane `13`, each read at the campaign's place or above (a campaign the
+person may not read is not found):
+
+| Capability | Class | What it allows |
+| --- | --- | --- |
+| `campaigns.read` | read | See campaigns and figures |
+| `campaigns.write` | operate | Drafts, message, template, people, files, a test to oneself |
+| `campaigns.send` | admin, fresh sign-in | Start, pause, resume, cancel, pace, unclear people; the do-not-mail list when held at the company |
+| `campaigns.approve` | admin, fresh sign-in | Answer someone else's large send |
+| `campaigns.run` | operate | **Run now** |
+
+The sender must be one the person may use for bulk mail (`email.senders.use` at its place, on a
+passing domain), for the writer and the starter alike.
