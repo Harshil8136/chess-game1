@@ -126,8 +126,9 @@ template byte for byte.
 the document that owns that fact, in the same commit. One fact has one home; another document
 links to it instead of repeating it. Every document under `docs/` carries front matter (title,
 status, owner, last verified, sources) and is linked from docs/README.md. A big change gets a
-dated record under `docs/records/` with how it worked before and after. A change without its
-documentation is not finished.
+dated record under `archive/records/`, outside docs/ so no agent loads it for a task: at most
+4 KB, from the template in its index (what changed, why, before and after, how it was checked).
+A change without its documentation is not finished.
 
 **Why.** The documentation is what the owner reviews on a phone, and what the next agent reads
 instead of the code. Out-of-date documentation is worse than none.
@@ -135,7 +136,8 @@ instead of the code. Out-of-date documentation is worse than none.
 **Scope.** Every repository.
 
 **Enforced by.** `pnpm docs:check` fails on a document without front matter, a document missing
-from the index, a document over its size budget and a relative link that points nowhere. That
+from the index, a document over its size budget, a record left in archive/records/, a record dated
+after 2026-11-26 over 4 KB and a relative link that points nowhere. That
 the right document was updated is the owner's review.
 
 ## R-08 One entry file

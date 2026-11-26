@@ -33,7 +33,7 @@ Its plan document is the authority on the design.
 ## Where these documents are published
 
 On every push to `main` the verify workflow's `mirror-docs` job runs the identifiers gate, then
-copies this folder, the root `.md` files, each package, module and template README and LICENSE
+copies this folder, the records in `archive/`, the root `.md` files, each package, module and template README and LICENSE
 to [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin)
 on the docs mirror, and every Oltrem Mail document (`vendor/mail/published/`, in each
 pack) to `synced-docs/oltrem-mail`, each with a provenance file. Nothing is redacted: the gate
@@ -59,6 +59,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Phone tests owed: Users and access](phone-tests-users.md) | the phone tests owed on the Users and access pages, split from the list above | living |
 | [Phone tests owed: Connected data](phone-tests-data.md) | the phone tests owed on the Data pages from 22 November on (Sign in with Supabase), split from the flows list | living |
 | [Phone tests owed: the Apps page](phone-tests-apps.md) | the phone tests owed on the Apps page, from its makeover on 22 November on | living |
+| [Phone tests owed: Home and the frame](phone-tests-frame.md) | the phone tests owed on Home and the frame, split from the list above | living |
 | [Phone tests owed: Files](phone-tests-files.md) | the phone tests owed on the Files page from its rebuild on 23 November | living |
 | [Phone tests owed: Backups and Status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and Status, split from the list above | living |
 | [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
@@ -117,13 +118,13 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the two workflows, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies, written as the client's how-to | written, beside the code; copied by the generator |
 
-The records, each dated and frozen once written, with what changed and how it was verified, are
-listed in [the records index](records/README.md).
+The records (the kit's history, dated and frozen) live outside this folder so no agent loads
+them for a task: [the records index](../archive/records/README.md).
 
 ## How this folder is checked
 
 `pnpm docs:check`, one of the gates of `pnpm verify`, refuses a document without front matter,
-a document missing from the tables above (a record: missing from [the records index](records/README.md)), a document over its size budget, a relative link that
+a document missing from the tables above (a record: missing from [the records index](../archive/records/README.md)), a document over its size budget, a relative link that
 points nowhere, and a generated document that differs from its source. Records are frozen: a
 later change is a new record, not an edit.
 

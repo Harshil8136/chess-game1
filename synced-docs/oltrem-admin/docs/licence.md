@@ -50,5 +50,5 @@ for has a service agreement with the licensor; that agreement, not this licence,
 
 ## Where it is recorded
 
-The decision and its history are in [the licence change record](records/2026-10-20-licence-change.md).
+The decision and its history are in [the licence change record](../archive/records/2026-10-20-licence-change.md).
 Until 2026-10-20 the kit carried the Apache License 2.0; no copy was shared under it.

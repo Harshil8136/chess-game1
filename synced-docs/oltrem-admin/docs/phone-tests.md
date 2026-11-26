@@ -3,7 +3,7 @@ title: "Phone tests owed"
 status: living
 owner: vendor
 last_verified: 2026-11-03
-sources: [the records under docs/records/ from 2026-10-21 to 2026-11-03, their "not verified" lines; the verification log]
+sources: [the records under archive/records/ from 2026-10-21 to 2026-11-03, their "not verified" lines; the verification log]
 ---
 
 # Phone tests owed
@@ -26,129 +26,25 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 ### Home and the frame
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P153 | Open Users, then Settings, then press Back; open Settings again from the sidebar | Back shows Users at once; Settings opens at once the second time. Remove someone's access on another device and press Back on theirs: the page shows, then the refusal replaces it | [record](records/2026-11-12-instant-pages.md) |
-| P157 | Home, light and dark; then the setup page (`oltrem deploy --page`) | The sidebar mark, Home's welcome band and the setup page's mark and main button are one solid colour, with no glow under them; buttons look as before | [record](records/2026-11-12-ui-foundation.md) |
-| P164 | Users, Roles and Settings on the phone, then on a computer | Title and main button on one line; search and filters right under; content in the top fifth; no empty side band | [record](records/2026-11-12-no-wasted-room.md) |
-| P165 | Roles; then Create role | Each role is a card in its own colour (the Owner amber), with a bar of its permissions and who holds it; in Create role the modules are coloured cards (two columns on a computer) and the save bar runs the full width at the foot | [record](records/2026-11-12-no-wasted-room.md) |
-| P166 | Settings, then Settings, Modules | Settings fills the width, its sections cards with a coloured head (two columns on a wide screen); the counts are slim pills; Modules are tinted cards, an off one plain | [record](records/2026-11-12-no-wasted-room.md) |
-| P167 | System status: press **Copy the report for an AI** and paste it in a note; press **Check again now** | The paste names every check, the budgets and alerts; each problem links to its fix; checks run again within five minutes | [record](records/2026-11-12-no-wasted-room.md) |
-| P168 | Email settings, Integrations | Brevo, Resend, Mailgun and Mailtrap show their logos; **Get a key** and **Docs** open the provider's own page in a new tab; a dropdown in a card opens in full, not cut off | [record](records/2026-11-12-no-wasted-room.md) |
-| P169 | Addresses: scroll so a default address's dropdown sits near the foot of the screen, then open it; then open one near the top | Near the foot its choices open upward over the line, all of them visible; near the top they open downward | [record](records/2026-11-12-no-wasted-room.md) |
-| P170 | Records, then Tasks, then System status, then Users | Each page in its section's colour (green Work, blue Users, violet System): the picked filter, an empty list's icon | [record](records/2026-11-12-bold-look-and-role-pages.md) |
-| P171 | Open a dialog with a long list in dark mode (Addresses, Edit), and scroll | The scrollbar is slim, in the page's colour, with no grey track and no arrows | [record](records/2026-11-12-bold-look-and-role-pages.md) |
-| P172 | Roles | One even list: each role a row with its name, what it reaches, a bar and count of permissions, who holds it and an arrow; the three ready sets on one line under it | [record](records/2026-11-12-bold-look-and-role-pages.md) |
-| P173 | Open a role, then a module's arrow; scroll to the foot | Levels a segmented control; a module opens without stretching its neighbour; special permissions are rows with a box; the save bar never covers "Who holds it" | [record](records/2026-11-12-bold-look-and-role-pages.md) |
-| P174 | Tap the heading of a sidebar group (Users & access), open another page, then reload | The group folds shut with its arrow turned and stays shut on the next page; the group of the page you are on is always open | [record](records/2026-11-12-bold-look-and-role-pages.md) |
-| P175 | System status and Alerts, an hour after the update | No `iam.door` line; the old "Every email provider refused the message" alerts are under resolved, not open, and Home's Open alerts count dropped to the few still recent | [record](records/2026-11-12-system-status-report-fixes.md) |
-| P176 | Settings, Modules, Audit log: switch **Daily seal** off and save; then System status | No `audit.sealed` line, and `jobs.runs` is OK even though the seal job stays paused | [record](records/2026-11-12-system-status-report-fixes.md) |
-| P177 | System status, the budgets line, before and after setting a new `KIT_OPS_TOKEN` in the Worker's Variables and Secrets | Before: says what key to make; within fifteen minutes after: each budget shows today's figure | [record](records/2026-11-12-system-status-report-fixes.md) |
-| P178 | Users: open someone who is not an Owner, then Change permissions; untick one that says From their roles, tick one that says Not in their roles, Save changes | Boxes ticked as they have it, with why; after Save: Taken away, Given to them, each with Reset | [record](records/2026-11-12-change-permissions-page.md) |
-| P179 | Your inbox and Alerts, a day after the update, with ImprovMX connected on Forwarding | No new "Forwarding addresses not all asked about" email; that alert is under resolved, not open | [record](records/2026-11-12-system-status-report-fixes.md) |
-| P180 | Settings, then Modules; untick Analytics, then tick it again; Save | One list per group, each row an icon, name, words and a box lined up with the rows above; Analytics' icon goes grey while unticked; extras sit under their module | [record](records/2026-11-13-plain-cards-and-module-list.md) |
-| P181 | Home, Email settings > Integrations, and Tasks with nothing in it | Cards are white with colour only in the icon or logo; the empty Tasks box is short, with no glow | [record](records/2026-11-13-plain-cards-and-module-list.md) |
-| P182 | System status, while the key is still refused | A box above Checks, "Cloudflare does not accept the portal’s key", with three steps; Open the key form opens Cloudflare with D1 Edit and Account Analytics Read chosen | [record](records/2026-11-13-cloudflare-key-from-the-phone.md) |
-| P183 | Make the key, set it as `KIT_OPS_TOKEN` in the Worker's Variables and Secrets, then Check again now | The box is gone and each budget shows today's use; Daily seal's Fix button opens Modules | [record](records/2026-11-13-cloudflare-key-from-the-phone.md) |
-| P187 | Home, then Users; tap ☰ each time, then outside the drawer | The menu opens every time at your page; a tap outside closes it | [record](records/2026-11-13-email-menu-on-a-phone.md) |
-| P188 | Open three pages, tap Search, type "back", tap Backups | The box lists recent pages; typing finds Backups, which opens | [record](records/2026-11-13-find-pages-and-jump-back.md) |
-| P189 | Home, after opening a few pages; then Sign out and in again | "Jump back in" shows a chip for each page you opened; after signing out it is gone until you open pages again | [record](records/2026-11-13-find-pages-and-jump-back.md) |
-| P190 | Tap Users, then each tab | One Users row in the sidebar; the page has a sideways row of tabs, the open one underlined | [record](records/2026-11-13-users-page-and-motion.md) |
-| P191 | On Users, tap Roles, Groups, Roles; open a role, press Back | Pages slide right going forward, left going back; the underline glides | [record](records/2026-11-13-users-page-and-motion.md) |
-| P192 | Tap a group's heading twice in the menu; open a dialog | The group folds and opens smoothly; drawers and shades leave as they came | [record](records/2026-11-13-users-page-and-motion.md) |
-| P193 | Email, Inbox: tick two conversations and press Archive; then press the star on another | The two rows go the moment you press, with no dimming; the star turns at once; after a moment the list is the same | [record](records/2026-11-13-reads-and-changes-at-once.md) |
-| P194 | Email, Inbox: on a bold (unread) conversation use Mark as read, then Snooze on another | The row turns plain at once; the snoozed row leaves the list at once | [record](records/2026-11-13-reads-and-changes-at-once.md) |
-| P195 | Turn on flight mode, press the star on a conversation, then turn it off | The star turns, then turns back, and the page says the change may not have been saved | [record](records/2026-11-13-reads-and-changes-at-once.md) |
-| P196 | On a computer, any page; then Notifications | A round bell at the head's right with the unread figure; no Notifications row in the sidebar | [record](records/2026-11-14-home-makeover-and-header-bell.md) |
-| P197 | Home on the phone | A greeting with today's date; three dials whose rings draw; a dial jumps to its part | [record](records/2026-11-14-home-makeover-and-header-bell.md) |
-| P198 | Home, At a glance | One lined-up list, what needs a look first; a tap opens the page | [record](records/2026-11-14-home-makeover-and-header-bell.md) |
-| P199 | Backups, then Audit log | Switches under the title; a flip saves at once and says Switched | [record](records/2026-11-14-quiet-off-and-switches.md) |
-| P200 | System status: press Turn off beside a warning | The warning goes; its alert closes within minutes | [record](records/2026-11-14-quiet-off-and-switches.md) |
-| P202 | Open a page on a slow connection | An orb of dots in a chip at the top, no line | [record](records/2026-11-14-loading-orb-and-status-list.md) |
-| P203 | Press Save on a setting | The orb turns inside the button until the answer | [record](records/2026-11-14-loading-orb-and-status-list.md) |
-| P204 | System status | Only problems listed, buttons on their row; "N checks pass" opens the rest | [record](records/2026-11-14-loading-orb-and-status-list.md) |
-| P205 | Sidebar closed: tap rows in each group | Icons stay put; the tint glides to the row tapped, never wider than the rail | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
-| P206 | Bell on any page; Unread; close | A panel over the page; Unread stays in it; X, Escape or outside closes it | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
-| P207 | Write on a computer: ⋮ More | A card over the message, not in the bar; a tap outside closes it | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
-| P208 | Write: drop or paste a file; ⋮ and template | No page scroll; file attached; one bar, cards whole | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
-| P209 | Sent: open one | Coloured tags; subject with Forward, Send again | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
-| P210 | Users, then Records | Head and tabs on a tinted band; Invite people on the head's line | [record](records/2026-11-14-page-heads-on-a-band.md) |
-| P211 | Users on a computer: the filters | Who and Role in two trays; counts as badges | [record](records/2026-11-14-page-heads-on-a-band.md) |
-| P212 | System status, Settings | Tabs with icons; each section heading with a colour mark | [record](records/2026-11-14-page-heads-on-a-band.md) |
-| P225 | Bulk mail off in Modules; a list with contacts: Send email, then Switch on Bulk mail | "This page is part of Bulk mail"; the press opens New campaign to that list, saying Switched on | [record](records/2026-11-14-switched-off-pages-and-head-menus.md) |
-| P226 | A list's ⋮ (with Bulk mail on and off); then Edit name and description | The menu opens just under the ⋮ and fades in, then fades out on a tap elsewhere (2026-11-15); the edit window opens | [record](records/2026-11-14-switched-off-pages-and-head-menus.md) |
-| P149 | After the deploy, move between Home, Users, Settings, Email and back, a few times | Each page opens sooner than before; the bell still shows its number and every tab is there | [record](records/2026-11-12-quiet-portal.md) |
-| P132 | On the live portal, once the fleet has updated it (no deploy needed): Look and colours, tap a palette; the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [record](records/2026-11-12-screen-actions-behind-the-door.md) |
-| P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
-| P129 | Tap from Home to People, Settings and Email | The sidebar stays where it was scrolled and marks the new page; pages open a little quicker; the letters are the new font, Inter | [record](records/2026-11-11-portal-name-icon-font.md) |
-| P128 | Settings, Name and icon: Upload a picture, pick a logo from the phone, Save | The picture shows in the tile, the sidebar, the top bar and the tab; it stays after a reload; a file that is not a picture is refused in words | [record](records/2026-11-11-portal-name-icon-font.md) |
-| P127 | As the Vendor or an Owner: Settings, Name and icon: type a new name, tap an icon, Save | The sidebar, the phone's top bar and the browser tab show the new name and icon; Initials puts the letters back | [record](records/2026-11-11-portal-name-icon-font.md) |
-| P125 | On the PC: the start page (`npm start`), Overview and Put it on Cloudflare; narrow and dark too | A band names the next move; tiles have icons; a ring shows the steps done; the steps sit on one line | [record](records/2026-11-11-setup-page-look.md) |
-| P124 | On the PC: `npm run setup`; at step 2 pick Add another Vendor, type a second address of yours | The next list has it with the Another Vendor chip; after the deploy it signs in as a Vendor | [record](records/2026-11-11-setup-page-look.md) |
-| P90 | Email settings, Integrations, before email is set up: Ready to send | Each check that stops email says what to do in a soft coloured box you can press, not a long underlined line; the letters on the service tiles are easy to read | [record](records/2026-11-08-look-3-pages.md) |
-| P79 | Email in the sidebar, then its tabs row | The page that lists every email sent is called Delivery log, in the tabs row and as its heading (no Activity) | [record](records/2026-11-08-look-3-pages.md) |
-| P78 | System status, Alerts, with nothing open; then Roles | An empty list shows a calm box with its sentence centred, not a thin strip; the roles sit on a white card | [record](records/2026-11-08-look-3-pages.md) |
-| P77 | Settings: change one value (a time zone, or a switch), then press Save changes in the dark bar that rises at the foot; then change one and press Discard | No Save on each row; the bar appears only once something changed, says "Your changes were saved" after Save, and Discard puts the value back | [record](records/2026-11-08-look-3-pages.md) |
-| P76 | Home, then any other page from the menu | Home opens with a coloured Welcome back band saying what waits, with a chip to Get started; Get started has a bar of the steps done; each page's parts come in one after another, quickly; with reduce motion on, nothing moves | [record](records/2026-11-08-look-3-pages.md) |
-| P74 | Settings, Users or any page with a switch or a tick box; then wait on a page that shows a toast (save something) | Switches and tick boxes are round, smooth and in the portal's colour, also in dark; the toast draws a line that empties over six seconds and stops while your finger is on it | [record](records/2026-11-08-look-3-foundation.md) |
-| P73 | Any page: open your account (Menu, then your name at the foot), press the green dot; then the moon icon | The colours change in a circle spreading from the dot, the menu stays open on the same page; dark mode spreads the same way. With reduce motion on in the phone's settings, it just changes | [record](records/2026-11-08-look-3-foundation.md) |
-| P72 | Any page on the phone, scrolled to the bottom | Nothing sits along the bottom any more (2026-11-11): the page runs to the foot of the screen; the page's own heading (with its buttons) is under the bar at the top, no empty space above it | [record](records/2026-11-11-compose-and-phone-bar.md) |
-| P71 | Any page on the phone: tap each button of the bar along the top | Menu (left) opens the sidebar as a drawer from the left; the portal's name goes Home; Search and the bell (with its unread figure) open their pages; there is no bar along the bottom | [record](records/2026-11-11-compose-and-phone-bar.md) |
-| P68 | On the live portal as the Vendor: People & Access, Vendor access, Vendor accounts: Add a Vendor account with a second address of yours; then sign in with that address on another browser; then, as the first Vendor, Switch off the second | The second address lands on Home as a Vendor with no invite to accept; once switched off, its next page says No account here; your own row has no Switch off | [record](records/2026-11-08-vendor-accounts.md) |
-| P66 | Email settings, Integrations, the Resend service whose last check failed: paste a new key from resend.com/api-keys and press Save the new key | The page says the new key was sealed and checked just now; Last check shows today's time and Worked, and Ready to send turns green (a wrong key shows Resend's answer at once) | [record](records/2026-11-08-first-run-sign-in.md) |
-| P65 | On the PC: pull, then `npm run deploy` in the client folder. On a portal with no company yet, open it as the Vendor | The Create the company form shows the Owner named at step 2 as the first Owner, not owner@example.com | [record](records/2026-11-08-first-run-sign-in.md) |
-| P64 | On the PC: pull, then `npm run deploy` in the client folder; at step 6 open the link it shows (or let the browser open) and allow cf; stop it once to see it start again 10 seconds later. Then on the phone sign in as the Vendor, make the company if asked; then sign in as a person named at step 2 | Step 6 shows a link and a code and sets the door; the Vendor lands on Home; the named person lands on Home with their role, no Invite or Accept pressed | [record](records/2026-11-08-first-run-sign-in.md) |
-| P63 | On the PC: pull, then `npm run deploy` in the client folder; allow cf in the browser when it opens. Then on the phone open the portal as the Vendor, and as an address nobody invited | The deploy says the door is set; the phone gets the email-code page (no "Cloudflare" button), the Vendor lands on Home, the stranger reads "No account here" | [record](records/2026-11-05-no-key-door.md) |
-| P62 | The live portal, after its new key (replaced by P63: the door needs no key now): open its address as the Vendor | Cloudflare's page asks for your email and sends a code, no "Cloudflare" button; after the code, the portal loads | [record](records/2026-11-05-dead-key.md) |
-| P61 | After Update it: Users, under Named at setup press Invite all; then on another phone (or a private tab) open the portal as one of those people and enter the code from the email | Users says the invitations are made and no email is needed; the other person lands on "You are invited … as Member" (or Admin, Owner), presses Accept and sees Home | [record](records/2026-11-04-setup-people.md) |
-| P60 | The live portal, after Update it: open its address, enter the code from the email | Home loads with its look (colours, the sidebar), not "Not signed in"; a second page opens without a reload | [record](records/2026-11-04-sign-in-and-static-files.md) |
-| P59 | In the dark theme: Email, Write, then Settings, then Look and pick two other palettes | main buttons are a deep colour with white text, not pale with dark text; text boxes a shade darker than their card; a switch that is on has the same deep colour; links and tabs still light and easy to read | [record](records/2026-11-04-colour-pass.md) |
-| P58 | Email, Templates, then Users, then a list in Records | the bar says Email (or Users, Records) with its coloured icon; no second big title or description under it; the tabs right under the bar; a list's own name still shows under the tabs | [record](records/2026-11-04-phone-top.md) |
-| P1 | Home on a new portal | "Get started: 0 of 5 done", each open step a row; tapping one opens its page | [record](records/2026-11-03-get-started.md) |
-| P2 | Home | Needs you first (or "Nothing waits for you"), then the cards in two columns at most | [record](records/2026-10-27-needs-you.md) |
-| P3 | The menu button, then a section | the sidebar slides in over the page; a section opens without the whole page reloading | [record](records/2026-10-28-sidebar-without-reloads.md) |
-| P4 | Any page with tabs (Email, Access) | the tabs as one sideways row under the title, the open one marked | [record](records/2026-10-29-shorter-sidebar.md) |
-| P5 | The theme switch at the foot of the sidebar | light and dark both readable, buttons 40 px tall, fields do not zoom when tapped | [record](records/2026-10-27-portal-makeover.md) |
-| P32 | The bell (sidebar, or beside Search on a phone), after someone gives you a task | a figure on the bell; the page lists the task, bold; tapping it opens the task and the figure goes down |
-| P33 | Notifications, How you are told: switch Tasks' By email off | "Saved" shows at once, no Save button; the next task given to you is under the bell and no email comes |
-| P34 | Any page with chips (Tasks, Access), on a phone and on a computer | small rounded chips on one soft row, the open one tinted in the brand colour; buttons 40 px on the phone and 36 px under a mouse | [record](records/2026-11-03-look-2.md) |
-| P35 | Save any change (a task done), then a change refused (a form left blank) | "Saved" or "done" comes up at the bottom right (the foot on a phone) and leaves by itself after 6 s; a refusal stays until you press × | [record](records/2026-11-03-look-2.md) |
-| P36 | Settings, Find a setting; Parts, Find a module | one field with a magnifier and an arrow inside it, no separate big button; the page loads styled straight away | [record](records/2026-11-03-look-2.md) |
-| P37 | Users, Roles, Create role, Start from Member | every module a row with None, View, Edit and Manage always showing (a level the module has not is faded); Set all shown to Manage, then type in Find a module and press None: only the rows shown change; the arrow on Records lists its four permissions; the sentence in the Save bar follows | [record](records/2026-11-03-role-matrix.md) |
-| P40 | Your account (the foot of the sidebar), Look and colours: tap Emerald, then Dots; then open Tasks; switch the theme to Dark | each tap changes the page at once with a "saved" note; the green and the dots stay on every page and in dark; Back to the portal's own returns the blue | [record](records/2026-11-03-looks.md) |
-| P41 | Users, a user who holds a role: What they can do | one row per module with "3 of 4" and a word (View, Edit, Admin, Custom); the arrow on a row lists each permission and where it comes from | [record](records/2026-11-03-role-matrix.md) |
-| P42 | Automations, Files, a booking | the filters (All, On, Off) are soft chips; what you can do (When something happens, Upload a file, New folder) are white buttons with a border, so the two never look alike | [record](records/2026-11-03-look-2.md) |
-| P43 | Search (the magnifier), Customers, a records list, a form's answers | each search is one field with the magnifier in front and the arrow inside; Enter or the arrow searches | [record](records/2026-11-03-look-2.md) |
-| P44 | Users → Roles; Developer → Jobs | Roles lists Viewer, Member and Admin under "Start a role from a ready set"; a press opens the editor filled in, named, ready to save. In Jobs each time sits on one line with its cost beneath, and Run soon and Pause are two bordered buttons side by side | [record](records/2026-11-03-look-2.md) |
-| P46 | Approvals, Automations, Records on a computer; then on the phone | on the computer the page's button sits at the right of the filters (or of the heading on Records); on the phone it has its own row under them; nothing is cut off | [record](records/2026-11-03-look-2-step-2.md) |
-| P47 | Notifications, How you are told, on the phone | one grid, a row per module with two switches, In the portal and By email, all in view without sideways scrolling | [record](records/2026-11-03-look-2-step-2.md) |
-| P48 | Look and colours | each palette a gradient tile, each background a small preview; the one in use ringed; a tap changes the page at once | [record](records/2026-11-03-look-2-step-2.md) |
-| P49 | Users, Locations, Add a location; then Files, a file, Make a link | the add form opens in a dialog; the link comes up in the corner and stays until you press × | [record](records/2026-11-03-look-2-step-2.md) |
-| P50 | Bookings, Notifications, Tasks with nothing in them | the same dashed box on each, never a box inside a box | [record](records/2026-11-03-look-2-step-3.md) |
-| P51 | Settings on a computer, then on the phone | on the computer each setting's name and words on the left, its box and Save on the right; on the phone one under the other | [record](records/2026-11-03-look-2-step-3.md) |
-| P54 | Home on a new portal, as the Owner: tap Connect an email service | the one-step email setup opens straight away, not the list of integrations | [record](records/2026-11-03-easier-setup.md) |
-| P52 | As an Owner: Look and colours, pick Forest and Grid, press Make it everyone's look; then sign in as another user | "saved for everyone"; the other user sees green and the grid without picking anything; their own pick still wins on their phone | [record](records/2026-11-03-look-2-step-3.md) |
-| P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
-| P240 | Home, Users and Settings, press Menu; light and dark | The sidebar tinted with the portal's colour, each icon on a tile of its group's colour, the page on screen a solid tile and bold | [record](records/2026-11-15-one-sidebar-and-colour.md) |
-| P242 | Any page, press Menu | The drawer as narrow as the computer's sidebar, no wide blank strip beside the names; a long address ends in … | [record](records/2026-11-15-one-sidebar-and-colour.md) |
+Owed in [their own list](phone-tests-frame.md), P153 to P242.
 
 ### Lists, saved views and bulk actions
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P6 | Tasks, pick "Open", name it, Save view | a chip with the name above the list; tapping All and back to it works; Remove takes it away | [record](records/2026-11-03-saved-views.md) |
-| P7 | A records list, filter by a choice | the filters and the list fit; the save field sits under the chips | [record](records/2026-11-03-saved-views.md) |
-| P29 | Tasks, Open, with two tasks or more: tick two, press Mark done | the bar says "2 tasks chosen" and its buttons wake only once something is ticked; after the press, "Mark done: done for 2 rows" and both are on Done | [record](records/2026-11-03-bulk-actions.md) |
-| P30 | Tasks, Done: tick the box at the top on a computer, or each task on a phone, press Remove | a dialog asks first; Cancel leaves them; Remove takes them all away | [record](records/2026-11-03-bulk-actions.md) |
+| P6 | Tasks, pick "Open", name it, Save view | a chip with the name above the list; tapping All and back to it works; Remove takes it away | [record](../archive/records/2026-11-03-saved-views.md) |
+| P7 | A records list, filter by a choice | the filters and the list fit; the save field sits under the chips | [record](../archive/records/2026-11-03-saved-views.md) |
+| P29 | Tasks, Open, with two tasks or more: tick two, press Mark done | the bar says "2 tasks chosen" and its buttons wake only once something is ticked; after the press, "Mark done: done for 2 rows" and both are on Done | [record](../archive/records/2026-11-03-bulk-actions.md) |
+| P30 | Tasks, Done: tick the box at the top on a computer, or each task on a phone, press Remove | a dialog asks first; Cancel leaves them; Remove takes them all away | [record](../archive/records/2026-11-03-bulk-actions.md) |
 
 ### Settings
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P151 | Admin, Scheduled jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
-| P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](records/2026-11-03-optional-extras.md) |
-| P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](records/2026-11-03-get-started.md) |
-| P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot | [record](records/2026-10-31-access-settings-redesign.md) |
+| P151 | Admin, Scheduled jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](../archive/records/2026-11-12-quiet-portal.md) |
+| P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](../archive/records/2026-11-03-optional-extras.md) |
+| P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](../archive/records/2026-11-03-get-started.md) |
+| P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot | [record](../archive/records/2026-10-31-access-settings-redesign.md) |
 
 ### People and access
 
@@ -176,8 +72,8 @@ Owed in [their own list](phone-tests-apps.md), P376-P385, P468-P474, P512-P514, 
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P13 | Alerts | open alerts, the worst first; a server error listed with where, how often and its stack | [record](records/2026-11-03-error-log.md) |
-| P14 | Audit log, filter, Download | the list, the filters as chips; the file downloads on the phone | [record](records/2026-10-21-audit-seal-and-export.md) |
+| P13 | Alerts | open alerts, the worst first; a server error listed with where, how often and its stack | [record](../archive/records/2026-11-03-error-log.md) |
+| P14 | Audit log, filter, Download | the list, the filters as chips; the file downloads on the phone | [record](../archive/records/2026-10-21-audit-seal-and-export.md) |
 
 ### Email and Mail
 
@@ -188,20 +84,20 @@ each list stays small enough to read whole.
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P18 | Tasks: make one, mark it done | it shows on Home's Needs you, then leaves | [record](records/2026-10-27-tasks-module.md) |
-| P19 | Files: upload a photo, share a link | the upload from the camera roll, the link copied | [record](records/2026-10-27-files-module.md) |
-| P20 | Expenses: add one with a receipt photo | the camera opens; the claim goes to approval | [record](records/2026-10-27-expenses-module.md) |
-| P21 | Approvals, Announcements, Equipment | each list and form fits; a decision is two taps | [approvals](records/2026-10-27-approvals-module.md), [announcements](records/2026-10-27-announcements-module.md), [equipment](records/2026-10-27-assets-module.md) |
-| P22 | Bookings, Time off, Time clock, Shifts | the week or day views fit; clock in and out in one tap each | [bookings](records/2026-10-27-bookings-module.md), [time clock](records/2026-10-27-timeclock-module.md), [shifts](records/2026-10-27-shifts-module.md) |
-| P23 | Quotes and Invoices: make one, send it | the lines readable; the customer's page shows it | [quotes](records/2026-10-27-quotes-module.md), [invoices](records/2026-10-27-invoices-module.md) |
-| P24 | Privacy: search an address | the rows found, grouped by module | [record](records/2026-10-27-privacy-module.md) |
+| P18 | Tasks: make one, mark it done | it shows on Home's Needs you, then leaves | [record](../archive/records/2026-10-27-tasks-module.md) |
+| P19 | Files: upload a photo, share a link | the upload from the camera roll, the link copied | [record](../archive/records/2026-10-27-files-module.md) |
+| P20 | Expenses: add one with a receipt photo | the camera opens; the claim goes to approval | [record](../archive/records/2026-10-27-expenses-module.md) |
+| P21 | Approvals, Announcements, Equipment | each list and form fits; a decision is two taps | [approvals](../archive/records/2026-10-27-approvals-module.md), [announcements](../archive/records/2026-10-27-announcements-module.md), [equipment](../archive/records/2026-10-27-assets-module.md) |
+| P22 | Bookings, Time off, Time clock, Shifts | the week or day views fit; clock in and out in one tap each | [bookings](../archive/records/2026-10-27-bookings-module.md), [time clock](../archive/records/2026-10-27-timeclock-module.md), [shifts](../archive/records/2026-10-27-shifts-module.md) |
+| P23 | Quotes and Invoices: make one, send it | the lines readable; the customer's page shows it | [quotes](../archive/records/2026-10-27-quotes-module.md), [invoices](../archive/records/2026-10-27-invoices-module.md) |
+| P24 | Privacy: search an address | the rows found, grouped by module | [record](../archive/records/2026-10-27-privacy-module.md) |
 
 ### Customers
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P25 | The customer sign-in page, as a customer | the code arrives by email; the account page lists their sections | [sign-in](records/2026-10-27-customer-sign-in.md), [sections](records/2026-10-27-customer-account-sections.md) |
-| P26 | A customer's account, Files | the files shared with them open | [record](records/2026-10-27-files-shared-with-customers.md) |
+| P25 | The customer sign-in page, as a customer | the code arrives by email; the account page lists their sections | [sign-in](../archive/records/2026-10-27-customer-sign-in.md), [sections](../archive/records/2026-10-27-customer-account-sections.md) |
+| P26 | A customer's account, Files | the files shared with them open | [record](../archive/records/2026-10-27-files-shared-with-customers.md) |
 
 ## Passed
 

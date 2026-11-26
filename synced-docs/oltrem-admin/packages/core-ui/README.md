@@ -133,7 +133,7 @@ Since 2026-10-31 (`src/console.tsx`) the kit has the pieces an operations consol
 page reads as solid panes on hairlines, one row of options at the top, dense rows with a state at
 their edge, and numbers in a strip. A tone colour marks a state only, always beside a glyph or a
 word; a group's hue marks identity only. The pages of the email module are the first built from
-them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
+them ([the record](../../archive/records/2026-10-31-email-console-remake.md)).
 
 | Piece | Built on | Rule it keeps |
 |---|---|---|
@@ -163,7 +163,7 @@ on hover and to a screen reader, a fixed height whatever the data, and the hue o
 
 ## daisyUI and the Email pieces (Look 3)
 
-Since 2026-11-08 (the owner's choice, [the record](../../docs/records/2026-11-08-look-3-foundation.md))
+Since 2026-11-08 (the owner's choice, [the record](../../archive/records/2026-11-08-look-3-foundation.md))
 the stylesheet also carries a few of daisyUI's components as a Tailwind plugin, run only when
 the stylesheet is built: no script reaches the browser. `theme.css` names the ones taken
 (checkbox, radio, toggle, the text fields and progress; buttons, badge, kbd, skeleton, loading,
@@ -218,7 +218,7 @@ menu's accessible name. The day cells are announced with the date in the locale.
 
 Still to come from the plan's list: the primitives gallery page, and of the quality gates of plan
 12.6 axe, screenshots at 390 px and the CSP smoke test. Every page's names, labels and viewport
-are checked on each verify ([the phone and accessibility check](../../docs/records/2026-11-03-phone-a11y-check.md)).
+are checked on each verify ([the phone and accessibility check](../../archive/records/2026-11-03-phone-a11y-check.md)).
 
 ## Using it
 

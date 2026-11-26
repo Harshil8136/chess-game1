@@ -75,7 +75,7 @@ startup hook has finished, to another origin, or to a path that is not under `/a
 **The router.** The app uses Hono's trie router, which takes each route as it is added while the
 Worker loads. Hono's default router tries a faster router first, cannot take every module route,
 and so builds two routers on an isolate's first request, about 10 ms of that request's CPU
-(`docs/records/2026-11-01-cpu-budget.md`).
+(`archive/records/2026-11-01-cpu-budget.md`).
 
 ## Using it
 

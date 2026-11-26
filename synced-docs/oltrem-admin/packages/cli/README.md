@@ -414,7 +414,7 @@ port, a refused socket), the same deploy runs in the terminal instead.
 update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
 live), sent first to every page that connects, before the choices; a `status` event from a run
 (**Check again**, `run.mjs check`) replaces it. Its sections (since 2026-11-26,
-[record](../../docs/records/2026-11-26-start-page-remade.md)): **Run the portal** first (the
+[record](../../archive/records/2026-11-26-start-page-remade.md)): **Run the portal** first (the
 checks' warning with **See what to fix**; **Local** or **Production** as two big choices, Local's
 **Who may open it** as a sideways row, Start; while it runs, one panel with the address, how long,
 what it says now, **Open the portal**, **Copy**, **Stop**, and **Answer it** when a question
@@ -435,7 +435,7 @@ channel), drawn in its own section as a card with one part per title line, clear
 that card, an error seen again counted (×6) rather than repeated. The template's dev script sends a
 `serving` event with its address. The sidebar marks each section's state (the checks, the portal
 running, Cloudflare live, working, needing you or stopped) and the section being read. The page was
-remade compact on 2026-10-31 ([record](../../docs/records/2026-10-31-start-page-remake.md)), then
+remade compact on 2026-10-31 ([record](../../archive/records/2026-10-31-start-page-remake.md)), then
 as an app shell the same day.
 A choice marked stoppable (the portal on this computer) has a **Stop** button, which
 asks the process over IPC to stop what it started, then ends it three seconds later, with every

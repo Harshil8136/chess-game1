@@ -130,7 +130,7 @@ client template's tick test holds that bound, reading the period from `EVERY_TIC
 (exported). A tick also runs at most `MAX_JOBS_PER_TICK`
 (3) jobs, the longest waiting first, so the jobs due every five minutes spread over the one-minute
 ticks instead of all landing on one: each run stays within the free plan's 10 ms of CPU (measured
-2026-11-10 at 1 to 3 ms a job; the [record](../../docs/records/2026-11-10-reads-cpu-and-campaigns.md)).
+2026-11-10 at 1 to 3 ms a job; the [record](../../archive/records/2026-11-10-reads-cpu-and-campaigns.md)).
 `maxJobsPerTick` changes it. In the client template a day of one-minute ticks runs every five-minute job
 about every five minutes, never more than six apart, each tick within 45 queries (`templates/client/test/worker.test.ts`). `queryBudget` may also be a function of the env,
 asked once a tick, so it follows the client's Cloudflare plan: the client template hands in

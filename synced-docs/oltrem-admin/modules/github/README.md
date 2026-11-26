@@ -69,7 +69,7 @@ has one to read.
 - The docs mirror's status, for a client that keeps a mirror.
 - The newest kit: a run asks the public npm registry (`pnpm view`) for a package the kit does not
   publish there, so it records the newest version as unknown. Taking that lookup out is proposed
-  in [the codebase review](../../docs/records/2026-11-20-codebase-review.md).
+  in [the codebase review](../../archive/records/2026-11-20-codebase-review.md).
 
 ## The table
 

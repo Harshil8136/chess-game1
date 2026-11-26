@@ -374,7 +374,7 @@ trips before a page's own first read; now a page waits for its slowest read.
 - **The first page of a fresh copy** (2026-11-15): `createScreens` draws the frame once while
   the Worker loads, into nothing (`warmFrame`), so the renderer, the frame, the sidebar and its
   icons are compiled before the first request, whose CPU the Free plan counts; a fault there is
-  printed and the Worker starts as before ([record](../../docs/records/2026-11-15-cpu-first-request.md)).
+  printed and the Worker starts as before ([record](../../archive/records/2026-11-15-cpu-first-request.md)).
 - **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
   post `palette` and `back` to `POST /do/look`, which keeps the pattern the cookie already holds.
   With the script, the new colours and a change of theme spread from the button pressed as a
@@ -447,7 +447,7 @@ element its `aria-describedby` names while it is off and one of them is on.
 icon, the person, the sidebar's rows, the unread count, a page's own menu in the sidebar). The script sends it as `x-ui-frame` on
 every page it fetches; when the server's key for the new page is the same, the answer is only
 `<div class="ui-frame" data-here="…"><main>…</main></div>`, 40 to 80 percent smaller and 1 to
-2.5 ms less CPU (2026-11-11, [the record](../../docs/records/2026-11-11-portal-name-icon-font.md)),
+2.5 ms less CPU (2026-11-11, [the record](../../archive/records/2026-11-11-portal-name-icon-font.md)),
 and `data-here` names the sidebar row to mark (`data-here-as="true"` when the row holds the
 page's own menu). A page whose key differs is opened whole.
 
@@ -565,7 +565,7 @@ name made of its contents, kept for good, with its own type and `nosniff`; anyth
 version every page links (`src/generated/versions.ts`) and `no-cache` without it. From 2026-11-03
 to 2026-11-04 they were Cloudflare static assets: a Worker with static assets runs behind
 Cloudflare's asset router, which does not hand it the Access sign-in (`ctx.access`), so every page
-of a live portal refused everyone with KIT-E-0401 ([the record](../../docs/records/2026-11-04-sign-in-and-static-files.md)).
+of a live portal refused everyone with KIT-E-0401 ([the record](../../archive/records/2026-11-04-sign-in-and-static-files.md)).
 `oltrem deploy` and `oltrem upgrade` take that `assets` line out, and the deploy refuses any other.
 After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
 while a committed file differs from what the build writes. The two files are generated: never

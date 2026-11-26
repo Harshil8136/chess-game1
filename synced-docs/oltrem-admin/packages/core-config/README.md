@@ -102,7 +102,7 @@ names a zone: making one costs far more CPU than using it, and the first one mad
 also loads the runtime's time zone data (10 to 30 ms measured locally). `warmClock()` makes one
 and checks a zone; the client template calls it in the Worker's global scope, which runs while
 the Worker loads, outside the CPU time of its first request or tick
-(`docs/records/2026-11-01-cpu-budget.md`).
+(`archive/records/2026-11-01-cpu-budget.md`).
 
 ## The settings routes
 

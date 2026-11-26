@@ -178,7 +178,7 @@ are then checked in parts over the next runs, and the run that stops partway kee
 partly checked. With 96 runs a day this keeps up with about 2,700 rows a day; a busier log is
 checked over more than a day, never skipped. The daily seal no longer rechecks: before the
 change it rechecked all 7 seals in one run, which took most of a tick's CPU on its own
-(`docs/records/2026-11-01-cpu-budget.md`).
+(`archive/records/2026-11-01-cpu-budget.md`).
 
 **Ninety days in the database (2026-11-22).** The log keeps its last 90 days in D1
 (`KEEP_DAYS`, the owner's database review). The job `audit.archive` moves older rows into the

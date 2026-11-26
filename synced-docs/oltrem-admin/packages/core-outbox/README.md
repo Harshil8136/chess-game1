@@ -9,7 +9,7 @@ the truth, then replay what did not land.**
 Nothing here runs on its own. Whoever enqueues declares the job that calls `replay`: today that
 is email's `email.release` job, in Oltrem Mail. Until 2026-11-17 nothing called it, so a
 released row stayed pending for ever and a send the queue refused was never tried again
-(`docs/records/2026-11-17-outbox-replay.md`).
+(`archive/records/2026-11-17-outbox-replay.md`).
 
 ## How a row moves
 

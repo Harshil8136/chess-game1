@@ -82,7 +82,7 @@ The tool's other commands, which serve a client repository, are in `packages/cli
 | Who may do what: capabilities, roles, scopes, sessions, grants, approvals, the check; people | `modules/iam/README.md`, `modules/users/README.md`, then the plan's sections 6 and 7 |
 | A client repository: its template, its deploy, its first deploy | `templates/client/README.md`, then `packages/cli/README.md` |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
-| What was done and when | the dated records under `docs/records/` |
+| What was done and when, only if asked | `archive/records/` |
 | The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |
 
 ## 5. What to update, in the same commit
@@ -95,7 +95,7 @@ The tool's other commands, which serve a client repository, are in `packages/cli
 | A dependency | the catalog in `pnpm-workspace.yaml` and `dependencies.registry.json`, then `pnpm docs:build` |
 | A binding, var or secret of a Worker | its `oltrem.manifest.json`; one more than the cap needs an exception row with the reason and the owner's yes |
 | Where things stand | docs/README.md |
-| A big change | a dated record in `docs/records/`, in its README |
+| A big change | a record (4 KB at most) in `archive/records/`, from its template |
 | What a page shows | docs/phone-tests.md |
 | A pointer file | its template in `scripts/lib/agents.mjs`, then `pnpm agents:write` |
 | What a package does for its users | a note from `pnpm changeset` (docs/release.md) |

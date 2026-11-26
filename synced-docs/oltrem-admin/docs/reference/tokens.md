@@ -70,7 +70,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | changes only when the integration is made again; set the new id, and the connections signed in with the old one sign in again |
 | Why it exists | Airtable has no key an app can make that lasts, so a sign-in gives an hour's access token and a refresh token; a public integration (PKCE, no secret) lets each portal renew them itself with this id, so no portal and no relay endpoint holds a secret for it. |
-| Plan section | records/2026-11-22-airtable-sign-in.md |
+| Plan section | archive/records/2026-11-22-airtable-sign-in.md |
 
 ## BACKUP_PUBLIC_KEY
 
@@ -134,7 +134,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | changes only when the app is made again; set the new id |
 | Why it exists | Discord exchanges the sign-in code for the channel's webhook only with the application's id and secret. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## DISCORD_CLIENT_SECRET
 
@@ -150,7 +150,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | make a new secret in Discord's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
 | Why it exists | Discord exchanges the sign-in code for the channel's webhook only with the application's id and secret. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## GITHUB_PACKAGES_READ_TOKEN
 
@@ -198,7 +198,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | changes only when the app is made again; set the new id |
 | Why it exists | Google exchanges the sign-in code for a one-time access token, used once by the portal to create the sheet, only with the client's id and secret. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## GOOGLE_CLIENT_SECRET
 
@@ -214,7 +214,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | make a new secret in Google's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
 | Why it exists | Google exchanges the sign-in code for a one-time access token, used once by the portal to create the sheet, only with the client's id and secret. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## KEK
 
@@ -310,7 +310,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | add or remove a portal's address and set it again; no other step |
 | Why it exists | The relay sends a sealed answer back only to a portal on this list, so nobody can start a sign-in that lands on a site of their own. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## RELAY_SEAL_KEY
 
@@ -326,7 +326,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | run the script again into wrangler secret put; trips on their way at that moment come back as failed and the person presses again |
 | Why it exists | Added after the security review of 2026-11-22: a trip's state travels in addresses others can see, and without the relay's own key anyone who read it could seal an answer of their own to it. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## SESSION_KEY
 
@@ -358,7 +358,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | changes only when the app is made again; set the new id |
 | Why it exists | Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## SLACK_CLIENT_SECRET
 
@@ -374,7 +374,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | make a new secret in Slack's developer settings, set it on the relay, then revoke the old one; yearly, or at once if exposed |
 | Why it exists | Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold. |
-| Plan section | records/2026-11-22-apps-page-and-one-click-connect.md |
+| Plan section | archive/records/2026-11-22-apps-page-and-one-click-connect.md |
 
 ## SUPABASE_CLIENT_ID
 
@@ -390,7 +390,7 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | changes only when the app is made again; set the new id |
 | Why it exists | Supabase exchanges the sign-in code for a Management API token, used once by the relay to read the picked project's secret key, only with the app's id and secret. |
-| Plan section | records/2026-11-22-supabase-one-click.md |
+| Plan section | archive/records/2026-11-22-supabase-one-click.md |
 
 ## SUPABASE_CLIENT_SECRET
 
@@ -406,4 +406,4 @@ sources: [tokens.registry.json]
 | Expires | not set |
 | Rotation | make a new secret in the OAuth app's settings in Supabase, set it on the relay, then revoke the old one; yearly, or at once if exposed |
 | Why it exists | Supabase exchanges the sign-in code for a Management API token, used once by the relay to read the picked project's secret key, only with the app's id and secret. |
-| Plan section | records/2026-11-22-supabase-one-click.md |
+| Plan section | archive/records/2026-11-22-supabase-one-click.md |

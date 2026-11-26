@@ -89,7 +89,7 @@ is missing from it.
 | [Index](../README.md) | a row for the README, and one for the record |
 | [Architecture](../architecture.md) | the numbers taken, and the next free ones |
 | [Roadmap](../roadmap.md) | the module in its edition, and its row in the state of each module |
-| A record, `docs/records/<date>-<id>-module.md` | what changed and why in plain words, before and after as two flowcharts with an explanation, the impact on each part, how it was verified |
+| A record, `archive/records/<date>-<id>-module.md` | what changed and why in plain words, before and after as two flowcharts with an explanation, the impact on each part, how it was verified |
 | [Verification log](../verification-log.md) | one row: what the tests checked, and what was not (a phone, a deployed portal) |
 
 ## 5. Checking and pushing
