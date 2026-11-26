@@ -98,3 +98,4 @@ The records since 16 November:
 | [The Audit log: a strip of days, unusual sign-ins, every action in words](2026-11-25-audit-log-days-and-words.md) | the range as a chart of days, a tap lists one day; sign-ins from an unusual country or new browser flagged; every action written has a sentence, kept by a test; P780-P782 |
 | [Every dialog remade](2026-11-25-dialogs-remade.md) | head, body, foot |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
+| [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |

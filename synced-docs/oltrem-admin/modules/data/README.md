@@ -116,6 +116,25 @@ the service's words, and Status opens a problem after two failures in a row, as 
 is the part's one extra, Database checks (`data.watch`), off on a new portal and on a portal that
 saved its Modules switches before it existed (core-config migration `0077`).
 
+`data.services` (lane `data`, every hour, under the same extra since 2026-11-26, batch 2 of the
+integrations plan) asks each Supabase, Turso and Upstash connection's own service what needs a
+look, with the access token or API key the connection was given; one without it is not asked. At
+most three a run (`SERVICES_MAX`, as Turso takes five calls), the rest in turn by the hour, each
+with 5 s (`WATCH_WAIT_MS`); nothing is kept but the check's own line (`src/warnings.ts`):
+
+- **It fails**, so Status opens a problem after two runs and the alerts follow, when the service
+  has stopped something: a Supabase service not healthy (not one still starting), a Supabase
+  database in read-only mode, Turso's blocked reads or writes, an Upstash database not active.
+- **It asks for a look** (Status's "to look at", and Home's Status line) when a figure nears its
+  limit: a Supabase disk 90% full (`DISK_NEAR`, where Supabase grows it), a Turso account's rows
+  read or written, storage or bytes synced, or an Upstash database's requests this month, storage
+  or cost against its budget, 80% of the plan (`NEAR`), and a service that could not be asked,
+  with its words.
+
+A Supabase project is asked three things apart (`watch()` in `dialects/supabase.ts`: its services'
+health, read-only mode and the disk); a part its token may not read is left out, and all three
+refused is said.
+
 Home's Databases line reads the kept checks, for the whole portal like Home's other cards: "2 of
 3" answered, the failing count when a connection's last check failed, "not checked yet" for one
 with no check kept, "None" and Off when nothing is connected. Without Database checks it shows the
@@ -577,6 +596,12 @@ Inside the Workers runtime, every service answered from a script so nothing leav
   wrong shape refused), and the three routes through the pipeline: the Owner reads them, a
   manager without `data.insights.read` is refused, a bad page or bucket is refused, another
   service is refused, and users and storage are marked audited.
+- `test/warnings.test.ts`: what each service's answer needs a look for: services not healthy
+  (one starting left out), read-only mode, the disk at 90%, Turso's blocks and its allowance at
+  80%, an Upstash database not active, its requests, storage and cost near the plan; nothing for
+  figures under the line or limits not given. `test/usage.test.ts` also runs `data.services`
+  through the route's connections: nothing to look at, then a suspended Upstash database failing
+  it with its name, and a connection without a key not asked.
 - `test/usage.test.ts`: Neon's endpoint from its host and its project found among the key's,
   the figures read with no owner's email kept, only the API key sent and only GETs; Turso's
   organization and database from its host (the longest slug first), its usage and blocks; no key,
