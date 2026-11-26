@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/customers: Using it; Signing in; Sign-in services; Who may do what; The pages"
+title: "@oltrem/customers: using it, signing in, sign-in services, who may do what, the pages"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/customers/src; split from modules/customers/README.md]
+sources: [modules/customers/src/door.ts, customers.ts, services.ts, module.ts, pages.tsx]
 ---
 
-# @oltrem/customers: Using it; Signing in; Sign-in services; Who may do what; The pages
+# @oltrem/customers: using it, signing in, sign-in services, who may do what, the pages
 
 > Part of [the @oltrem/customers README](../README.md).
 
@@ -53,29 +53,23 @@ createApp<Env>({
 });
 ```
 
-`createCustomers` returns the `store`, the `services`, the module manifest and `door`. It stands on
-the IAM module (sessions, the authorizer) and the audit log. It adds four tables and no binding,
-variable or setting; it reuses the KEK secret the providers already seal their keys with.
+`createCustomers` returns the `store`, the `services`, the module and `door`, on the IAM module and
+the audit log. It adds four tables and no binding, variable or setting, reusing the providers' KEK.
 
-### The door and Cloudflare Access
 
-Staff sign in through Cloudflare Access, which stands in front of the whole portal. Customers do
-not: Access's free plan counts 50 people, and each customer would be one of them. So the client
-lets `/account` past Access, with a self-hosted Access application on the portal's address with
-the path `account` and a Bypass policy, the same step as for `/hooks` and `/healthz`
-(`oltrem deploy` prints it). The pipeline hands every request under `/account` to the door before
-it reads any Access identity:
+## The door and Cloudflare Access
 
-- the door reads only its own cookie, so a staff sign-in never opens a customer's page;
-- every other path still needs Access, so a customer's cookie opens no staff page or route;
-- the door's forms are refused unless they come from the portal's own page (their `Origin`, or a
-  browser's `Sec-Fetch-Site: same-origin`), and every answer is `no-store`;
-- a form's body is read only up to 4 KB (an address or a six-digit code needs far less), so a long
-  one is never held whole, and a link whose path is not valid percent-encoding leads back to the
-  account page or the sign-in, never to an error.
+Staff come through Access; customers do not (Access's free plan counts 50 people). The client
+lets `/account` past Access with a self-hosted application on the path `account` and a Bypass
+policy, as for `/hooks` and `/healthz` (`oltrem deploy` prints it); until then a customer meets the
+Access sign-in. The pipeline hands `/account` to the door before reading any Access identity:
 
-Until the Bypass is added, a customer who opens `/account` meets the Access sign-in, which lets in
-only the addresses it allows.
+- the door reads only its own cookie, so a staff sign-in opens no customer page, and every other
+  path still needs Access, so a customer's cookie opens no staff page;
+- its forms need the portal's own `Origin` or `Sec-Fetch-Site: same-origin`; answers are
+  `no-store`;
+- a form body is read only to 4 KB (`FORM_MAX`); a path that is not valid percent-encoding leads
+  back to the account or the sign-in, never an error.
 
 ## Signing in
 
@@ -86,36 +80,33 @@ sequenceDiagram
   participant DB as D1
   participant E as Email
   C->>D: POST /account/sign-in (address)
-  D->>DB: count this hour's requests; is it a customer who is on?
+  D->>DB: count this hour's requests; a customer who is on?
   D->>DB: store the code's hash, ten minutes
-  D->>E: the code, when it is a customer's address
+  D->>E: the code, only to a customer's address
   D-->>C: 303 to /account/code (the same for any address)
   C->>D: POST /account/code (six digits)
-  D->>DB: right, unused, not expired? mark it used; a new sign-in
-  D-->>C: 303 to /account, with the sign-in's cookie
+  D->>DB: right, unused, in time? mark used; a new sign-in
+  D-->>C: 303 to /account with the sign-in cookie
 ```
 
-| Rule | Why |
+| Rule (`LIMITS`) | Why |
 |---|---|
-| The answer to an address is the same whether it is a customer's or not, and so is the code page | Nobody learns who is a customer by trying addresses |
-| Only addresses staff added get a code; a customer who is off gets none | Nobody signs themselves up; the company decides who its customers are |
-| A code is six digits, drawn evenly, kept only as the SHA-256 of its row id and itself | A copy of the database shows no code |
-| A code lasts ten minutes, once; a new code ends the last; five wrong tries end it (audited as `customers.code-burned`) | Guessing a code is one in a million per try, and five tries a code |
-| An address gets five codes an hour; a network (the hash of its address) asks thirty times an hour, then the page says to wait | A mailbox is not flooded, and one network cannot try many addresses |
-| A sign-in is 32 random bytes in a `__Host-` cookie (`Secure`, `HttpOnly`, `SameSite=Lax`, thirty days), kept only as its SHA-256 | The cookie stays on this host over HTTPS, scripts cannot read it, and a copy of the database opens nothing |
-| A sign-in ends after thirty days, when the customer signs out, signs out of the other devices, is switched off, or staff end their sign-ins | A lost phone is closed from either side |
+| The same answer and code page for any address | Nobody learns who is a customer |
+| Only addresses staff added, and on, get a code | The company decides who its customers are |
+| Six digits drawn evenly, kept as the SHA-256 of its row id and itself | A database copy shows no code |
+| `codeMinutes` (10), once; a new code ends the last; `tries` (5) wrong end it (`customers.code-burned`) | One in a million a try, five tries a code |
+| `perAddress` (5) codes an hour; `perNetwork` (30) requests an hour by the network's hash | No flooded mailbox, no address sweeping |
+| 32 random bytes in `__Host-oltrem_customer` (`Secure`, `HttpOnly`, `SameSite=Lax`, `sessionDays` 30), kept as its SHA-256, marked used at most hourly | HTTPS only, unreadable by scripts, a copy opens nothing |
+| Ends after 30 days, on sign out, sign out of other devices, switched off, or staff ending sign-ins | A lost phone is closed from either side |
 
-Every sign-in is in the audit log as `customers.sign-in` by `customers.door`, with the customer's
-id. Requests for a code are rows in `customers_codes`, deleted after a day.
+Each sign-in is audited `customers.sign-in` by `customers.door`.
 
 ## Sign-in services
 
-A company whose customers already have an account somewhere (its own app on Auth0 or Supabase, a
-Google Workspace, Okta, Keycloak) can offer "Continue with" that service at the door, beside the
-emailed code, which always stays. Whoever holds `customers.services` connects one on
-`/customers/sign-in` with three things the service gives when an application is made there: the
-issuer address, a client id and a client secret. The application at the service is given the
-return address `https://<portal>/account/return`.
+A company whose customers have an account elsewhere (its app on Auth0 or Supabase, Google
+Workspace, Okta, Keycloak) can offer "Continue with" it beside the code, which always stays.
+`customers.services` connects one on `/customers/sign-in` with the issuer, a client id and secret;
+the service's application gets the return address `https://<portal>/account/return`.
 
 ```mermaid
 sequenceDiagram
@@ -123,57 +114,52 @@ sequenceDiagram
   participant D as Door at /account
   participant S as Sign-in service
   C->>D: GET /account/with/<service>
-  D-->>C: 303 to the service, with state, nonce and a PKCE challenge; the three kept in a cookie
-  C->>S: signs in there
+  D-->>C: 303 to the service with state, nonce, PKCE challenge (kept in a cookie)
+  C->>S: signs in
   S-->>C: 303 to /account/return with a code and the state
   C->>D: GET /account/return
-  D->>S: the code, the PKCE verifier, the client id and secret (server to server)
+  D->>S: code, verifier, client id and secret (server to server)
   S-->>D: an ID token
-  D->>D: issuer, this client, the nonce, the time, a verified address; a customer who is on?
-  D-->>C: 303 to /account, with the sign-in's cookie
+  D->>D: issuer, client, nonce, time, verified address; a customer who is on?
+  D-->>C: 303 to /account with the sign-in cookie
 ```
 
-| Rule | Why |
+| Rule (`SERVICE_LIMITS`) | Why |
 |---|---|
-| Connecting reads the service's `<issuer>/.well-known/openid-configuration` first; the issuer it names must be the one typed, and its addresses HTTPS | A typo or a look-alike service is refused before anything is kept |
-| The client secret is sealed under the KEK with its own data key, bound to its row; no page or route shows it again | A copy of the database shows no secret |
-| The trip carries `state`, `nonce` and a PKCE `S256` challenge, kept in a `__Host-` cookie for ten minutes | Nobody can finish another browser's sign-in, replay a token or use a stolen code |
-| The ID token comes straight from the service's token endpoint over HTTPS, as OpenID Connect Core 3.1.3.7 allows, and its issuer, audience (and `azp`), nonce and times (two minutes' skew) are checked | The token is the service's answer to this sign-in and no other |
-| The token must say the address was verified (`email_verified`), and the address must be a customer the company added who is on | A service proves an address; the company still decides who its customers are |
-| A sign-in made this way is the same `__Host-` sign-in as the code's, marked with the service's name, and audited as `customers.sign-in` | Ending sign-ins, switching off and signing out work the same |
-| Each call to the service (its details, the token) gives up after ten seconds (`SERVICE_LIMITS.callSeconds`) | A service that hangs fails the sign-in with a reason instead of holding the customer's page |
+| Connecting reads `<issuer>/.well-known/openid-configuration` (kept `discoveryMinutes`, 60); its issuer must be the one typed, its addresses HTTPS | A typo or look-alike is refused first |
+| The secret is sealed under the KEK with its own data key, bound to its row, never shown again | A database copy shows no secret |
+| `state`, `nonce` and PKCE `S256` in `__Host-oltrem_customer_with` for `returnMinutes` (10) | No finishing another browser's sign-in, replay or stolen code |
+| The ID token comes straight from the token endpoint (OpenID Connect Core 3.1.3.7); issuer, audience (and `azp`), nonce and times (`skewSeconds`, 120) checked | It answers this sign-in only |
+| `email_verified` and an added customer who is on | A service proves an address; the company decides |
+| The same sign-in as the code's, marked with the service | Ending, switching off and signing out work alike |
+| Each call gives up after `callSeconds` (10) | A hanging service fails with a reason |
 
-Services that fit: any OpenID Connect provider that publishes its details at the issuer and puts
-`email_verified` in its ID tokens, such as Auth0, Okta, Keycloak and Google. Supabase's OAuth 2.1
-server fits too: its issuer is the project's `/auth/v1` address, its project needs asymmetric
-signing keys, and the company's own app shows its consent page. Microsoft Entra ID's tokens carry no
-`email_verified`, so the door refuses their sign-ins. A company connects ten services at
-most; one that is switched off disappears from the door, and sign-ins made with it stay.
+Any OpenID provider that publishes its details and sends `email_verified` fits: Auth0, Okta,
+Keycloak, Google, and Supabase's OAuth 2.1 server (issuer `/auth/v1`, asymmetric signing keys).
+Microsoft Entra ID sends no `email_verified`, so its sign-ins are refused. At most `count` (10)
+services; one switched off leaves the door, its sign-ins stay.
 
 ## Who may do what
 
-Three capabilities on bit plane `26`, held across the company:
+Bit plane `26`, across the company. A customer holds none: the door is all they reach.
 
 | Capability | Lets them |
 |---|---|
-| `customers.view` | see the customers, search them, and when each signed in; see the sign-in services, never their secrets |
-| `customers.manage` | add a customer, change their name and note, switch them off and on, end their sign-ins, email them the link |
-| `customers.services` | connect, switch and remove the sign-in services (admin class, a fresh sign-in) |
-
-A customer holds no capability: the door is the only place they reach.
+| `customers.view` | See and search customers and their sign-ins; see the services, never secrets |
+| `customers.manage` | Add, change name and note, switch off and on, end sign-ins, email the link |
+| `customers.services` (admin, fresh sign-in) | Connect, switch and remove sign-in services |
 
 ## The pages
 
 | Path | Shows |
 |---|---|
-| `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in. An address that is a customer already is refused with a link to open that customer. Beside it, to whoever manages them, "Import from a spreadsheet" in a dialog: a CSV file with Email and Name columns (Note if wanted, in any order); the notice after says how many were added and how many skipped as customers already, and nobody is emailed |
-| `/customers/sign-in` | how customers sign in: the emailed code always; the sign-in services with their state, issuer and last use; to whoever may set them up "Connect a service" in a dialog (the name on the button, the issuer address, the client id, the client secret) and, in each row, "Stop offering" or "Offer again" and "Remove", confirmed in a dialog; the return address to give the service |
-| `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; a row with "Make a quote for them" and "Make an invoice" (to whoever makes them somewhere, while the customer is on, with the address filled in), and to whoever manages them "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; their quotes and their invoices, the newest five of each with "All of them" (read through those modules' own APIs, so a portal without one, or a person who does not see them, gets no section); the sign-ins, the newest first, with the browser, how and when. The notice after an add or an email of the link says the email is queued; one that no email service took links Email settings |
-| `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
-| `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
-| `/account/open/<module>/<id>` | one thing a module showed the customer, a file to download, say; the module checks again that it is theirs; anything else returns to `/account` with "That is no longer open to you" |
-| `/account/act/<module>/<id>/<action>` | a button on the account page, accept a quote, say: posted by the signed-in customer, the module checks again that the item is theirs and still takes that answer, then back to `/account` with "Thank you: we have your answer", or "That is no longer open to you" |
-| `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); an item's first button posts at once, and any other, Decline say, opens below to ask "Are you sure? Your answer is final." before "Yes, decline" posts it (a disclosure, so the door needs no script); where they are signed in (this device marked) and "Sign out on the other devices" |
+| `/customers` | Where customers sign in, counts, a search, the list by name with state, address and last sign-in; for managers **Add a customer** (address, name, a staff-only note, "Email them the link", ticked; an existing address links to that customer) and **Import from a spreadsheet** (a CSV with Email and Name, Note optional; added and skipped counted, nobody emailed) |
+| `/customers/sign-in` | The emailed code always; services with state, issuer, last use; **Connect a service** (button name, issuer, id, secret), **Stop offering** or **Offer again**, **Remove** (confirmed); the return address |
+| `/customers/:id` | State, address, who added them, last sign-in; **Make a quote for them** and **Make an invoice** (for whoever makes them, while on, address filled); for managers Email the link, Change, End their sign-ins (n), Switch on or off (confirmed); the note; the newest five quotes and invoices (through those modules' APIs); sign-ins newest first. After an add or link, a notice that the email is queued, or a link to Email settings when no service took it |
+| `/account/sign-in` | Address and **Email me a code**, and **Continue with** each service that is on |
+| `/account/code` | The code, with the one-time-code keyboard, and a link for a new one |
+| `/account` | Name, address, Sign out; a section per module (the newest 20 with state, date and replies; "Nothing yet"; an unreadable section said, the rest shown); an item's first button posts at once, others (Decline) ask "Are you sure? Your answer is final." first, without a script; devices (this one marked) and **Sign out on the other devices** |
+| `/account/open/<module>/<id>` | One item (a file to download); the module checks it is theirs, else back with "That is no longer open to you" |
+| `/account/act/<module>/<id>/<action>` | A button posted by the customer; the module checks again, then "Thank you: we have your answer", or "That is no longer open to you" |
 
-The door's pages use the portal's look, without the staff sidebar; the mark at the top leads to
-`/account`.
+The door's pages use the portal's look without the staff sidebar; the mark leads to `/account`.

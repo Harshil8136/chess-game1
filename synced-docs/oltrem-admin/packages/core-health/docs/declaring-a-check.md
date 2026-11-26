@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/core-health: Declaring a check; Running the checks"
+title: "@oltrem/core-health: declaring and running checks, status pages, watched addresses, tables, tests"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [packages/core-health/src; split from packages/core-health/README.md]
+sources: [packages/core-health/src/health.ts, watched.ts, test]
 ---
 
-# @oltrem/core-health: Declaring a check; Running the checks
+# @oltrem/core-health: declaring and running checks, status pages, watched addresses, tables, tests
 
 > Part of [the @oltrem/core-health README](../README.md).
 
@@ -33,63 +33,85 @@ export const notes = defineModule({
 | Field | Rule |
 |---|---|
 | `id` | `<module>.<name>`, stable: the key of its row |
-| `lane` | the group the page shows it under, lower-case letters, digits and dashes: `storage`, `email`, `access` |
-| `summary` | a few words the Status page shows |
-| `every` | optional: how often it runs, as a job's interval (`5m`, `1h`); `15m` (`CHECK_EVERY`) when left out. A check that failed last time runs on every run of the job until it passes |
-| `run(env, ctx)` | answers `{ status: 'ok' \| 'warn' \| 'fail', message? }`; a throw, no answer within the timeout (five seconds) or an answer of another shape is a failure with the reason |
+| `lane` | The group on the page (`storage`, `email`, `access`): lower-case letters, digits, dashes |
+| `summary` | A few words for Status |
+| `every` | Optional interval (`5m`, `1h`), else `CHECK_EVERY` (15m); a check that failed runs on every run until it passes |
+| `run(env, ctx)` | `{ status: 'ok' \| 'warn' \| 'fail', message? }`; a throw, no answer in `DEFAULT_TIMEOUT_MS` (5 s) or another shape is a failure with the reason |
 
-The contract (`@oltrem/core-module`) refuses a bad id, lane, interval or summary when the module
-loads.
+`@oltrem/core-module` refuses a bad id, lane, interval or summary when the module loads.
 
 ## Running the checks
 
 ```ts
 const health = createHealth<Env>({ bindings: (env) => ({ db: env.DB }), modules, report });
 modules.push(health.module);
-const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), modules, report });
 ```
 
-`createHealth` returns the runner and the `health` module, with one job, `health.run`, every five
-minutes, and two routes for Status, each checked against `health.read` (bit plane 6, a read): `GET
-/api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each budget's reading
-as `items`, an empty list when the budgets are not measured, with the `plan`, what one run may do on
-it as `limits`, the events queue's backlog asked live as `queue`, and, while the key is why the
-budgets go unmeasured, the steps to fix it as `key`), `GET /api/health/requests` , `GET
-/api/health/requests/key/:subject`, and the Home card's `GET /api/health/home` (how many checks fail
-or need a look). The tick runs the job like any other job, so a client gets system health by
-mounting the module, with no cron of its own. Each run of the job takes the checks whose time has
-come, so it fits in the tick's 45 queries (the Free plan's 50 an invocation) beside the other jobs:
-a check never run, one that failed last time and waits to be confirmed, and one whose `every` has
-passed since it last ran (five minutes at least, less half a run of slack); the ones to confirm
-first, then the ones never run, then the longest overdue, twelve at most a run (`CHECKS_PER_RUN`),
-and the job comes back five minutes later for the rest.
+The `health` module has the job `health.run` (`HEALTH_EVERY`, 5m) and routes under `/api/health`
+behind `health.read` (bit plane 6): `GET /checks` (every listed row), `GET /budgets` (each budget
+as `items`, the `plan`, its `limits`, the live `queue` backlog, and `key` while a missing key
+leaves them unmeasured), `GET /requests` and `GET /requests/key/:subject`
+([request figures](cloudflare-plans-budgets.md#request-figures)). Home's Status card is a module
+part (how many fail or need a look).
 
-The job sleeps while all is well: a run that leaves no failure to confirm and no check waiting
-answers `'idle'`, and the next run is half an hour away (`HEALTH_IDLE`) instead of five minutes. A
-first failure brings the job back five minutes later to confirm it, so a problem opens within about
-35 minutes of starting, where it was 10; a run by hand (the jobs page's Run now) checks at once. A
-run used to cost a row written per check, every five minutes, whatever it found: about 1,600 rows a
-day on a portal with nothing wrong. Now a check's row is written only when its status, message or
-count of failures changed, and when each check last ran, with the time it took, is kept together in
-one row of the same table (id `~checked`, never listed), one write a run.
+Each run takes, in this order, checks waiting to confirm a failure, checks never run, then the
+longest overdue, at most `CHECKS_PER_RUN` (12), so it fits the tick's query budget; the rest come
+five minutes later. A run with nothing to confirm or waiting answers `'idle'` and sleeps
+`HEALTH_IDLE` (30m); a first failure brings it back in five minutes, so a problem opens within
+about 35 minutes. Run now checks at once.
 
-The checks taken run in manifest order, each with the time it took, and the rows that changed are
-written in one batch with the row of last runs: the status, the message (its first 400
-characters), how many failures in a row, and since when the problem is open. The count of failures in a row resets on any pass or
-warning. From the second failure in a row the problem is open: `onOpen(row, env)` is called
-once, when it opens, and `onClose(row, env)` once, when the check passes again, after the rows
-are written; a failure of either hook is reported through `report(error, checkId)` and the run
-goes on.
+Rows are written in one batch only when a check's status, message (first `MESSAGE_MAX`, 400
+characters) or failure count changed, plus one row `STAMPS_ID` (`~checked`, never listed) holding
+when each check last ran and how long it took. A pass or a warning resets the count. On the second
+failure `onOpen(row, env)` is called once; on the next pass `onClose(row, env)`; a hook's failure
+goes to `report(error, checkId)` and the run goes on.
 
-`run(env, ctx)` runs every declared check at once, whatever its pace, and returns the ids by
-status and the ids opened and closed on that run. `list(env)`
-returns the declared checks' rows by lane then id. The row of a check no mounted module declares
-any more is kept in the table but left out of `list`, so of the page, the report and Home's card:
-before 2026-11-12 a check taken out of the kit (`iam.door`) showed its last answer for ever.
+`run(env, ctx)` runs every check at once and returns the ids by status, opened and closed.
+`list(env)` returns rows by lane then id, leaving out checks no mounted module declares. Given
+`off` (`@oltrem/core-config`), a switched-off module's checks (or a check whose own id is off,
+such as `audit.sealed`) are not run or listed, and an open problem of theirs, or of an undeclared
+check, is closed through `onClose`.
 
-Given `off` (the parts switched off on the Features page, `@oltrem/core-config`), a switched-off
-module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
-their counts; a problem of theirs that was open is closed through `onClose`, so its alert
-resolves, and so is one of a check no mounted module declares any more. Switched back on, its
-checks run again on the next tick (`test/parts.test.ts`). A check whose own id is in the set (an
-optional extra switched off, such as `audit.sealed`) is treated the same way, alone.
+## Service status
+
+Given `statusPages` (`pages(env)`, and `fetch` for tests), the check `health.status-pages` (lane
+`services`, `STATUS_PAGES_EVERY`, 30m) reads each page's `<page>/api/v2/status.json` side by side,
+`STATUS_PAGE_MS` (3 s) each, at that address only, 16 KB at most. The template names Cloudflare's
+page and those of the sending email services whose definition names one (`status`). Only a major or
+critical outage warns, its service first; a minor problem is OK in the page's words; a page that
+does not answer or answers another shape is said and stays OK, so it never opens an alert. Outside
+words are kept plain, 80 characters. It is an extra that starts off; off, no page is asked.
+
+## Web addresses to watch
+
+Given `watched` (`addresses(env)`, and `fetch` for tests), the check `health.addresses` (lane
+`services`, `WATCHED_EVERY`, 15m) and the Owner's setting `health.watched_addresses`
+(`WATCHED_SETTING`, Settings, Company): up to `WATCHED_MAX` (10) lines, each `https://…`, optionally
+` | ` and words its page must hold (`https://shop.example.com | Add to cart`).
+
+| Result | When |
+|---|---|
+| Fail (two runs open an alert) | Not 2xx, no answer in `WATCH_WAIT_MS` (4 s), unreachable (cause named), or the words not in the first `WATCH_BYTES_MAX` (64 KB, case ignored) |
+| Warn | Slower than `WATCH_SLOW_MS` (2 s), or a 3xx (not followed; where it goes is named) |
+| OK | Otherwise, or no lines |
+
+Only public addresses (`publicAddress`, as the developer module's webhooks): `https://`, no user or
+password, a dotted name, not a number or an inside name (`.local`, `.internal`, `.corp`). Messages
+show host and path, never the query.
+
+## Tables
+
+| Migration | Table | Columns |
+|---|---|---|
+| `0009` | `oltrem_health` | `id`, `module_id`, `lane`, `status`, `message`, `checked_at`, `ms`, `failures`, `open_since`; written only by the job |
+| `0014` | `oltrem_budgets` | `id`, `used`, `day`, `measured_at`, `tried_at`, `problem`; written only by `health.measure` |
+
+## Tests
+
+| File | What it proves |
+|---|---|
+| `test/health.test.ts` | Rows written; a problem opened on the second failure, `onOpen` once, `onClose` on a pass, a warning resetting the count; throws, timeouts and nonsense recorded with the reason; undeclared rows left out; the tick running the job, writing only changes, sleeping, twelve a run; the contract's refusals |
+| `test/budgets.test.ts` | With a stand-in for Cloudflare: one call per measure, every figure read, CPU in ms, size from D1; warn and fail lines; jobs paused and resumed after midnight UTC; a refused or missing key named with its fix, never shown; the key's steps; Workers Paid's month, no pause past 90%; an unreadable plan as free; the queue's backlog |
+| `test/status-pages.test.ts` | Declared only with pages; minor OK, major warns without an alert; no answer, 404, another shape, a move or a large answer said and OK; plain words; nothing asked while off |
+| `test/watched.test.ts` | Each failure and warning; public addresses only; the query never shown |
+| `test/parts.test.ts` | A switched-off module's checks not run or listed, its open problem closed, running again when back on |
