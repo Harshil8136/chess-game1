@@ -99,9 +99,12 @@ standard ones and every time reads in the viewer's zone with its name ("Nov 26, 
 UTC stays in the technical details. A row's head gives the severity and kind, the title, Open or
 Resolved and who it is assigned to; it opens to Observed activity and Recommended response (for
 an account-access alert, what to do if it was them and if it was not, with links to Users and the
-sign-in history), then Timing, Ownership, Notifications and Classification, the technical details
-folded (the event fingerprint with its own copy button, the alert id, the source, both times in
-UTC), and an internal note. Its actions, for whoever holds `alerts.manage`: Assign to me or
+sign-in history), then the facts in one wrapping band (first detected, last activity, who it is
+assigned to, who resolved it and why, the recipients, the delivery, when it was sent, how long it is
+muted; what the row's head says is not repeated, so an open alert fits one screen, 2026-11-26),
+the technical details folded (the event fingerprint with its own copy button, the alert id, the
+source, both times in UTC), and an internal note: one box beside Add note, with Remove note once
+there is one. Its actions, for whoever holds `alerts.manage`: Assign to me or
 Unassign, Resolve incident, which asks why (Legitimate activity verified, Unauthorized activity
 contained, False positive, Duplicate, Problem fixed, Other with a few words) and keeps it as the
 alert's `resolution` (migration `0098`), Mute emails for this alert for 1, 7 or 30 days or Unmute,

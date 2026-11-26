@@ -125,6 +125,14 @@ lone "Data >" row above a page inside a section is now one link back with its ar
 back; the bell has a tooltip naming it and how many are unread (its spoken name, hover and count
 were already there); and every page's figures read label first, then the number (P848, P849).
 
+An hour later the owner found two things still wrong: the tick box kept touching the row's
+coloured edge, and an open alert was too tall to see on one screen. The edge now runs down the
+whole row, left of the box, with room between them (P850). An open alert lost about half its
+height (P851): the four fact columns became one wrapping band of label and value, without the
+status, severity, category, event type and channel the row's head already shows; the sign-in
+steps are two short lines; and the note is one box beside its button, the author line kept, with
+Remove note in the same form.
+
 ## Verified
 
 - `modules/alerts` tests: let go, note, mute that survives a new alert and unmute, delete only
