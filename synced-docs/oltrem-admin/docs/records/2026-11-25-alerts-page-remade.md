@@ -83,8 +83,9 @@ On 2026-11-26 the owner found the account menu broken in the phone's drawer: onc
 followed its names it was too narrow, so the colour dots and the theme buttons ran past its edge
 and Look and colours and the email were cut short. The drawer keeps its full width again (16 rem,
 or the screen less 56 px), the colour dots wrap to a second line instead of leaving the menu, and
-on a computer the menu is never narrower than 15 rem, over the page beside a narrow sidebar
-(P820).
+on a computer the menu is never narrower than 15 rem (P820). The same morning the owner found the
+fitted sidebar "TOO thin": the portal's name was cramped and the address cut. The sidebar is now a
+steady 17 rem, on a computer and as the phone's drawer (P819).
 
 ## Verified
 
