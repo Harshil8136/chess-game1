@@ -1,147 +1,91 @@
 # @oltrem/privacy
 
-Privacy requests: when someone asks to see, correct or delete the data the company holds on them,
-or to stop a use of it, the request is logged here with the day it is due. The portal finds their
-data in every part of it in one search, gives a copy as one file once their identity is checked,
-reminds whoever answers as the due day nears, and keeps what the person was told. Every step is in
-the audit log.
+Privacy requests: someone asks to see, correct or delete the data the company holds on them, or to
+stop a use of it. The request is logged with its due day; the portal finds their data in every part
+in one search, gives a copy once their identity is checked, reminds as the day nears, and keeps what
+the person was told.
 
 ## Using it
 
 ```ts
-import { createPrivacy } from '@oltrem/privacy';
-import { pages as privacyPages } from '@oltrem/privacy/pages';
-import { withPages } from '@oltrem/core-module';
-
 const privacy = createPrivacy<Env>({
   bindings: (env) => ({ db: env.DB }),
   config: settingsFor,
-  modules: () => modules,
+  modules: () => modules, // read when a search runs
 });
 const modules = [iam.module, /* ... */ withPages(privacy.module, privacyPages)];
 ```
 
-`createPrivacy` returns the `store` and the module manifest. `modules` is read when a search runs,
-so the list can name the privacy module itself. It stands on the IAM module (sessions, the
-authorizer) and the audit log, and adds no binding, secret or variable.
+It returns `store` and the manifest, stands on IAM and the audit log, and adds no binding, secret or
+variable. Two capabilities on bit plane 17, read at the company (a request is about the whole
+company's data): `privacy.read` and `privacy.manage` (log, search, record the identity check,
+download, close).
 
-## Who may do what
-
-Two capabilities on bit plane `17`, both read at the company itself, since a request is about the
-whole company's data: someone who holds them only at a place is refused.
-
-| Capability | Lets them |
-|---|---|
-| `privacy.read` | see the requests and how each was answered |
-| `privacy.manage` | log a request, search for the person's data, write down how their identity was checked, download the copy, close it; Needs you shows them the requests due |
-
-## The setting
-
-| Key | Default | Meaning |
+| Setting | Default | Meaning |
 |---|---|---|
-| `privacy.answer_days` | `30` (1 to 90) | a request is due this many days after the day it came in |
-
-Thirty days matches the GDPR's one month. Other laws differ, and the client sets the number its
-own law gives: the CCPA gives 45 days, and Mexico's 2010 data protection law (LFPDPPP) gives 20
-business days. These are a starting point read on 2026-10-27, not legal advice; the 2025 Mexican
-law was not checked. Sources: [GDPR deadlines](https://gdprlocal.com/dsar-rules-and-deadlines/),
-[US state laws](https://www.bdemerson.com/article/dsar),
-[the LFPDPPP](https://kyc-systems.com/blog/lfpdppp).
+| `privacy.answer_days` | `30` (1–90) | Days after it came in that a request is due. GDPR gives a month, the CCPA 45 days, Mexico's LFPDPPP 20 business days (read 2026-10-27, not legal advice; the 2025 Mexican law not checked): [GDPR](https://gdprlocal.com/dsar-rules-and-deadlines/), [US states](https://www.bdemerson.com/article/dsar), [LFPDPPP](https://kyc-systems.com/blog/lfpdppp) |
 
 ## How a request is answered
 
-1. **Log it**: the kind (see, correct, delete, stop a use), the person's address (kept in lower
-   case), what they asked, and the day it came in (today when left out; never a future day). Its
-   due day is set from the setting.
-2. **Find their data**: every mounted module that declares `personal` (core-module, "Personal
-   data") is asked for its rows under the address, at most `PERSONAL_ROWS` (200) each, and the
-   audit log for what the address did in the portal in its last 90 days (older rows are moved to
-   the bucket, core-audit "Ninety days in the database", and are read with the audit log's export
-   of those days). The page shows each part with its row count
-   and a link to its page; the quotes and invoices link their lists filtered to the address, the
-   customers module the customer's own page. The search is audited with the parts it found.
-3. **Check who asks**: their data goes only to them. Whoever answers writes down how the identity
-   was checked; until then the copy is refused (`KIT-E-2801`). Checked after a search, the search
-   is made again (and audited again), so where their data is stays on the page.
-4. **Download a copy**: one JSON file with the request and every part's rows. It is not cached,
-   and each download is audited.
-5. **Correct or delete** in the module that holds the data, through the link: that module's own
-   rules, checks and audit apply. Nothing is deleted from here, by design. For a request to delete,
-   the page says plainly that the portal cannot erase a person's rows: no module deletes them yet.
-   It names what can be stopped (a quote withdrawn, a customer switched off, a shift not yet
-   published removed) and what is kept for the record (sent quotes and invoices, answered requests,
-   the audit log), so the answer tells the person both.
-6. **Close it**: answered or refused, with what the person was told. A closed request is kept as
-   it was; a new request is logged if they ask again (`KIT-E-2802`).
+Limits are `LIMITS` in `src/privacy.ts`.
 
-The modules that declare `personal` in the kit:
+1. **Log it**: the kind (`KINDS`: access, correct, delete, object), the address (lower case), what
+   was asked (`details` 2,000), the day it came in (today by default, never ahead); the due day
+   follows the setting.
+2. **Find their data**: every mounted module that declares `personal` answers up to `PERSONAL_ROWS`
+   (200) rows for the address, and the audit log what the address did in its last 90 days (older
+   rows are in the bucket, read by the audit export). Each part shows its count and a link to its
+   page (quotes and invoices filtered by `?email=`, the customer's own page). Audited with the parts
+   found.
+3. **Check who asks** (`verification` 500): until written down the copy is refused (`KIT-E-2801`);
+   checked after a search, the search runs again.
+4. **Download a copy**: one JSON file, not cached, each download audited.
+5. **Correct or delete** in the module that holds the data, by its link and rules; nothing is deleted
+   from here. For a delete, the page says plainly that no module erases a person's rows yet, what
+   can be stopped (a quote withdrawn, a customer switched off, an unpublished shift removed) and what
+   is kept for the record (sent quotes and invoices, answered requests, the audit log).
+6. **Close it**: `STATUSES` answered or refused, with what they were told (`answer` 2,000). A closed
+   request stays as it was (`KIT-E-2802`); a new ask is a new request.
 
-| Module | Title | What it finds |
-|---|---|---|
-| users | Their account and roles | the account (address, name, language, on or off) and every role given to it |
-| forms | Form answers | every answer sent from the address or naming it, with the notes on it |
-| records | Records in lists | every record whose text names the address, its values by field label |
-| campaigns | Campaigns they were sent | whether they are never mailed, and each campaign sent to them |
-| email | Emails sent to them | each message sent to the address and what became of it (the text is not kept) |
-| (the audit log) | What they did in the portal, last 90 days | the actions they made: when, what, on what, the outcome |
+Parts that declare `personal`: users, forms, records, connect, customers, quotes,
+invoices, expenses, timeoff, timeclock, shifts, assets, Oltrem Mail's email and campaigns, and the
+audit log. Each package's README says what it answers.
 
-## The pages
+## Pages and routes
 
 | Path | Shows |
 |---|---|
-| `/privacy` | Open or Closed in a row; how many are past due; "Log a request" in a dialog; the requests, open ones by due day |
-| `/privacy/:id` | the request and its state; a row with "Find their data", "Download a copy" (once checked), "Close it" and "All requests"; how the identity was checked, or the form to write it down; where their data is, after a search; what they were told, once closed |
-| `/privacy/:id/copy` | the copy as a file |
+| `/privacy` | Chips Open, Closed; how many past due; **Log a request** in a dialog; open requests by due day |
+| `/privacy/:id` | State; **Find their data**, **Download a copy** (once checked), **Close it**; the identity check or its form; where their data is; what they were told |
+| `/privacy/:id/copy` | The copy as a file |
 
-## The routes
-
-| Route | Capability | What it does |
+| Route | Needs | What it does |
 |---|---|---|
-| `GET /requests` (`status` open or closed) | `privacy.read` | the requests, at most 100, with how many are open and past due |
-| `POST /requests` | `privacy.manage` | logs a request |
-| `GET /requests/:id` | `privacy.read` | one request |
-| `POST /requests/:id/verify` | `privacy.manage` | writes down how the identity was checked |
-| `POST /requests/:id/find` | `privacy.manage` | searches every module and the audit log |
-| `GET /requests/:id/copy` | `privacy.manage` | the copy, once the identity is checked |
-| `POST /requests/:id/close` | `privacy.manage` | closes it, answered or refused, with what they were told |
-| `GET /todo` | `privacy.manage` | Needs you: the requests due within seven days or past due |
+| `GET /requests` (`status`) | `privacy.read` | `listed` (100), with open and past-due counts |
+| `POST /requests` | `privacy.manage` | Logs one |
+| `GET /requests/:id` | `privacy.read` | One |
+| `POST /requests/:id/verify`, `/find`, `/close` | `privacy.manage` | Record the identity check; search; close |
+| `GET /requests/:id/copy` | `privacy.manage` | The copy, once checked |
 
-## Health
+Module part: Needs you (due within `soonDays` 7 or past due). Health: `privacy.due` warns while one is
+past due, with how many and since when.
 
-The check `privacy.due` warns while a request is open past its due day, naming how many and since
-when.
+## Table and errors
 
-## Table
+Migration `0025`: `privacy_requests` (kind, address, what was asked, came in, due, state, the identity
+check and by whom, what they were told and by whom).
 
-Migration `0025_privacy.sql`, additive and idempotent: `privacy_requests` (the kind, the address,
-what was asked, when it came in and is due, the state, how the identity was checked and by whom,
-what the person was told and by whom). It holds the address the person gave, which is what
-answering them needs.
+Block `28xx`: `KIT-E-2801` identity not checked yet, `2802` already closed. Bad input is `KIT-E-0422`.
 
-## Errors
-
-The `28xx` block: `KIT-E-2801` the identity is not checked yet, `KIT-E-2802` the request is
-already closed. An address, a day or a text out of bounds is the core's `KIT-E-0422`.
-
-## Not here yet
-
-- Erasing a person's rows: no module offers an erase hook yet, so a request to delete is carried
-  out by stopping what each module can stop and saying what is kept. A hook in `personal` (beside
-  `find`) would let each module erase or anonymise its own rows from here; it is a design change
-  across the modules.
-- A public form for people to make a request themselves: logged by staff for now, from email or
-  a website form answer.
-- Business days for the due day.
+Not built: erasing rows (a hook beside `find` in `personal`, a change across modules); a public form
+for people to ask themselves; business days for the due day.
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module: the manifest and the
-contract's refusal of a `personal` without a title; a request logged at the company only, its
-address in lower case, its due day, and the refusals audited; the search across modules (a part
-with more rows than a search answers, an address outside the portal dropped) and the audit log;
-the copy refused before the check, then given as one file, audited; Needs you and the health check
-for a request past due; a closed request kept as it was. The page tests (`test/pages.test.ts`)
-render a request: one to delete says what cannot be erased and links each part's rows, one to see
-offers the copy instead, and checking who asks after a search keeps their data on the page. Each kit module's `personal` is tested in
-its own package. The client template's screens test logs a request for an address a campaign was
-sent to, finds it, checks who asks, downloads the copy and closes it.
+| File | Covers |
+|---|---|
+| `test/privacy.test.ts` | The manifest and the contract refusing an untitled `personal`; logged at the company only, address lower-cased, due day, refusals audited; the search across modules (capped parts, outside addresses dropped) and the audit log; the copy refused then given, audited; Needs you and the check; a closed request kept |
+| `test/pages.test.ts` | A delete request says what cannot be erased and links each part; an access request offers the copy; a check after a search keeps the results |
+
+Each module's `personal` is tested in its own package. The client template's screens test logs a
+request for an address a campaign was sent to, finds it, checks who asks, downloads and closes.
