@@ -2,115 +2,80 @@
 title: "Roadmap: what the kit sells, what is built, what comes next"
 status: living
 owner: vendor
-last_verified: 2026-11-03
-sources: [the plan sections 4.4 and 18; market research of 2026-10-27 listed at the end]
+last_verified: 2026-11-26
+sources: [the plan sections 4.4 and 18; market research of 2026-10-27 listed at the end; modules/*/README.md]
 ---
 
 # Roadmap
 
-> **In plain words.** Oltrem sells a ready-made admin portal that any business can use, running in
-> the client's own Cloudflare account at almost no hosting cost. This page says what buyers of
-> such portals pay for, how the kit's parts group into things a client can buy, which parts are
-> built, and the order of what comes next with the reason for each. It never aims the kit at one
-> kind of business: every feature here is one any company uses.
+> **In plain words.** Oltrem sells a ready-made admin portal any business can use, in the client's
+> own Cloudflare account at almost no hosting cost. This page says what buyers pay for, how the
+> parts group into editions, what is built and how the next part is chosen. Every feature is one
+> any company uses. Each module's README owns what it does and what it does not do yet.
 
 ## What buyers pay for
 
-The research of 2026-10-27 (sources at the end) read the internal-tool builders (Retool, Appsmith,
-Budibase, NocoBase, Jet Admin, UI Bakery), the client-portal products sold to service firms, and
-the standards behind audit logs, webhooks and bulk email. Five things come up again and again:
+From the internal-tool builders (Retool, Appsmith, Budibase, NocoBase, Jet Admin, UI Bakery),
+client-portal products and the standards behind audit logs, webhooks and bulk email:
 
-1. **Permissions people trust.** Role-based access, permissions on the data and not only on the
-   page, and a log of who changed whose access. Several reviews name a weak permission model as
-   the reason a general tool loses to a dedicated portal.
-2. **An audit trail by default.** Every action recorded with who, what, to what, when and from
-   where, exportable for an auditor. The audit-log products (WorkOS among them) settle on the same
-   shape: an actor, an action, targets, a context of address and device, and short metadata.
-3. **Files with sharing.** A place to keep documents, shared inside the company by the same rules
-   as everything else, and outside it by a link that expires.
-4. **Messages that reach people.** Notices to staff, replies to customers, and bulk sends to a
-   list, within the mailbox providers' rules: authenticated sending, one-click unsubscribe
-   (RFC 8058), a complaint rate under 0.3 per cent, and an opt-out honoured within two days.
-5. **Automation and an API.** Things that run on their own (schedules, triggers), an API key for
-   other systems, and signed outgoing webhooks so other tools hear about changes (the Standard
-   Webhooks scheme: an id, a timestamp and an HMAC signature per delivery).
+1. **Permissions people trust**: roles, permissions on the data, a log of access changes.
+2. **An audit trail by default**: who, what, to what, when and from where, exportable.
+3. **Files with sharing**: inside by the same rules, outside by a link that ends.
+4. **Messages that reach people**: authenticated sending, one-click unsubscribe (RFC 8058), a
+   complaint rate under 0.3 per cent, opt-outs honoured within two days.
+5. **Automation and an API**: schedules and triggers, API keys, signed webhooks (Standard Webhooks).
 
-Pricing in the market is per user: from about 5 to 50 US dollars a user a month, with the
-self-hosted tiers of the builders reserved for their enterprise plans. That is the opening:
+The market charges about 5 to 50 US dollars a user a month, self-hosting reserved for enterprise
+plans. That is the opening.
 
-## Why a client picks Oltrem
-
-| What the client gets | Why it matters against the alternatives |
+| What the client gets | Why it matters |
 |---|---|
-| It runs in the client's own Cloudflare account, on the free plan | no per-user hosting bill; the client owns the data and the account |
-| Ready-made features, not a builder | nothing to assemble: records, forms, people, email, backups work on day one |
-| Phone first | every page works on a phone before anything loads, with no app to install |
-| Permissions by place | a role holds at one branch or department and not another, with exceptions per person and "see it as" to check |
-| Audit, backups and health built in | the log is sealed daily, the database is copied nightly and a drill proves it opens, and System status watches the free plan's limits |
-| An AI agent can extend it safely | a contract file, strict gates and a module generator, so a client's own feature is added without breaking the rest |
+| Their own Cloudflare account, the free plan | No per-user hosting bill; they own the data |
+| Ready-made features, not a builder | Records, forms, people, email and backups work on day one |
+| Phone first | Every page works on a phone, no app to install |
+| Permissions by place | A role holds at one branch and not another, with exceptions and "see it as" |
+| Audit, backups and health built in | A sealed log, nightly copies with a drill, System status watching the free plan |
+| An AI agent can extend it safely | A contract file, strict gates and a module generator |
 
-## Editions: how the modules group into what a client buys
+## Editions
 
-| Edition | Modules | Who it is for |
-|---|---|---|
-| **Core**, in every portal | people and access (`iam`, `users`), privacy requests, settings, audit, alerts, health, backups, deploys | every client |
-| **Work** | records (your own lists), forms and inbox, files, tasks, approvals, announcements, bookings, time off, expenses, equipment, time clock, shifts, quotes, invoices, automations, analytics | a team that runs its day in the portal |
-| **Messages** | providers, email, campaigns (bulk sends), later SMS and WhatsApp | a business that writes to its customers |
-| **Developer** | API keys, outgoing webhooks, the API reference, the jobs page | a business that connects other systems |
-| **Website** (later) | the public site shell, its content, SEO, visitor analytics | a business whose website runs on the same account |
+An edition is a list of modules mounted in the client's Worker; nothing else changes.
 
-An edition is a list of modules mounted in the client's Worker; nothing else changes between them.
+| Edition | Modules |
+|---|---|
+| **Core**, in every portal | `iam`, `users`, `privacy`, settings, `alerts`, audit, health, `jobs`, `backup`, `github` |
+| **Work** | `records`, `forms`, `files`, `tasks`, `approvals`, `announcements`, `bookings`, `timeoff`, `expenses`, `assets`, `timeclock`, `shifts`, `quotes`, `invoices`, `customers`, `automations`, `analytics`, `connect` |
+| **Admin** | `data` (connected databases), API keys (`iam`) |
+| **Messages** | `providers`, and from Oltrem Mail (packed in `vendor/mail/`) `email`, `campaigns`, `mail` |
+| **Developer** | `developer` (webhooks, the API reference) |
+| **Website** (later) | The public site shell, content, SEO, visitor analytics |
 
-## State of each module
+## State
 
-| Module | Edition | State |
-|---|---|---|
-| `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations (one or fifty at a time, each link emailed), switching off; a grant ending within the week is emailed to its holder and an overdue access review shows on the System status page (both off on a new portal until switched on, since 2026-11-21); a new or unusual sign-in emails its person and warns on System status, Signed in today and Sign everyone else out, and Your sign-ins with Sign out everywhere ([the record](../archive/records/2026-11-21-safer-and-calmer.md)); the phone screens for My access (hold, turn on, ask), the decisions waiting (requests and approvals) and access reviews (start, keep or remove, close), groups (members, roles) and the Vendor's access, and a role given for 30 days, 90 or a year, or off until turned on |
-| settings, audit, alerts, health, backup, github | Core | **built**; Home's What changed card and System status's Service status, both off until switched on ([the record](../archive/records/2026-11-21-safer-and-calmer.md)) |
-| `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export; CSV import (all rows or none) |
-| `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies; read and unread ([the record](../archive/records/2026-11-21-safer-and-calmer.md)) |
-| `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports; `email` and `campaigns` live in Oltrem Mail, their own private repository, and the kit keeps them packed in `vendor/mail/` ([the record](../archive/records/2026-11-02-mail-moved-out.md)) |
-| `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash; a file's kind read from its first bytes, a room for each place, links with a passcode or emailed when made ([the record](../archive/records/2026-11-21-safer-and-calmer.md)) |
-| `campaigns` | Messages | **built** 2026-10-27: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, a suppression list fed by bounces and complaints |
-| `developer` | Developer | **built** 2026-10-27: the jobs page (every job and flow, its last runs, run soon, pause), webhooks fed by the audit log and signed as Standard Webhooks sign them, with retries and a delivery log, the API reference read from the manifests; each job's last 24 hours, why the jobs wait, and Check for work ([the record](../archive/records/2026-11-21-safer-and-calmer.md)) |
-| `connect` | Work | **built** 2026-11-22: the Connect apps page: chat alerts to Slack, Teams, Discord and Google Chat (the Developer webhooks in each chat's own format), a calendar link of the person's own bookings, shifts, time off and due tasks, live spreadsheet links for Google Sheets and Excel (`connect.share`), Make, Zapier and n8n, each card with the service's logo ([the record](../archive/records/2026-11-22-connect-apps.md)). One-click sign-in for Slack and Discord next |
-| `data` | Admin | **started** 2026-11-22: Connected data. The dialects that read a client's own Turso, Neon, Supabase, Airtable and Upstash Redis, read, and changed where a manager turns editing on ([the README](../modules/data/README.md)). The routes, the Data tab under Integrations and saved views; the hourly Database checks extra, Home's Databases line, Rename, tables opened by name and one connection per address; the usage count left out, as it would cost a write on every page read; editing rows of Turso, Neon and Supabase, per database and off at first, with Undo for 30 days, built 2026-11-23 ([the record](../archive/records/2026-11-23-connected-data-edits.md)); questions in SQL on Neon and Turso built 2026-11-23 ([record](../archive/records/2026-11-23-connected-data-questions.md)); hidden and masked columns built 2026-11-23 ([record](../archive/records/2026-11-23-connected-data-hidden-columns.md)); an answer as a CSV download, Older changes and saved questions 2026-11-24; the rows grid made over and a Supabase project's users, storage and health 2026-11-25, and with an access token its logs, requests, advisors, backups, functions and questions in SQL, the token pasted or given by Sign in with Supabase and renewed through the relay; a Neon or Turso database's usage with an optional API key; then an approval before a change, and the no-key link to AWS, Google Cloud, Azure and Snowflake. Sign in with Supabase and with Airtable through the connect relay shipped 2026-11-22 ([Supabase](../archive/records/2026-11-22-supabase-one-click.md), [Airtable](../archive/records/2026-11-22-airtable-sign-in.md)) |
-| API keys | Admin | **built** 2026-11-24: an Owner makes a key under Users and access, Settings, with a role at a location and an optional end; another system calls `/hooks/api/...` with it as that service account; shown once, kept as a hash, revoked at once ([the record](../archive/records/2026-11-24-api-keys.md)) |
-| `automations` | Work | **built** 2026-10-27: when an audited action happens (a website form's answer among them) or on a schedule in UTC, send an email or raise an alert, or a client's own action; a log of every run. Actions on records, and chains of steps, later |
-| `analytics` | Work | **built** 2026-10-27: the portal's activity counted from the audit log by day, area and action, against the period before; two bar charts, a CSV of the days; the Monday summary, an email to each Owner of last week against the week before, off until switched on. A module's own series (emails delivered) later |
-| `tasks` | Work | **built** 2026-10-27: work given to people at a place, by a day; the person's own first and on Home; done by them or by whoever manages the place's tasks; an email when given; "Make a task" for automations; comments, emailed to the people on the task. Files on a task and a board view later; repeating tasks are an automation on a schedule |
-| `approvals` | Work | **built** 2026-10-27: ask for a yes at a place (a purchase, days off, a payment); whoever decides there approves or declines, never their own, a no with its reason; what waits on Home; the answer emailed; every step audited, so an automation can follow it. Two answers in a row and limits by amount later |
-| `announcements` | Work | **built** 2026-10-27: notices to the people at a place, on their Home until read; "I have read it" when one must be confirmed, and who has read it for whoever posts; shown until a day, then past. An email to everyone at the place and reminders later |
-| `bookings` | Work | **built** 2026-10-27: rooms, vehicles and equipment at a place, booked by the hour on the company's clock (a setting), never twice at once; the week's days in a row; cancelled by the person who booked or a manager. Opening hours, repeating bookings and a week view later |
-| `timeoff` | Work | **built** 2026-10-27: vacation, sick leave and personal time asked at a place; whoever decides there approves or declines, never their own, a no with its reason; never two requests on one day; the vacation days a year (a setting) with what each person took, asked and has left; who is off in the next two weeks, the kind kept for the people who decide; withdrawn until it begins; the answer emailed. Public holidays, half days and days carried over later |
-| `expenses` | Work | **built** 2026-10-27: what people spent claimed back at a place with a photo or PDF of the receipt, in the company's currency (a setting); whoever decides there approves or declines with a reason, then marks it paid, never their own; what the company owes each person; Needs you with the sum to pay; a month of approved and paid claims as a CSV file for the accountant; every step emailed and audited. Mileage, limits by amount and reading the receipt later |
-| `assets` | Work | **built** 2026-10-27: the laptops, phones, keys and tools at a place, each with its tag, who holds which since when; handed to a person of the company (emailed) or straight on, taken back, retired with a reason once nobody holds it, every move kept; the holder always sees what they hold; Needs you with what people whose account is off still hold. Photos, signatures on hand-over, value and lending for a while later |
-| `timeclock` | Work | **built** 2026-10-27: clock in and out at a place from the phone, once at a time; the week on the company's clock with the total; whoever manages there sees the team's hours, adds time someone forgot and fixes a missed clock-out with why, never their own; Needs you after 12 hours clocked in; the hours as a CSV file for payroll. Breaks, overtime and location later |
-| `shifts` | Work | **built** 2026-10-27: whoever plans at a place drafts the week's shifts, a person on each or left open, and publishes the week: the people of the place see it and each person is emailed their shifts; one shift at a time a person; open shifts taken once by someone free then; a published shift changed or removed tells the people on it; drafts and open shifts in Needs you. the week before copied as drafts in one tap. Swaps and warnings about time off later |
-| `quotes` | Work | **built** 2026-10-27: a price sent to a customer, line by line, from a place, in the company's currency (a setting); a draft until sent, then the customer is emailed and accepts or declines it on their account page until its last day, once; the maker told; accepted quotes in Needs you; withdrawn while open; every step audited, so an automation can start the work; a page to print or save as a PDF, for staff and the customer; an accepted quote becomes an invoice. A signature and taxes later |
-| `invoices` | Work | **built** 2026-10-27: a customer billed line by line from a place, from scratch or from an accepted quote, in the company's currency (a setting); a draft until sent, then the customer is emailed and sees it on their account page with how to pay; marked paid once with how, the customer thanked; overdue ones in their own view and in Needs you; voided while unpaid; every step audited; a page to print or save as a PDF, with the company's legal details (a setting), for staff and the customer; reminders by email three days before the day and the day after, once the Owner turns them on. Online payment (it needs a payment provider's secret) and taxes later |
-| customer sign-in | Work | **built** 2026-10-27 (`customers`): staff add customers; a customer signs in at `/account` with a code emailed to them, outside Cloudflare Access's 50 free places, and sees their account and sign-ins; beside the code, "Continue with" a sign-in service the company uses (any OpenID Connect provider: Auth0, Supabase, Google, Okta, Keycloak), chosen per client; each module adds the customer's own things to their account page: the messages they sent through the forms with the replies, the files shared with them, downloaded there, with an email telling them it is there, the quotes sent to them, accepted or declined there, and their invoices, owed or paid; customers imported from a spreadsheet, nobody emailed until staff choose. Next: customers who sign themselves up, when a client wants that |
-| `privacy` | Core | **built** 2026-10-27: privacy requests (see, correct, delete, stop a use) with their due day from a setting, one search across every module that declares `personal` and the audit log, the identity checked before a copy is downloaded as one file, Needs you and a health check for the days. A public form for people to ask themselves later |
-| `site`, `cms`, `seo`, visitor analytics | Website | later, as plan section 4.4 lists them |
-| `sms`, WhatsApp | Messages | later |
-| `vps`, `postgres` | Developer | later, optional |
+Every module under `modules/` is **built**; its README says what it does and lists what it does
+not do yet. Started or later:
+
+| Part | State |
+|---|---|
+| `data` | Started: Turso, Neon, Supabase, Airtable and Upstash read and, where turned on, edited with Undo; questions in SQL; a Supabase project's sections; usage. Next: an approval before a change, and links to AWS, Google Cloud, Azure and Snowflake |
+| `customers` | Next: customers who sign themselves up, when a client wants it |
+| `site`, `cms`, `seo`, visitor analytics | Later (plan 4.4) |
+| SMS, WhatsApp | Later |
+| `vps`, `postgres` | Later, optional |
 
 ## How a round is chosen
 
-The next module is the one that most clients would use, that needs no new resource or secret, and
-that the free plan can carry. A module that needs a new kind of resource waits for the owner's
-yes with the reason written down (R-09).
+The next module is the one most clients would use, that needs no new resource or secret, and that
+the free plan can carry. One that needs a new kind of resource waits for the owner's yes with the
+reason written down (R-09).
 
 ## Sources
 
-Read on 2026-10-27:
-
-- [Retool vs Appsmith comparison, Jet Admin](https://www.jetadmin.io/blog/retool-vs-appsmith-which-is-better-for-internal-tool-development/)
-- [Best platforms for building internal tools 2026, UI Bakery](https://uibakery.io/blog/best-platforms-for-building-internal-tools)
-- [Appsmith vs Retool 2026, WeWeb](https://www.weweb.io/blog/appsmith-vs-retool-comparison)
-- [NocoBase plugins](https://www.nocobase.com/en/plugins)
-- [Client portal features for service firms, Assembly](https://assembly.com/blog/client-portal-features)
-- [Client portal software for approval workflows, Noloco](https://noloco.io/blog/client-portal-software-for-approval-workflows-in-2026)
-- [WorkOS audit logs](https://workos.com/docs/audit-logs/index.md)
-- [Gmail and Yahoo sender requirements, Bird](https://bird.com/docs/knowledge-base/deliverability/gmail-yahoo-requirements)
-- [The View Transition API, Chrome for Developers](https://developer.chrome.com/docs/web-platform/view-transitions)
+Read on 2026-10-27: [Jet Admin, Retool vs Appsmith](https://www.jetadmin.io/blog/retool-vs-appsmith-which-is-better-for-internal-tool-development/);
+[UI Bakery, internal tools 2026](https://uibakery.io/blog/best-platforms-for-building-internal-tools);
+[WeWeb, Appsmith vs Retool](https://www.weweb.io/blog/appsmith-vs-retool-comparison);
+[NocoBase plugins](https://www.nocobase.com/en/plugins);
+[Assembly, client portal features](https://assembly.com/blog/client-portal-features);
+[Noloco, approval workflows](https://noloco.io/blog/client-portal-software-for-approval-workflows-in-2026);
+[WorkOS audit logs](https://workos.com/docs/audit-logs/index.md);
+[Bird, Gmail and Yahoo requirements](https://bird.com/docs/knowledge-base/deliverability/gmail-yahoo-requirements).
