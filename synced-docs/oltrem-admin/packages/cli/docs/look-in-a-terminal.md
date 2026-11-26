@@ -1,22 +1,21 @@
 ---
-title: "@oltrem/cli: The look in a terminal and more"
+title: "@oltrem/cli: the look in a terminal, manifest check, migrations"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [packages/cli/src; split from packages/cli/README.md]
+sources: [packages/cli/look/index.js, packages/cli/src/manifest.ts, manifest-check.ts, migrations.ts]
 ---
 
-# @oltrem/cli: The look in a terminal and more
+# @oltrem/cli: the look in a terminal, manifest check, migrations
 
 > Part of [the @oltrem/cli README](../README.md).
 
 ## The look in a terminal
 
-Every command a person runs at a terminal shows itself the same way: `npm install`, `npm run dev`,
-`npm run update` and `npm run deploy` in the kit, `oltrem deploy` and `oltrem upgrade` in a client
-repository. The look is `look/index.js` here, plain JavaScript with its types beside it
-(`look/index.d.ts`), so the kit's scripts use it before anything is built and a client
-repository's through `@oltrem/cli/look`. It has no dependency.
+Every command a person runs (`npm install`, `npm run dev`, `npm run update`, `npm run deploy` in
+the kit; `oltrem deploy`, `oltrem upgrade` in a client repository) looks the same. The look is
+`look/index.js`, plain JavaScript with no dependency and its types in `look/index.d.ts`, so the
+kit's scripts use it before any build and a client through `@oltrem/cli/look`.
 
 ```text
 ┌  Oltrem deploy
@@ -31,147 +30,87 @@ repository's through `@oltrem/cli/look`. It has no dependency.
 
 | Part | What it is for |
 |---|---|
-| The rail | `┌` a command's title, `◆` a step or a question, `│` what belongs to it, `└` how it ended |
-| Colour | one meaning each: cyan a step and a number to act on, green done, yellow a warning, red a stop, grey what may be skimmed. Off when the output is not a terminal or `NO_COLOR` is set; on with `FORCE_COLOR` |
-| Long work | a spinner with what it is doing, how far (pnpm's packages, wrangler's migrations) and for how long, then one line saying what was done and how long it took. Only in a terminal; elsewhere a line before and a line after |
-| A tool's own output | kept in `.oltrem/<command>.log` beside the code (git ignores the folder). When the tool fails, its last twelve lines are shown under the stop, with the log's path. When it asks something or names a link to open, its output is shown as it is from then on |
-| The old Windows console | the console PowerShell 5 opens by itself cannot draw every symbol, so it gets `●`, `√`, `×` and a `|/-\` spinner, which its fonts carry; Windows Terminal, VS Code's terminal and the others get the full set (the same test as `is-unicode-supported`) |
+| The rail | `┌` title, `◆` a step or question, `│` what belongs to it, `└` how it ended |
+| Colour | Cyan a step or number to act on, green done, yellow a warning, red a stop, grey skimmable. Off outside a terminal or with `NO_COLOR`; on with `FORCE_COLOR` |
+| Long work | A spinner with what, how far and how long, then one line with the time taken; outside a terminal, a line before and after |
+| A tool's output | Kept in `.oltrem/<command>.log` (git-ignored). On failure its last 12 lines show under the stop with the log's path; once it asks something or names a link, its output shows as it is |
+| Old Windows console | PowerShell 5's console gets `●`, `√`, `×` and a `\|/-\` spinner (the `is-unicode-supported` test); other terminals the full set |
 
-`runTool` runs a tool this way; `runToolSync` does the same for a caller that cannot wait, through
-a Node process of its own (`look/run.js`) that draws while the caller waits. The `wranglerRunner`
-`oltrem deploy` uses shows wrangler's long steps this way when a label names them; in a workflow,
-where nobody watches, wrangler's output is printed as it is.
+`runTool` runs a tool this way; `runToolSync` does it for a caller that cannot wait, through
+`look/run.js`. In a workflow, wrangler's output prints as it is.
 
 ## `oltrem manifest check [dir...]`
 
-Reads the Worker's `wrangler.jsonc` (or `wrangler.json`) and its `oltrem.manifest.json` in
-`dir` (the current directory by default), scans the code there for `env.NAME` uses, and fails
-when the three disagree or a cap is exceeded, with the plan's sentence: **adding a resource
-needs a manifest entry and the owner's yes.** Several directories run one after the other,
-each line then names its directory, and the worst exit code wins. It runs as the `manifest`
-gate of `pnpm verify` on the kit's own test Worker configurations, and will be the first step
-of a client repository's verify and deploy workflows.
+Compares the Worker's `wrangler.jsonc` (or `.json`), its `oltrem.manifest.json` and the code's
+`env.NAME` uses, and fails on any disagreement or cap, with the rule: **adding a resource needs a
+manifest entry and the owner's yes.** Several directories run in turn; the worst exit wins. It is
+`pnpm verify`'s `manifest` gate.
 
-What it refuses:
+It refuses:
 
-- a binding, queue, Durable Object class, cron, var or required secret in the configuration that
-  the manifest does not list, and a manifest entry the configuration does not have;
-- a binding whose kind differs between the two files;
-- more of a kind than its cap allows (below), unless the manifest carries an exception for it;
-- a binding kind the kit does not use (a service binding, Hyperdrive, Vectorize, AI, Browser
-  Rendering, Analytics Engine, Email, mTLS, a dispatch namespace, Secrets Store, Pipelines and
-  the others);
-- named environments (`env`): one Worker per client, one configuration;
-- an `env.NAME` or `env['NAME']` in the code that the manifest lists under neither bindings,
-  vars nor secrets. The scan is textual and skips `process.env`, `import.meta.env`, test
-  directories, `*.test.*` and `*.d.ts` files, `node_modules`, `dist` and `.wrangler`. A mention
-  in a comment counts, so write `env.` followed by a capitalised name only for a real use;
-- a `wrangler.toml`: the kit writes its configuration as JSONC.
+- a binding, queue, Durable Object class, cron, var or required secret in one file and not the
+  other, or a binding whose kind differs;
+- more of a kind than its cap, without an exception;
+- a kind the kit does not use (a service binding, Hyperdrive, Vectorize, AI, Browser Rendering,
+  mTLS, a dispatch namespace, Secrets Store, Pipelines and the rest);
+- named environments (`env`), and a `wrangler.toml`;
+- an `env.NAME` or `env['NAME']` in the code the manifest does not list. The scan is textual and
+  skips `process.env`, `import.meta.env`, tests, `*.d.ts`, `node_modules`, `dist`, `.wrangler`; a
+  comment counts.
 
-### The manifest
-
-`oltrem.manifest.json` is the one place a client's resources are listed. It is read as JSONC,
-so comments are allowed.
+**The manifest** is JSONC, and every list may be empty. The client template's:
 
 ```jsonc
 {
   "version": 1,
   "bindings": {
-    "DB": "d1",
-    "STORE": "r2",
-    "CACHE": "kv",
-    "EVENTS": "queue",
-    "COORD": "durable_object",
-    "JOBS": "workflow",
-    "ASSETS": "assets",
-    "RATE_LIMITER": "ratelimit"
+    "DB": "d1", "CACHE": "kv", "FILES": "r2", "EVENTS": "queue",
+    "JOBS": "workflow", "LIMITS": "ratelimit", "METRICS": "analytics_engine"
   },
-  "queues": ["client-oltrem-events", "client-oltrem-events-dlq"],
-  "durableObjectClasses": ["KitCoordinator"],
+  "queues": ["oltrem-client-events", "oltrem-client-events-dlq"],
+  "durableObjectClasses": [],
   "crons": ["* * * * *"],
   "vars": ["CLIENT_ID", "PUBLIC_HOST", "ENVIRONMENT"],
-  "secrets": ["SESSION_KEY", "KEK", "KIT_OPS_TOKEN", "ACCESS_AUD"],
+  "secrets": ["ACCESS_AUD", "BACKUP_PUBLIC_KEY", "KEK", "KIT_OPS_TOKEN"],
   "exceptions": []
 }
 ```
 
-Every list may be empty; a package whose test Worker has only a database and a KV namespace
-lists those two bindings and nothing else (see `packages/core-config/oltrem.manifest.json`).
+**The caps** (`CAPS`, plan 9.1) are ceilings; the free plan allows more:
 
-### The caps
+| Kind | Cap | Kind | Cap |
+|---|---|---|---|
+| `d1`, `r2`, `kv` | 1 each | `workflow`, `assets`, `ratelimit` | 1 each |
+| `queue` (producers) | 2 | `queue_name` (all queues) | 2 |
+| `durable_object` | 2 | `durable_object_class` | 2 |
+| `send_email` (Mail's `EMAIL`, [`oltrem mail`](oltrem-mail.md#oltrem-mail)) | 1 | `analytics_engine` (System status's request figures) | 1 |
+| `cron` | 1 | `var` | 3 |
+| `secret` (`secrets.required`) | 12 | | |
 
-The caps are the kit's law from the plan's section 9.1: the free plan allows more of each, the
-cap is the discipline. Each is a ceiling; a configuration may have fewer.
+**Exceptions.** Each row lifts one kind's cap by one and needs the kind, a reason and the date of
+the owner's yes; a row missing either stops the check:
+`{ "kind": "r2", "reason": "a public asset host", "approved": "2026-10-20" }`.
 
-| Kind | Cap | What it counts |
-|---|---|---|
-| `d1` | 1 | D1 database bindings |
-| `r2` | 1 | R2 bucket bindings |
-| `kv` | 1 | KV namespace bindings |
-| `queue` | 2 | queue producer bindings |
-| `queue_name` | 2 | distinct queue names across producers, consumers and dead-letter queues |
-| `durable_object` | 2 | Durable Object bindings |
-| `durable_object_class` | 2 | distinct Durable Object classes |
-| `workflow` | 1 | workflow bindings |
-| `assets` | 1 | assets bindings |
-| `ratelimit` | 1 | rate limiter bindings |
-| `send_email` | 1 | email sending bindings: Oltrem Mail's `EMAIL`, only while it is installed ([`oltrem mail`](oltrem-mail.md#oltrem-mail)) |
-| `cron` | 1 | cron triggers |
-| `var` | 3 | `vars` (the three identity values) |
-| `secret` | 12 | names in `secrets.required` |
-
-### Exceptions
-
-One more of a kind needs an exception row in the manifest: the kind, the written reason, and
-the date of the owner's yes. Each row lifts that kind's cap by one. A row missing its reason or
-its date stops the check before it runs.
-
-```jsonc
-"exceptions": [
-  { "kind": "r2", "reason": "a public asset host on its own domain", "approved": "2026-10-20" }
-]
-```
-
-### Output and exit codes
-
-One line of counts, then one line per problem on stderr, then the rule. `--json` prints
-`{ ok, ran, exitCode, problems, notes }` for agents. Exit `0` when everything agrees, `1` on a
-problem, `3` when the check could not run (no manifest, no configuration, a file that does not
-parse, an invalid manifest).
+Output: a line of counts, a line per problem on stderr, the rule. Exit `0` agrees, `1` a problem,
+`3` could not run (a missing or unparsable file, an invalid manifest).
 
 ## `oltrem migrations sync [dir] [--check]`
 
-A client repository runs the kit's migrations from its own `migrations/` folder, so that the
-deploy workflow needs nothing but the repository. This command copies every `migrations/*.sql`
-of every installed `@oltrem/*` package into `migrations/` and writes `migrations/kit.json`, the
-list of those files with a checksum each (`sha256-` then base64, the notation browsers use for
-integrity), and, once `oltrem upgrade` has run, the kit versions it took, which this command
-keeps. It is idempotent: a second run copies nothing. With `--check` it writes nothing and
-fails when a copy is missing or `kit.json` is stale; a client's `pnpm verify` runs it that way.
+Copies every installed `@oltrem/*` package's `migrations/*.sql` into the client's `migrations/`
+and writes `migrations/kit.json` (each file with a `sha256-` base64 checksum, and the kit versions
+`oltrem upgrade` recorded, which it keeps). A second run copies nothing. `--check` writes nothing
+and fails on a missing copy or stale `kit.json`; a client's verify runs it so.
 
-What it refuses, in either mode:
-
-- a copy that differs from the package's file: an applied migration is never edited; take the
-  package's file back, or ship the change as a new number;
-- two kit packages shipping the same number, and a kit package shipping a number `5000` or
-  higher, which the client owns;
-- a client file (one no kit package ships) numbered below `5000`, or not named `NNNN_name.sql`.
-
-Exit `0` when the folder is current, `1` on a problem or a missing copy, `3` when no installed
-package has migrations (run `pnpm install` first). `--json` prints the outcome for agents.
+It refuses a copy that differs from the package's (ship a new number instead), two packages with
+one number, a kit number of `5000` or more, and a client file below `5000` or not named
+`NNNN_name.sql`. Exit `0` current, `1` a problem, `3` no installed package has migrations.
 
 ## `oltrem migrations apply [dir]`
 
-Runs the migrations on the client's Cloudflare account, before the deploy, so a migration is
-live before the code that needs it. The client's one D1 database is found by the
-`database_name` in `wrangler.jsonc` (no id in the repository, plan 9.2); when it does not
-exist yet, the very first deploy, the command creates it with `wrangler d1 create`, then runs
-`wrangler d1 migrations apply <binding> --remote` either way. It runs the repository's own
-wrangler, which reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment:
-the deploy workflow passes the two repository secrets, and a person runs it from a signed-in
-wrangler through `npm run deploy` (`oltrem deploy`). The Worker's other resources (the KV namespace, the bucket, the
-queues) are created by `wrangler deploy` itself from their names.
-
-Exit `0` when the migrations are applied, `1` when the database could not be created or the
-apply failed (wrangler's own message is printed above), `3` when `wrangler.jsonc` is missing or
-declares anything but exactly one D1 database.
+Runs the migrations on the account before the deploy, so they are live before the code. The one
+D1 database is found by `database_name` (no id in the repository); on the first deploy it is made
+with `wrangler d1 create`. Then `wrangler d1 migrations apply <binding> --remote`, with
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the workflow, or a signed-in wrangler
+through `npm run deploy`. `wrangler deploy` makes the other resources from their names. Exit `0`
+applied, `1` create or apply failed (wrangler's message above), `3` no `wrangler.jsonc` or not
+exactly one D1 database.

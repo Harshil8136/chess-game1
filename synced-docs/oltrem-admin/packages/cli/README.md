@@ -25,10 +25,10 @@ This README is split by section, so each part can be read whole.
 
 | Part | Sections |
 |---|---|
-| [look-in-a-terminal](docs/look-in-a-terminal.md) | The look in a terminal; `oltrem manifest check [dir...]`; `oltrem migrations sync [dir] [--check]`; `oltrem migrations apply [dir]` |
-| [oltrem-deploy-dir](docs/oltrem-deploy-dir.md) | `oltrem deploy [dir]` |
-| [oltrem-deploy-dir-2](docs/oltrem-deploy-dir-2.md) | `oltrem deploy [dir]`: `oltrem deploy [dir] --page`, Copy the details, Keep … on, The start page, Who may open it, Clear |
-| [oltrem-setup-dir](docs/oltrem-setup-dir.md) | `oltrem setup [dir]`; `oltrem new client <dir> [--name "Acme Ltd"] [--kit <folder>] [--mail] [--git]`; `oltrem new module <name> [dir]`; `oltrem docs [dir] [--check]`; `oltrem check agents [dir]`; `oltrem check tokens [dir]` |
-| [oltrem-check-files-dir](docs/oltrem-check-files-dir.md) | `oltrem check files [dir]`; `oltrem check modules [dir]`; `oltrem check packages [dir]`; `oltrem check secrets [dir]`; `oltrem check budgets [dir]`; `oltrem release [dir]`; `oltrem fleet [--check]`; `oltrem live [--portal <worker>] [--yes]`; `oltrem operate <operation> [dir] [--target X] [--confirm X]` |
-| [oltrem-backup-setup-dir](docs/oltrem-backup-setup-dir.md) | `oltrem backup setup [dir]`; `oltrem backup drill [dir] --key <file>`; `oltrem github report [dir] --outcome <success\|failure\|cancelled>`; `oltrem vendor set <email> [dir]`; The door and settings from this computer (`src/door.ts`, `src/settings-write.ts`); `oltrem parts list [dir]`, `set <ids...>`, `preset everything\|email [dir]` |
-| [oltrem-mail](docs/oltrem-mail.md) | `oltrem mail`; `oltrem upgrade [dir]`; `oltrem doctor`; In the kit repository |
+| [look-in-a-terminal](docs/look-in-a-terminal.md) | The look in a terminal; `oltrem manifest check`; `oltrem migrations sync`; `oltrem migrations apply` |
+| [oltrem-deploy-dir](docs/oltrem-deploy-dir.md) | `oltrem deploy [dir]`: the seven steps |
+| [oltrem-deploy-dir-2](docs/oltrem-deploy-dir-2.md) | `oltrem deploy --page`; the start page; reports and run logs |
+| [oltrem-setup-dir](docs/oltrem-setup-dir.md) | `oltrem setup`; `oltrem new client`; `oltrem new module`; `oltrem docs`; `oltrem check agents`; `oltrem check tokens` |
+| [oltrem-check-files-dir](docs/oltrem-check-files-dir.md) | The client checks (files, modules, packages, secrets, budgets); `oltrem release`; `oltrem fleet`; `oltrem live`; `oltrem operate` |
+| [oltrem-backup-setup-dir](docs/oltrem-backup-setup-dir.md) | `oltrem backup setup`; `oltrem backup drill`; `oltrem github report`; `oltrem vendor set`; the door and settings; `oltrem parts` |
+| [oltrem-mail](docs/oltrem-mail.md) | `oltrem mail`; `oltrem upgrade`; `oltrem doctor`; in the kit repository |
