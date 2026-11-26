@@ -60,7 +60,7 @@ changes of every place.
 |---|---|
 | `/developer`, `/developer?show=webhooks` | a row of **Webhooks**, **API reference** and **API keys** (a link to the keys, 2026-11-25); the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
 | `/developer?show=reference` | a note leading to API keys and its How to use, then each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
-| `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again** |
+| `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again**, and above them (2026-11-26) the deliveries at a glance (`src/deliveries.ts`): the share delivered of those settled, how many wait, the typical and the slowest answer, and the newest failure with what to do about its answer (a refused signature, an address that moved or is gone, a service that asked to slow down or failed on its side, no answer in time) |
 
 ## The routes
 

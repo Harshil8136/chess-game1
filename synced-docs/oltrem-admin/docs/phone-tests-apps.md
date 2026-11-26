@@ -54,3 +54,5 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 |---|---|---|---|
 | P797 | Connect a Slack or Discord alert, then delete the channel or the app's link at the other end; wait for the next change in the portal; then Home | Under Needs you: "<name> is failing", which opens the alert's page; after ten failures in a row it reads "<name> stopped sending" | [Developer](../modules/developer/README.md) |
 | P798 | The same Home, as someone who cannot keep the webhooks | No such line | [Developer](../modules/developer/README.md) |
+| P895 | Admin, Developer, open a webhook that has deliveries | Above the deliveries: the share delivered, how many wait, the typical and slowest answer | [Developer](../modules/developer/README.md) |
+| P896 | The same, for a webhook whose last delivery failed (for example a wrong address) | A notice with when it failed, the answer, and what to do, such as checking the address in Settings | [Developer](../modules/developer/README.md) |
