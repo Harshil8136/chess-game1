@@ -5,15 +5,7 @@ many tenants times many providers cannot be Worker secrets, so one key-encryptio
 secret and everything else is a sealed string in a row. Web Crypto only, no dependency. Under
 `@oltrem/core-crypto/age`, the age file format a backup copy is written in (below).
 
-## How it is layered
-
-```mermaid
-flowchart LR
-  S["the KEK secret: one key, or two while rotating"] --> E["createEnvelope({ kek })"]
-  E --> K["newDataKey(): a data key per tenant, wrapped by the current KEK, stored as a string"]
-  K --> V["seal(key, value, { tenant, row }): the value under the data key, bound to its row"]
-  V --> O["open(key, sealed, { tenant, row }): the value back, only at the same tenant and row"]
-```
+## The envelope
 
 ```ts
 const envelope = await createEnvelope({ kek: env.KEK }); // once per isolate
@@ -52,7 +44,7 @@ never shows a secret back and a rotation needs the old one.
   that same tenant and row to `open`: the binding is what refuses a value moved between rows.
 - Audit every create, rotate and failed use, with the actor: the envelope has no actor and writes
   no row. The providers module does this.
-- Unwrapped data keys are kept in memory per isolate, the most recent sixty-four; nothing is
+- Unwrapped data keys are kept in memory per isolate, the newest `CACHE_LIMIT` (64); nothing is
   cached across isolates.
 
 ## The age format, for backup copies
@@ -102,11 +94,8 @@ seal or open asked without its tenant and row; `1307` a recipient that is not an
 
 ## Tests
 
-Inside the Workers runtime: a value sealed and opened at its address, two seals of it different,
-the empty value allowed; refused at another tenant, another row, altered, under another data key,
-malformed, or without its address; a key wrapped under one key-encryption key opened under the
-next with the old one beside it, rewrapped, then refused once the old key is gone; the secret
-refused when missing, malformed, repeated or three keys long. The age entry: a known-answer file
-whose bytes the age tool decrypted, pinned by its digest; the header's shape and fixed length;
-the size formula at every chunk boundary; a file streamed in uneven pieces equal to one written
-in one go; a recipient with a bad checksum, prefix, case or length refused.
+| File | Covers |
+|---|---|
+| `test/envelope.test.ts` | Sealed and opened at its address, two seals different, the empty value allowed; refused at another tenant or row, altered, under another data key, malformed or without its address; a key opened under the next KEK with the old beside it, rewrapped, refused once the old is gone; the secret refused when missing, malformed, repeated or three keys long |
+| `test/age.test.ts` | A known-answer file the age tool decrypted, pinned by digest; the header's shape and `AGE_HEADER_SIZE`; the size formula at every chunk boundary; a stream in uneven pieces equal to one written at once; bad recipients refused |
+| `test/one-time.test.ts` | Opened by its key for its trip, two seals different; refused with another key, trip or service, altered or malformed; a named sender's seal only |
