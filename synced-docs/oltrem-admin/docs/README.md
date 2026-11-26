@@ -65,6 +65,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
+| [How documents are written and sized](reference/doc-policy.md) | the size caps, the documents budget and its allowances, the shape of a document and of a record | living |
 | [Open-source ideas](reference/open-source-ideas.md) | 30 ranked open-source ideas | proposed |
 | [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
 | [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |

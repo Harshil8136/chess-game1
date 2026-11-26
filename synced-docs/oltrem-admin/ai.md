@@ -50,18 +50,13 @@ are checked against it by `pnpm check:agents`.
 | `pnpm ui:build` | rebuilds the screens' stylesheet |
 | `pnpm test` | the tests of the verify chain itself (`scripts/*.test.mjs`) |
 | `pnpm test:packages` | the package and module tests: Worker code inside the Workers runtime, the tool on Node |
-| `pnpm typecheck` | the type check of every package and module, each against its own runtime |
 | `pnpm build` | compiles the command-line tool to `packages/cli/dist/` |
 | `pnpm oltrem manifest check <dir>` | the Worker in `<dir>` against its `oltrem.manifest.json` and the caps (R-09) |
 | `pnpm oltrem doctor` | the setup checks of this repository, one line each |
-| `pnpm lint` | ESLint, with the module-boundary rules |
-| `pnpm format` | Prettier over every code file; `pnpm format:check` only reports |
 | `pnpm docs:build` | regenerates every document marked generated from its source |
-| `pnpm docs:check` | refuses a generated document edited by hand, an unindexed document, a broken link |
-| `pnpm check:agents` | the budgets, rule numbers and pointer files of this contract (R-08) |
-| `pnpm check:tokens` | every secret name has a row in the token registry (R-05) |
-| `pnpm check:identifiers` | the scan for copied names and identifier shapes (R-03, R-04) |
-| `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
+| `pnpm docs:lower` | lowers the documents budget after a trim (docs/reference/doc-policy.md) |
+| `pnpm format` | Prettier over every code file |
+| `pnpm typecheck`, `lint`, `docs:check`, `check:agents`, `check:tokens`, `check:identifiers`, `check:deps` | one gate of verify alone (docs/reference/verify.md) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
 The tool's other commands, which serve a client repository, are in `packages/cli/README.md`.
@@ -82,6 +77,7 @@ The tool's other commands, which serve a client repository, are in `packages/cli
 | Who may do what: capabilities, roles, scopes, sessions, grants, approvals, the check; people | `modules/iam/README.md`, `modules/users/README.md`, then the plan's sections 6 and 7 |
 | A client repository: its template, its deploy, its first deploy | `templates/client/README.md`, then `packages/cli/README.md` |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
+| Writing or sizing a document | docs/reference/doc-policy.md |
 | What was done and when, only if asked | `archive/records/` |
 | The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |
 

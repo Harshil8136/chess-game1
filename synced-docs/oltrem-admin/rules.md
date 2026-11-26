@@ -135,10 +135,10 @@ instead of the code. Out-of-date documentation is worse than none.
 
 **Scope.** Every repository.
 
-**Enforced by.** `pnpm docs:check` fails on a document without front matter, a document missing
-from the index, a document over its size budget, a record left in archive/records/, a record dated
-after 2026-11-26 over 4 KB and a relative link that points nowhere. That
-the right document was updated is the owner's review.
+**Enforced by.** `pnpm docs:check` fails on a document without front matter or index row, a
+relative link that points nowhere, a document over its size cap or budget
+(docs/reference/doc-policy.md), and a record in docs/records/ or, dated after 2026-11-26, over
+4 KB. That the right document was updated is the owner's review.
 
 ## R-08 One entry file
 
