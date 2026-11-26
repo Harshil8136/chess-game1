@@ -244,6 +244,11 @@ trips before a page's own first read; now a page waits for its slowest read.
   (`data-peeked`, a tint and a bar at its start); buttons marked `data-peek-step="-1"` or `"1"`
   and the keys K and J open the previous or next record of the list without closing the panel;
   an empty panel shows a soft placeholder while the record loads.
+- **A time that counts down** (2026-11-26, the frame script): an element with
+  `data-count-to="<ISO time>"` is rewritten each second as "in 4 min 12 s", "in 9 s" or "Due
+  now"; with `data-count="tick"` it rolls on to the next minute once it passes, as the scheduler's
+  tick does. The server writes the first value, so without the script it still reads right when
+  the page was made. Used by Scheduled jobs' Next tick and a job's next run.
 - **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
   (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
   the unread figure (to "99+") and, since 2026-11-26, a tooltip naming it ("Notifications: 3
