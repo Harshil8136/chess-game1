@@ -47,6 +47,7 @@ portal link, a search, a filter or a form's change in place: it fetches the next
 
 | Behaviour | How |
 |---|---|
+| How a trip ended | A page shows `?trip=` once: on a load or a swap the script drops it from the address (`replaceState`), so a reload or Back never repeats an old notice. |
 | A refused form | Keeps the address it was sent from. On a refusal (`data-refused`) the script refills the form by field name (hidden, file and password fields as drawn), reopens its dialog and shows the reason at its top. |
 | Motion | One 150 ms fade of the content where view transitions exist and motion is on; the head and tabs stay still. Sidebar groups glide; drawers slide; a pressed sidebar row gives a little (`theme.css`). The marked tab, segment or section carries `.ui-mark`, which glides; a filter on the same page moves the mark alone (`data-vt="mark"`). Figures count up and meters fill; a live figure glides to its new value in 400 ms. None under reduced motion. |
 | Focus and scroll | Focus moves to the new heading or to a form's errors. A change back to the same page keeps its scroll and brings its outcome into view. A link to `#section` is the browser's own. |

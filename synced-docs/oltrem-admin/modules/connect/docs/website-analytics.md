@@ -59,9 +59,13 @@ the portal renews itself; Google reuses the Vendor's app with offline access, re
 relay's `/renew/google-analytics`, which adds the secret.
 
 1. **Continue with <app>** posts `/connect/start`; the person allows read-only access.
-2. **The sites.** The portal checks the tokens (lifetime at most a day), then lists PostHog's
-   projects in the US then the EU region (a 401 or 403 tries the other), narrowed to those allowed,
-   or Google's GA4 properties (`accountSummaries`): at most `SITES_MAX` (12), names cut to 48.
+2. **The sites.** The portal checks the tokens (lifetime at most a day), then reads PostHog in the
+   region that issued the token (`region`, else US then EU; only a 401 tries the other) by what the
+   person allowed, as PostHog's scoping requires: chosen projects each by its own address
+   (`/api/projects/<id>/`, a list is refused for them), a whole organization by its list
+   (`/api/organizations/<id>/projects/`), everything by `/api/projects/`; or Google's GA4
+   properties (`accountSummaries`): at most `SITES_MAX` (12), names cut to 48. How a trip ended
+   (`?trip=`) is said once: the frame drops it from the address, so a reload never repeats it.
 3. **Pick one.** Tokens and sites wait in a sealed 10-minute row (`HELD_ROW`); Connect posts
    `/analytics/signin`, which opens it on the server, so no token reaches the page.
 4. **Saved** as a new connection, the one signed in again, or that site's, its tokens replacing a

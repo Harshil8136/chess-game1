@@ -23,11 +23,15 @@ go back, each with the start it must have.
 | Google | `…/auth/drive.file`, online, PKCE | Only the new sheet's address: the relay creates it with the token, used once |
 | Supabase | None sent (the app has Projects and Secrets read), PKCE, id and secret as HTTP Basic | The project's address, name and `sb_secret_…` key, plus the Management API token (an hour), refresh token and lifetime; with several projects and none picked, the list (ref, name) and no token |
 | Airtable | `data.records:read schema.bases:read`, PKCE, id alone (no secret) | Access token (an hour), refresh token (60 days, replaced on use), lifetime, the integration's id; the portal renews itself |
-| PostHog | `project:read query:read`, PKCE, client id `https://<relay>/client/posthog` | Tokens, lifetime, the projects allowed (`scoped_teams`) and the client id; the portal renews itself |
+| PostHog | `project:read query:read`, PKCE, client id `https://<relay>/client/posthog` | Tokens, lifetime, what was allowed (`scoped_teams` as `teams`, `scoped_organizations` as `orgs`), the region that issued the token (`posthog_region` as `region`) and the client id; the portal renews itself |
 | Google Analytics | `…/auth/analytics.readonly`, offline, consent each time, PKCE, the Google app | Tokens and lifetime; renewed through `/renew/google-analytics` |
 
 A new service is one entry with its secrets (and their rows in `tokens.registry.json`), or none for
 one that reads a client document.
+
+On the way back, only `error=access_denied` is the person saying no (`e=refused`, "You
+cancelled"). Any other `error`, or no code, is the service refusing the request: `e=failed`, and the
+relay logs the error and up to 200 characters of `error_description`, never the code or the state.
 
 | Flag or case | What it does |
 |---|---|
@@ -132,7 +136,8 @@ setting; fields kept only as named and prefixed. Supabase: PKCE, HTTP Basic, the
 read once, several as a list, a sealed project only when the account's, none without a key, its
 tokens and `/renew/supabase` (a refused token 400). Airtable: scopes, PKCE, the id alone, tokens and
 id sealed back, an answer without a refresh token failed. An unknown service: not set up. PostHog:
-the client document, the id and PKCE, tokens and projects sealed back. Google Analytics: offline and
+the client document, the id and PKCE, tokens, projects, organizations and region sealed back; its
+own refusal a logged failure, a cancel a refusal. Google Analytics: offline and
 consent, a renewal without a refresh token handing back the one given.
 
 `scripts/relay-deploy.test.mjs` (Node): required secrets read from `wrangler.jsonc`, a Worker not yet
