@@ -81,6 +81,7 @@ The records since 16 November:
 | [API reference with fields, an OpenAPI file, keys in Needs you](2026-11-25-api-reference-and-openapi.md) | each route's fields and an example body, one part at a time; an OpenAPI 3.1 file for the portal or a key; Needs you names keys ending this week or unused for 90 days; P794-P796 |
 | [Scheduled jobs](2026-11-25-scheduled-jobs-page.md) | a page per job; P720-P725 |
 | [Scheduled jobs remade](2026-11-25-scheduled-jobs-remade.md) | Run now, timed pause; P880-P885 |
+| [Scheduled jobs in panes](2026-11-26-scheduled-jobs-panes.md) | rows that open, pills; P960-P964 |
 | [Public addresses rest before a limit](2026-11-24-public-hooks-rest.md) | the fleet's edge rule `oltrem_hooks`, 60 hook calls a minute per address, 503 near the day's D1 limit, migration rules as a test, one Analytics Engine figure per request; P510-P511 |
 | [Which day today is follows the company time zone](2026-11-24-company-time-zone.md) | invoices, quotes, expenses and time off read today from `bookings.time_zone`, now titled Company time zone; P529 |
 | [System status shows the last day of requests](2026-11-24-request-charts.md) | `GET /api/health/requests` from Analytics Engine: requests, failures and the 95th percentile by hour, the five slowest routes; P560 |
