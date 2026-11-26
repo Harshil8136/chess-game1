@@ -13,6 +13,6 @@ This README is split by section, so each part can be read whole.
 
 | Part | Sections |
 |---|---|
-| [defining-a-module](docs/defining-a-module.md) | Defining a module; What the contract refuses; Capabilities; Public hooks; Jobs; Flows; Health; Home; Search |
+| [defining-a-module](docs/defining-a-module.md) | Defining a module; what the contract refuses; capabilities; public hooks; jobs, flows, health; Home and search |
 | [reports](docs/reports.md) | Reports; Needs you; Get started; Bulk actions; Personal data; Customer parts; Pages |
 | [csv-files](docs/csv-files.md) | CSV files; Calendar items; Pages to print; Amounts; Where a request came from; Migrations, settings and errors; Key recipes; Schemas; The event envelope |

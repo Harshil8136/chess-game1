@@ -1,215 +1,111 @@
 ---
-title: "@oltrem/core-module: Reports; Needs you; Get started; Bulk actions; Personal data; Customer parts; Pages"
+title: "@oltrem/core-module: reports, Needs you, Get started, bulk, personal data, customer parts, pages"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [packages/core-module/src; split from packages/core-module/README.md]
+sources: [packages/core-module/src/module.ts, report.ts, pages.ts]
 ---
 
-# @oltrem/core-module: Reports; Needs you; Get started; Bulk actions; Personal data; Customer parts; Pages
+# @oltrem/core-module: reports, Needs you, Get started, bulk, personal data, customer parts, pages
 
-> Part of [the @oltrem/core-module README](../README.md).
+> Part of [the @oltrem/core-module README](../README.md). Each part below is optional on the
+> manifest; `find`, `list`, `steps` and `read` get the session from `ctx`, so they answer only what
+> the person may see. A link that is not a portal page is dropped.
 
 ## Reports
 
-A module's section on the Reports page is declared as `report`: a title (the section's heading), the
-tab it sits under (`money`, `customers`, `work`, `email` or `services`), one of the module's own capabilities,
-and `read(period, ctx)`, which answers up to `REPORT_FIGURES` (six) figures, each the period's
-number and the period before's (`before: null` when that cannot be known, so no move is shown;
-`good: 'down'` when less is better; `currency` for an amount in its smallest unit; `unit` `percent`,
-`days` or `bytes`), one number a day as a `trend`, lists of up to `REPORT_ROWS` (eight) rows (a
-row's `unit` `percent` or `bytes`, or `shown`, its value in words), and a `note` for what the period
-cannot show. With `company: true` the capability is asked at the company, as a route's `company`. `defineModule` adds `GET
-/api/<module>/report?days=&to=YYYY-MM-DD` under that capability: `days` 7, 30 or 90 (`REPORT_DAYS`), or
-1 to `REPORT_MAX_DAYS` (90) for a range the person picked, ending on `to`; any other period or day is
-refused (422), and a row's address that is not a page of the portal is dropped. `reportPeriod(days,
-to)` is the period and the one before it; `tally(period, rows, pick)` folds rows counted by day
-(`d`), read from `beforeFrom` to `end`, into both totals and both daily lines; `mainCurrency(rows)`
-is the currency most rows use; `bytes(n)` writes a size (`1.2 MB`). A part that counts a step from an enquiry to a payment declares it in
-`steps` (`enquiries`, `quoted`, `won`, `paid`) and answers each in `steps`, the period's count and
-the one before's; the Money tab sets them after the website's visitors as "From visit to paid", and
-a step it did not declare is dropped. `read` reads the session from `ctx`, so a section counts only
-the places the person may see. The analytics module's `parts` option lists the sections, and the
-page asks only the open tab's.
+`report`: a title, a tab (`money`, `customers`, `work`, `email`, `services`), a capability
+(`company: true` asks it at the root) and `read(period, ctx)`. It adds `GET
+/api/<module>/report?days=&to=YYYY-MM-DD`: `days` 7, 30 or 90 (`REPORT_DAYS`) or 1 to 90
+(`REPORT_MAX_DAYS`) ending on `to`; anything else is 422. The answer:
+
+- up to 6 figures (`REPORT_FIGURES`), each `now` and `before` (`null` when unknown), with `good:
+  'down'`, `currency` (smallest unit) or `unit` (`percent`, `days`, `bytes`);
+- a `trend`, one number a day; lists of up to 8 rows (`REPORT_ROWS`, a row's `unit` or `shown`);
+  a `note`;
+- `steps` (`enquiries`, `quoted`, `won`, `paid`) for the Money tab's "From visit to paid".
+
+Helpers: `reportPeriod(days, to)`, `tally(period, rows, pick)` (folds rows by day `d` into both
+totals and daily lines), `mainCurrency(rows)`, `bytes(n)`. The analytics module's `parts` lists the
+sections; the page asks only the open tab's.
 
 ```ts
-report: {
-  title: 'Notes',
-  tab: 'work',
-  capability: 'notes.read',
+report: { title: 'Notes', tab: 'work', capability: 'notes.read',
   read: async (p, ctx) => {
     const made = tally(p, await notesByDay(ctx, p.beforeFrom, p.end), (r) => r.n);
-    return {
-      figures: [{ label: 'Notes made', now: made.now, before: made.before }],
-      trend: { label: 'Notes made', values: made.daily, before: made.dailyBefore },
-    };
-  },
-},
+    return { figures: [{ label: 'Notes made', now: made.now, before: made.before }],
+             trend: { label: 'Notes made', values: made.daily, before: made.dailyBefore } };
+  } },
 ```
 
 ## Needs you
 
-What waits for the person signed in is declared as `todo`: one of the module's own capabilities
-and `list(ctx)`, which answers items, each a title, an optional note and the portal page to act on
-it. `defineModule` adds `GET /api/<module>/todo` under that capability; an item whose address is
-not a page of the portal is dropped, and at most `TODO_ITEMS` (five) are answered. Home asks every
-mounted module that has one, in the sidebar's order, and shows the items first, under "Needs you";
-a module that refuses the person adds nothing. `list` reads the session from `ctx`: it answers
-only what this person can act on, by the same rules the action itself checks, so nobody is sent
-to a decision the API would refuse them. Count what is many ("3 requests to decide") rather than
-listing each.
-
-```ts
-todo: {
-  capability: 'notes.manage',
-  list: async (ctx) => {
-    const n = await unansweredFor(ctx);
-    return n ? [{ title: `${n} notes to answer`, href: '/notes' }] : [];
-  },
-},
-```
+`todo`: a capability and `list(ctx)` answering items (title, optional note, page). It adds `GET
+/api/<module>/todo`, at most 5 items (`TODO_ITEMS`). Home asks every module in sidebar order and
+shows them first. `list` answers only what this person can act on, by the same rules the action
+checks. Count what is many ("3 requests to decide").
 
 ## Get started
 
-A module that has a step of setting a new portal up declares `onboarding`: one of its own
-capabilities and `steps(ctx)`, which answers each step's title, an optional note, the portal page
-where it is done and `done`, read from what the module really stores (a row, a setting), never from
-a click. A step one press does may also carry `action`: a button label and a `path` among the
-module's own API routes (`/api/<module>/...`), which Home shows as a button on the step's row and
-POSTs with an empty body; the route's own capability and audit apply, and the step still ticks only
-by what is stored. `defineModule` adds `GET /api/<module>/onboarding` under that capability; a step
-whose address is not a page of the portal is dropped, an action whose path is not the module's own
-is dropped from its step, and at most `ONBOARDING_STEPS` (five) are answered. Home asks every
-mounted module that has one, in the sidebar's order, and shows the card "Get started: n of m done"
-above Needs you while a step is open; once all are done the card is gone. The settings part's extra
-`settings.get-started` switches it off. The kit's steps: connect an email service (`providers`),
-invite a second person (`users`), make the first backup copy (with Make it now once backups are set
-up) and run a restore drill (`backup`), name who gets alerts (`alerts`).
-
-```ts
-onboarding: {
-  capability: 'notes.manage',
-  steps: async (ctx) => [
-    { title: 'Write the first note', href: '/notes', done: await anyNote(ctx.env) },
-  ],
-},
-```
+`onboarding`: a capability and `steps(ctx)`, each a title, optional note, page and `done` read from
+what the module stores, never a click. A one-press step may carry `action` (a label and a `path`
+among the module's own `/api/<module>/...` routes, posted empty; its own capability and audit
+apply). It adds `GET /api/<module>/onboarding`, at most 5 steps (`ONBOARDING_STEPS`). Home shows
+"Get started: n of m done" above Needs you until all are done; `settings.get-started` switches it
+off. The kit's steps come from `providers`, `users`, `iam` (the people named at setup sign in),
+`backup` and `alerts`.
 
 ## Bulk actions
 
-A module whose list can act on many rows at once declares `bulk`: each action an `id` (lower case,
-the route's last segment), the button's `label`, the `capability` the route needs somewhere,
-`destructive` when it cannot be taken back, and `run(ctx, ids)`. `defineModule` adds
-`POST /api/<module>/bulk/<id>` with the body `{ ids }`: one to `BULK_MAX` (100) ids, repeats
-dropped. `run` checks each row by the same rule its one-row action checks, refuses the rows that
-fail with a reason, and answers `{ done, refused: [{ id, reason }] }`. To stay inside an
-invocation's 50 database calls it reads the rows in one query (`json_each(?1)` with the ids as
-JSON, never one bind per id) and writes the changes and one audit row per record in one
-`db.batch`: `auditStatements` from `@oltrem/iam` (or `statements` of `@oltrem/core-audit`) makes
-the rows for that batch. The screens draw the bar (`BulkBar` in `@oltrem/core-ui`) and post to it
-through `/do/bulk`. The kit's: Mark done and Remove on the tasks.
-
-```ts
-bulk: [
-  { id: 'remove', label: 'Remove', capability: 'notes.manage', destructive: true,
-    run: (ctx, ids) => store.removeMany(ctx.env, actorOf(ctx), ids) },
-],
-```
+`bulk`: each action an `id` (the route's last segment), a `label`, a `capability`, `destructive`
+when it cannot be undone, and `run(ctx, ids)`. It adds `POST /api/<module>/bulk/<id>` with `{ ids }`
+(1 to 100, `BULK_MAX`, repeats dropped). `run` checks each row by its one-row rule and answers
+`{ done, refused: [{ id, reason }] }`. To stay within 50 database calls, read the rows in one query
+(`json_each(?1)`) and write the changes with one audit row each in one `db.batch`
+(`auditStatements` from `@oltrem/iam`, or core-audit's `statements`). The screens draw `BulkBar`
+and post through `/do/bulk`. The kit's: tasks (Mark done, Remove), files (trash, purge, end
+access).
 
 ## Personal data
 
-A module that keeps rows about people declares `personal`: a `title` and `find(env, tenantId,
-email)`, which answers the rows it holds under that address (lower case), at most `PERSONAL_ROWS`
-(200), with `more` when there are more and the `href` of the portal page that shows them. The
-privacy module calls it in-process when a privacy request is searched, and puts the rows in the
-copy the person is given, so a row should say what it is in plain field names, without internal
-ids. No route is added. `defineModule` refuses a `personal` without a title. Correcting and
-deleting stay in the module, where its own rules and audit apply.
-
-```ts
-personal: {
-  title: 'Notes about them',
-  find: async (env, tenantId, email) => {
-    const rows = await notesAbout(env, tenantId, email, PERSONAL_ROWS + 1);
-    return { rows: rows.slice(0, PERSONAL_ROWS), more: rows.length > PERSONAL_ROWS, href: '/notes' };
-  },
-},
-```
+`personal`: a `title` and `find(env, tenantId, email)` answering the rows held under that address
+(lower case), at most 200 (`PERSONAL_ROWS`), with `more` and an `href`. The privacy module calls it
+in-process for a privacy request and puts the rows in the person's copy, so rows use plain field
+names, no internal ids. No route. Correcting and deleting stay in the module.
 
 ## Customer parts
 
-A module that keeps things a customer of the company should see declares `customer`: a `title`
-and `find(env, tenantId, email)`, which answers the items it holds for the address the customer
-proved when they signed in (lower case), the newest first, at most `CUSTOMER_ITEMS` (20), with
-`more` when there are more. Each item has a `title`, the time it is about (`at`, ISO), and may
-have a `state` in a few words and `replies`, each a time and a text. The customers module calls
-it in-process when a signed-in customer opens `/account` and shows one section a module, so an
-item should be something the company wrote or confirmed: never text that anyone could have sent
-in the customer's name. No route is added. `defineModule` refuses a `customer` without a title.
-A `find` that throws shows its section as not readable; the page still opens.
+`customer`: a `title` and `find(env, tenantId, email)` answering the items held for the signed-in
+customer's address, newest first, at most 20 (`CUSTOMER_ITEMS`), with `more`. Each item has a
+`title`, an `at` time, and may have a `state`, `replies`, `details` (a few lines) and `actions`. The
+customers module shows one section a module on `/account`; only what the company wrote or
+confirmed belongs there. A `find` that throws shows its section as unreadable.
 
-A part that can hand the customer something, a file, adds `open(env, tenantId, email, id)` and
-gives each such item an `id`: the page links the item to `/account/open/<module>/<id>`, where the
-door calls `open` for the signed-in customer and answers its `Response`, uncached. `open` checks
-again that the thing is theirs and answers null when it is not or no longer is; null, or an
-error, returns the customer to their account page.
-
-An item may also carry `details`, a few lines of text shown under it (a quote's lines and its
-total), and `actions`, each an `id` and a label: the customer's answers to it, accept or decline,
-say. A part with actions adds `act(env, tenantId, email, id, action)`: each action is a button that
-posts to `/account/act/<module>/<id>/<action>`, and the door calls `act` for the signed-in customer
-and returns them to their account page with "Thank you: we have your answer". `act` checks again
-that the item is theirs and still takes that answer, does it once, records it in the audit log,
-and answers false otherwise, which shows "That is no longer open to you"; so does an error.
-
-```ts
-customer: {
-  title: 'Your orders',
-  find: async (env, tenantId, email) => {
-    const rows = await ordersOf(env, tenantId, email, CUSTOMER_ITEMS + 1);
-    return {
-      items: rows.slice(0, CUSTOMER_ITEMS).map((o) => ({ title: o.name, at: o.at, state: o.state })),
-      more: rows.length > CUSTOMER_ITEMS,
-    };
-  },
-},
-```
+- **`open(env, tenantId, email, id)`** hands a thing over at `/account/open/<module>/<id>`
+  (uncached), checking again it is theirs; null or an error returns to the account page.
+- **`act(env, tenantId, email, id, action)`** answers a button at
+  `/account/act/<module>/<id>/<action>`: it checks the item is theirs and open, acts once, audits,
+  and answers false otherwise ("That is no longer open to you").
 
 ## Pages
 
-A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post` that
-answer a page (a title and a body; optionally the line under the title, `sub`, the buttons on the
-head's right, `tools`, a count beside a tab of its set by the tab's path, `counts`, and `kind:
-'form'` for a form that keeps a readable width), a redirect or a plain response, and an optional
-`nav` (a label, a group, a summary, and optionally `before`: the path of the section it goes just
-before; `tabs`, the set of tabs it joins; and `under`, the tab it opens under when it is no tab of
-its own, such as Email's setup pages under `/settings/section/email`) that gives it a section in the
-sidebar. A page reads and writes only through `api`, the portal's own API called inside the same
-request, so it can never show or change more than its routes allow. A path under `/api`, `/hooks`,
-`/ui`, `/do` or `/local`, a path taken twice, a page with no `get` and a sidebar entry missing a
-word are refused when the module is defined.
+`pages`: each a portal path, a `get` and an optional `post` answering a page (title, body, and
+optionally `sub`, `tools`, `counts`, `kind: 'form'`), a redirect or a response, and an optional
+`nav` (label, group, summary, `before`, `tabs`, `under`) for a sidebar section. A page reads and
+writes only through `api`, the portal's own API in the same request, so it can never do more than
+its routes allow. Paths under `/api`, `/hooks`, `/ui`, `/do` or `/local`, a repeated path, a page
+with no `get` or an incomplete nav entry are refused.
 
-A list page whose filters live in its address declares `views`: the query parameters a saved view
-keeps (`views: ['view', 'place']`), lower case, never a page's own state (`done`, `page` and the
-like are refused). The screens then show the person's saved views of that page as a sideways row
-of chips above it (All first), offer to save the filters on screen under a name, and to remove
-the view on screen; the views are `@oltrem/users`'s. The kit declares them on tasks, files and
-customers, and the screens on a records list, a form's inbox and the audit log.
+- **`views`**: the query parameters a saved view keeps (`views: ['view', 'place']`; `done`, `page`
+  and the like refused). The screens show saved views as chips (`@oltrem/users`). Declared on
+  tasks, customers and the data module's records.
+- **JSX in its own entry.** The manifest cannot compile JSX, so pages live in `src/pages.tsx`
+  (checked against the DOM) and the client joins them with `withPages(module, pages)`; `module.ts`
+  never imports them. Types come from `@oltrem/core-module/pages` (no Workers type); a
+  `pages.public.d.ts` is the Worker-typed view, held by a type test. `@oltrem/files` is the model:
+  `./pages` exported with one export named `pages`, a `tsconfig.pages.json`, two pragma lines.
+- **Helpers** from `@oltrem/core-module/pages`: `field(form, name)`, `redirect(to)`,
+  `refused(title, detail?)` (the 422 `KIT-E-0422` shown above a form).
 
-Pages are JSX, which the Workers-typed manifest cannot compile, so a module keeps them in their
-own entry (`src/pages.tsx`, type-checked against the DOM) and the client joins them to the
-manifest with `withPages(module, pages)`, checked the same way. The module's own `module.ts`
-never imports its pages. The page types live in `@oltrem/core-module/pages`, which names no
-Workers type, so both sides import them; a `pages.public.d.ts` beside the pages is what a
-Worker-typed client sees, held to the implementation by a type test. `@oltrem/files` is the
-model: its `package.json` exports `./pages`, whose one export is named `pages` (the tool's
-loader stands it in by that name when it reads a Worker in Node), its `tsconfig.pages.json`
-checks the JSX, and two pragma lines at the top of `pages.tsx` tell any bundler how to compile it.
-
-A page's post uses three helpers from `@oltrem/core-module/pages`, kept once: `field(form, name)`, a
-form field's text trimmed (empty for a missing one or a file), `redirect(to)`, and `refused(title,
-detail?)`, the 422 `KIT-E-0422` a page shows above its form.
-
-A route may take its body as the content itself (`body: 'bytes'`, POST or PUT only): an upload.
-Its schema then checks the query. `route(def)` holds a route written with its own input type
-(from its schema) in the module's list of routes, which every module's list uses.
+A route with `body: 'bytes'` (POST or PUT) takes the content as its body; its schema checks the
+query. `route(def)` keeps a route's own input type in the module's list.
