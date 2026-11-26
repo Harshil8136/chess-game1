@@ -102,6 +102,10 @@ key and the site ID), each capable of `web-report`. Google's and Matomo's say au
 reader asks Google for a token with the key, and sends Matomo's token in the body of a POST. As with a data definition, the field an address is built from must carry
 a `pattern`, so a key is never sent elsewhere. The routes below treat one as they treat a data
 connection: not listed, not counted on Home, 404 on every instance route.
+PostHog's and Google Analytics' key is optional since the same day: `SIGN_IN_FIELDS` names the
+secret fields a sign-in fills (a token, a refresh token, when it ends, and PostHog's client), all
+optional, never typed into a form and refused when posted by hand; the Apps page asks for the key
+only when someone connects without signing in.
 
 Since 2026-11-23 it also ships six definitions of the kind `storage`, in
 `src/definitions/storage.ts`: a bucket of the client's own that the Files module may keep a
@@ -423,6 +427,12 @@ one of `OPTIONS` on the instance's config beside its fields: a choice about how 
 it, not part of its key. `edits` (`on`, or `null` to take it away): a connected database whose
 rows the portal may change. `columns` (JSON of 2 to 8,000 characters, no control characters):
 the data part's hidden and masked columns. A new key for the same host keeps the options.
+
+`registry.setCredential(env, actor, id, fields, { replace: true })` (2026-11-26, for Sign in with
+PostHog and Google Analytics) keeps none of the stored secrets: the pasted fields are the whole
+credential, so a key pasted over a sign-in drops its tokens and signing in again drops a key. The
+audit row says `replaced: true`. Without `replace`, a secret left out keeps the stored value, as
+above.
 
 `registry.renew(env, tenant, id, from, secret)` (2026-11-22, for Sign in with Airtable; since
 2026-11-25 also Sign in with Supabase's Management API tokens, so `access` is one of the fields it

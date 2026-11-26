@@ -27,7 +27,8 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
 - **Analytics.** The website analytics app the company already counts its visitors with:
   PostHog, Plausible, Umami (Cloud or its own server), Cloudflare Web Analytics, Google Analytics
-  4, Matomo (Cloud or its own server) or Fathom, connected with a read-only key (below, "Website analytics"). Its figures feed the Analytics page.
+  4, Matomo (Cloud or its own server) or Fathom, connected with a read-only key, or for PostHog and
+  Google Analytics by signing in (below, "Website analytics"). Its figures feed the Analytics page.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
   work (a retired Teams connector, a Slack Workflow link, n8n's test address) is refused with what
@@ -71,7 +72,7 @@ address. Empty, the cards offer the pasted link only.
 |---|---|
 | `connect.self` (every account) | see their own links, make their calendar link, delete their own links |
 | `connect.share` (bit plane `31`, operate) | make a spreadsheet link. It hands a whole list out of the portal, so an Owner can withhold it, as `files.share` for one file; taken away, the person's spreadsheet links open nothing until it is given back |
-| `connect.analytics.manage` (admin, at the company) | connect, check, give a new key to and remove the company's website analytics apps (`/api/connect/analytics`, 2026-11-26); someone without it sees the four cards greyed with "Ask an Owner" |
+| `connect.analytics.manage` (admin, at the company) | connect (by a key or by signing in), check, give a new key to and remove the company's website analytics apps (`/api/connect/analytics`, 2026-11-26); someone without it sees the cards greyed with "Ask an Owner" |
 | `connect.links.manage` (admin, at the company) | see everyone's links on `/connect/links` (whose each is, when an app last read it; never a secret) and delete any, audited as `connect.end` with whose it was (`GET /api/connect/links/everyone`, `DELETE /api/connect/links/everyone/:id`, 2026-11-24) |
 
 A chat alert or an automation needs `developer.manage`, checked by the Developer module. Without
@@ -257,7 +258,8 @@ an app does not keep is left out, never estimated.
 | Matomo | one `API.getBulkRequest` POST carrying all 13 reports, the token in its body (a token limited to POST works); a part switched off, such as Events or Live, leaves only its figure out | visitors over a range where its owner has not turned that on |
 | Fathom | `/aggregations` and `/current_visitors`, nine calls in turns of five, the most an account may run at once | visits apart from visitors, events |
 
-A report is kept ten minutes in the Cache API, keyed by the connection, the window and the key's
+An answer past 2 MB is refused as not a report before it is read whole (`ANSWER_MAX`): a week's
+report is a few kilobytes, and the daily check calls addresses people typed. A report is kept ten minutes in the Cache API, keyed by the connection, the window and the key's
 last change, so a page opened again calls no one and a new key is read at once; nothing is
 written to KV. A refusal is said in plain words ("Plausible refused the key. Make a new key and
 paste it here."), with the connection's page as the fix when a new key or a changed field fixes
@@ -268,13 +270,15 @@ hands in `registry: providers.registry`, without which these routes are not moun
 
 | Route | |
 |---|---|
-| `GET /api/connect/analytics` | the four apps, their fields and steps, and the connections made to each with their last check |
-| `POST /api/connect/analytics` | connect one (`definitionId`, `fields`, optional `label`), then a first check; the same app and site twice is `KIT-E-0422` |
+| `GET /api/connect/analytics` | the apps, their fields and steps, `signIn` where signing in is set up, and the connections made to each with their last check; the fields a sign-in fills are never listed |
+| `POST /api/connect/analytics` | connect one (`definitionId`, `fields`, optional `label`), then a first check; the same app and site twice is `KIT-E-0422`; a token, refresh token or client typed in is refused, and PostHog or Google Analytics without a key says to paste one or sign in |
 | `GET /api/connect/analytics/:id` | one connection: its fields that are no secret and its last check |
 | `GET /api/connect/analytics/:id/report?days=` | its report (7 when left out), kept ten minutes |
-| `POST /api/connect/analytics/:id/credential` | a new key or a changed field (a field left out keeps what is saved), checked at once |
+| `POST /api/connect/analytics/:id/credential` | a new key or a changed field (a field left out keeps what is saved), checked at once; a signed-in connection's site or region changes only with a key, else it is refused (`KIT-E-0422`): its sign-in may reach other sites the person can see |
 | `POST /api/connect/analytics/:id/check` | the last day asked for; asked again within 30 seconds, the last answer |
 | `DELETE /api/connect/analytics/:id` | the connection and its sealed key; the app and its figures are not touched |
+| `POST /api/connect/analytics/signin` | after Sign in with PostHog or Google: `held` (the sealed cookie) and `site`, one of those it lists; saves the connection (new, signed in again, or the one of that site) and checks it; answers `{id, again, check}` |
+| `GET /api/connect/todo` | Home's Needs you: the failing analytics connections |
 
 The Apps page reads the connections with the person's links: `GET /api/connect/links` answers
 `analytics` (each connection, as `GET /api/connect/analytics/:id` does) for someone who holds the
@@ -283,6 +287,52 @@ so the page stays inside its 10 queries.
 
 The registry audits each as `providers.create`, `providers.probe`, `providers.credential` and
 `providers.remove`.
+
+### Sign in with PostHog or Google Analytics
+
+Added 2026-11-26, the owner's ask: "1 Sign In which is modern, smart, smooth and easy to setup and
+2nd is manual with API key". PostHog and Google Analytics connect by signing in, through the same
+relay as one-click (`packages/relay`, its entries `posthog` and `google-analytics`), and the key
+stays as the second way, folded under "Or connect with a key". PostHog needs no app registered:
+its client id is the relay's own document (`/client/posthog`), so the portal renews its tokens
+itself; Google Analytics reuses the Vendor's Google app with `analytics.readonly` and offline
+access, renewed through the relay's `/renew/google-analytics`.
+
+1. **Sign in.** "Sign in with PostHog" posts `/connect/start` with the app; the trip goes the same
+   way as one-click, the person allows read-only access on the app's own page.
+2. **Find the sites.** On the way back the portal checks the tokens (a token, a refresh token,
+   when it ends, and for PostHog the relay's client id), then lists what the account can see:
+   PostHog's projects in the US region and then the EU one (a 401 or 403 tries the other),
+   narrowed to the projects the person allowed; Google's GA4 properties
+   (`accountSummaries`). At most 12, each name cut to 48 characters. None is "nosites", said in
+   plain words.
+3. **Pick one.** The tokens and the sites wait in a sealed cookie (`HELD_ROW`, ten minutes); the
+   page "Signed in to PostHog." lists the sites, each with Connect (the main button when there is
+   one). Connect posts `POST /api/connect/analytics/signin`, which opens the cookie on the
+   server, so a token never reaches the page; `/oneclick/held` refuses to hand one back.
+4. **Saved.** A new connection named after the site, or the one being signed in again, or one
+   already connected to the same site, its tokens replacing what was kept (`setCredential` with
+   `replace`, so an old key is dropped); then a first check.
+
+| Way | What is kept (sealed) | Renewed |
+|---|---|---|
+| Sign in with PostHog | the access token (an hour), the refresh token, when it ends, the client id | by the portal at PostHog's token endpoint with the client id, from five minutes before it ends |
+| Sign in with Google | the access token (an hour), the refresh token, when it ends | through the relay (`/renew/google-analytics`), which adds the app's secret; Google keeps the refresh token |
+| A key | the key, as before | never needed |
+
+A renewal is done just before a read, a check or a report, never on a schedule of its own. Two
+requests renewing at once: the one that loses reopens the connection and uses the tokens the
+other kept. A refused renewal (400 or 401) or a refused read under a sign-in says "PostHog asked
+you to sign in again. Press Sign in with PostHog on the connection." Pasting a key into a
+signed-in connection drops its tokens; signing in again drops a key.
+
+**The daily check** (`connect.analytics-check`, every three hours, listed on Scheduled jobs as
+"Check the analytics apps"): up to three connections whose last check is older than 20 hours,
+the oldest first, one after another, so a run stays far inside the 50 calls a Worker may make. A
+change of state (working to failing or back) is logged once; a run that changes nothing writes
+only the check's time. **Home** (Needs you, `GET /api/connect/todo`, for someone with
+`connect.analytics.manage`): "PostHog stopped answering" for each failing connection, opening its
+page, where Sign in with PostHog sits at the top when the last check failed.
 
 ## The page
 
@@ -295,9 +345,10 @@ The registry audits each as `providers.create`, `providers.probe`, `providers.cr
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
 | `/connect?show=analytics` | PostHog, Plausible, Umami, Cloudflare Web Analytics, Google Analytics, Matomo and Fathom, each opening `/connect/analytics/new/<app>`, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
-| `/connect/analytics/new/<app>` | the steps in the app with links to its pages, then Name and its fields, "Connect <app>"; a refusal keeps what was typed but never the key |
-| `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title |
-| `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Everyone's links" beside the Apps title |
+| `/connect/analytics/new/<app>` | the steps in the app with links to its pages, then Name and its fields, "Connect <app>"; a refusal keeps what was typed but never the key. PostHog and Google Analytics, where the relay is set up, open on "Sign in with <app>" (Recommended, three numbered steps, the one main button) and fold the key under "Or connect with a key" |
+| `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title. A sign-in app adds "Sign in again" (at the top when the last check failed) and folds the key under "Or use a key" |
+| `/connect/back?confirm=1&p=<app>` | after signing in: "Signed in to <app>." and the projects or properties, each with Connect; Cancel ends the sealed cookie |
+| `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Links your team made" in the Calendar part of the page (and above the Calendar and Spreadsheets filters), no longer beside the title (2026-11-26) |
 | `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
 
 ## The logos
@@ -346,7 +397,8 @@ without `connect.share` is `KIT-E-0403`; a link that is not theirs is `KIT-E-040
 
 ## Not here yet
 
-- Google Analytics 4, Matomo and Fathom among the analytics apps (the next batch).
+- Sign in for Plausible, Umami, Cloudflare, Matomo and Fathom: none of them offers it to an app
+  today, so they keep the key.
 - One-click for Microsoft Teams, Google Chat, Excel, Zapier and Make (see "One-click sign-in").
 - Calendar items from modules other than bookings, shifts, time off and tasks.
 - A Google Sheet's Google account named before its link is written. Today the way back only
@@ -380,7 +432,12 @@ words with the fix only where a key fixes it, a report kept and read again at on
 key; through the pipeline, the routes behind `connect.analytics.manage`, connecting, a second
 connection of the same site and an address of another shape refused, no key shown back, a new key
 checked, a check pressed twice calling once, `web` for the Analytics page, removing. The Analytics
-cards, locked or absent, and the connect and connection pages (`test/pages.test.ts`). The Custom card's guess from each
+cards, locked or absent, and the connect and connection pages (`test/pages.test.ts`). Sign in
+with (`test/analytics.test.ts`): the fields a sign-in fills never listed or typed; PostHog signed in
+across both regions with a renewal before a read, a client of another relay refused, a key pasted
+dropping the tokens; Google's refused renewal said as "sign in again", Home's line, signing in
+again into the same connection, and the daily job; the Connect page with Sign in first and the key
+folded, and the way back through the pick page to the connection (`test/pages.test.ts`). The Custom card's guess from each
 app's address, the links it refuses and an app's own page pasted by mistake
 (`test/detect.test.ts`). Each store's `calendar()` and the invoices' `csv()` have their own tests
 in their modules. The client template's screens test makes a calendar and a spreadsheet link as

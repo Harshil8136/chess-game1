@@ -3,7 +3,7 @@ title: "Phone tests owed: the Apps page"
 status: living
 owner: vendor
 last_verified: 2026-11-25
-sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-23-apps-logs-connected-look.md; docs/records/2026-11-24-everyones-links.md; modules/connect/README.md; modules/developer/README.md]
+sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/records/2026-11-26-analytics-sign-in.md; docs/records/2026-11-23-apps-logs-connected-look.md; docs/records/2026-11-24-everyones-links.md; modules/connect/README.md; modules/developer/README.md]
 ---
 
 # Phone tests owed: the Apps page
@@ -44,9 +44,9 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P512 | As an Owner, Admin, Integrations, Apps | "Everyone's links" beside the title; it lists every calendar and spreadsheet link, whose it is and when it was last used | [record](records/2026-11-24-everyones-links.md) |
+| P512 | As an Owner, Admin, Integrations, Apps, then "Links your team made" in the Calendar part | It opens Everyone's links: it lists every calendar and spreadsheet link, whose it is and when it was last used | [record](records/2026-11-24-everyones-links.md) |
 | P513 | Delete on someone else's link, then Delete link | It asks first, then says the link is deleted; the list no longer has it, and the Audit log has "connect.end" naming whose it was | [record](records/2026-11-24-everyones-links.md) |
-| P514 | As a person without that permission, Apps | No "Everyone's links" button; their own links still under Connected | [record](records/2026-11-24-everyones-links.md) |
+| P514 | As a person without that permission, Apps | No "Links your team made"; their own links still under Connected | [record](records/2026-11-24-everyones-links.md) |
 
 ### A stopped chat alert on Home, 25 November
 
@@ -68,6 +68,24 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 | P914 | Change the key with a wrong key, then Save and check | "Saved, but PostHog did not answer" with "PostHog refused the key"; Apps shows it under Connected as Not answering | [record](records/2026-11-26-website-analytics-apps.md) |
 | P915 | Disconnect, then Disconnect again in the window; then as someone without the permission, Apps, Analytics | Disconnected, the card back to Connect; the other person sees the four cards greyed with "Ask an Owner" | [record](records/2026-11-26-website-analytics-apps.md) |
 | P916 | Connect PostHog again, then Admin, Reports, and switch between 7, 30 and 90 days | A Website part with PostHog's visitors, page views and top lists for that period, and Open in PostHog; a refused key reads "could not be read" with a link to its connection | [record](records/2026-11-26-website-analytics-apps.md) |
-| P917 | Apps, Analytics, Google Analytics; follow its four steps, paste the JSON key file and the property ID, then Connect | Its page with the last 7 days, the live count, and your own events without page_view; pasting a G- ID is refused with what to paste instead | [record](records/2026-11-26-more-analytics-apps.md) |
-| P918 | Apps, Analytics, Matomo; your Matomo's address (with its folder, if any), the site ID and a token, then Connect | Its page with the last 7 days; with a wrong token, "Matomo refused the token" and a link back | [record](records/2026-11-26-more-analytics-apps.md) |
-| P919 | Apps, Analytics, Fathom; the site ID and a read-only API key, then Connect | Its page with visitors, page views, countries and the live count | [record](records/2026-11-26-more-analytics-apps.md) |
+| P930 | Apps, Analytics, Google Analytics, Or connect with a key; follow its four steps, paste the JSON key file and the property ID, then Connect | Its page with the last 7 days, the live count, and your own events without page_view; pasting a G- ID is refused with what to paste instead | [record](records/2026-11-26-more-analytics-apps.md) |
+| P931 | Apps, Analytics, Matomo; your Matomo's address (with its folder, if any), the site ID and a token, then Connect | Its page with the last 7 days; with a wrong token, "Matomo refused the token" and a link back | [record](records/2026-11-26-more-analytics-apps.md) |
+| P932 | Apps, Analytics, Fathom; the site ID and a read-only API key, then Connect | Its page with visitors, page views, countries and the live count | [record](records/2026-11-26-more-analytics-apps.md) |
+
+P930 to P932 were first numbered P917 to P919, which the Data list took at the same time.
+
+### Sign in with PostHog and Google Analytics, 26 November
+
+Before P934 and P935: the relay deployed again, and for Google its app's Analytics APIs and return
+address set (the relay's README, Google).
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P933 | Apps, Analytics, PostHog | "Sign in with PostHog" first, marked Recommended, with three short steps and the one filled button; the key under "Or connect with a key", closed | [record](records/2026-11-26-analytics-sign-in.md) |
+| P934 | Sign in with PostHog, Authorize on PostHog's page | Back on the portal: "Signed in to PostHog." and your projects; Connect on one opens its page with the last 7 days, and no key was asked for | [record](records/2026-11-26-analytics-sign-in.md) |
+| P935 | Apps, Analytics, Google Analytics, Sign in with Google, pick your account, Allow | Your GA4 properties listed; Connect on one opens its page with the last 7 days | [record](records/2026-11-26-analytics-sign-in.md) |
+| P936 | Sign in with PostHog again, then Cancel on PostHog's page | Back on PostHog's Connect page: you cancelled, so nothing was connected | [record](records/2026-11-26-analytics-sign-in.md) |
+| P937 | A signed-in connection's page | "Sign in again" and, closed, "Or use a key"; pasting a key there and saving keeps it working on the key | [record](records/2026-11-26-analytics-sign-in.md) |
+| P938 | Remove the portal's access in PostHog (or your Google account's third-party access); wait a day, then Home | Under Needs you: "PostHog stopped answering"; it opens the page with Sign in with PostHog at the top; signing in again clears the line | [record](records/2026-11-26-analytics-sign-in.md) |
+| P939 | Admin, Data, with a Supabase database connected (its card has "Add another"); then Apps at full width | The other cards in the row keep their own height; no card grows to match a taller one | [record](records/2026-11-26-analytics-sign-in.md) |
+

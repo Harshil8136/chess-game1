@@ -35,16 +35,34 @@ with the start it must have.
 | Supabase | none sent (the OAuth app is registered with Projects read and Secrets read), PKCE, the app's id and secret as HTTP Basic | the picked project's address, name and secret key (`sb_secret_…`), read by the relay with the Management API token; beside them that token (an hour), its refresh token and how many seconds it lasts, so the portal can read the project's logs, requests, advisors, backups and functions (2026-11-25). With several projects and none picked, the list of projects (ref and name) instead, and no token |
 | Airtable | `data.records:read schema.bases:read`, PKCE, the integration's id alone (it has no secret) | the access token (an hour), the refresh token (60 days, replaced on each use), how many seconds the access token lasts, and the integration's public id: Airtable has no lasting key an app can make, so the portal keeps these and renews them itself (the data part's README, "Sign in with Airtable"). The one service whose refresh token goes back |
 
-A new service is one more entry with its two secrets (and their rows in `tokens.registry.json`).
+| PostHog | `project:read query:read`, PKCE, no app registered: the client id is the relay's own document at `https://<relay>/client/posthog` (below) | the access token (an hour), the refresh token, how many seconds the access token lasts, the projects the person allowed (`scoped_teams`, as `12345,678`) and the client id: the portal finds the project's name and region with the token and renews the tokens itself (2026-11-26, website analytics) |
+| Google Analytics | `https://www.googleapis.com/auth/analytics.readonly`, offline access, consent asked each time, PKCE, the Google app above (no new secret) | the access token (an hour), the refresh token and how many seconds the access token lasts; the portal lists the person's properties with the token and renews it through `/renew/google-analytics`, since only the relay holds the app's secret |
 
-**Renewals (Supabase).** Supabase's access token lasts an hour and its refresh token needs the
+A new service is one more entry with its two secrets (and their rows in `tokens.registry.json`), or
+none for a service that reads a client document.
+
+**No app to register (PostHog).** An entry with `cimd` signs in with a Client ID Metadata
+Document (the IETF draft PostHog follows): the client id is the address `https://<relay>/client/<id>`,
+and the relay answers that address with the document the service reads at sign-in: the id
+itself, the name "Oltrem" (PostHog refuses a name with its own in it), the one way back
+`https://<relay>/back/<id>`, no secret (`token_endpoint_auth_method: none`) and the scopes under
+`com.posthog`, kept an hour. PKCE is a must, its verifier made from the seal key as for Airtable.
+Nothing is set up at PostHog for it.
+
+**Renewals (Supabase, Google Analytics).** Supabase's access token lasts an hour and its refresh token needs the
 app's secret, which only the relay holds. An entry marked `relayRenews` answers
 `POST /renew/<id>` with a form `refresh_token`: the relay exchanges it at the service's token
 endpoint with the app's id and secret as HTTP Basic and answers `{token, refresh, expires}` in
 plain JSON, keeping nothing. The refresh token is itself the credential, so nothing else is
 asked. A refusal by the service (400 or 401) is `400 {error: 'refused'}`, which the portal reads
 as the sign-in having ended; no app secrets set is 503; anything else 502. Another service, or a
-GET, is refused.
+GET, is refused. Google keeps its refresh token on a renewal and answers without one; for an
+entry marked `keepsRefresh` the relay hands the one it was given back, while for Supabase, which
+spends the old one, an answer without one is a failure. Who calls is not checked: a refresh token
+issued to the Vendor's app renews here for anyone holding it. The portals keep theirs sealed under
+their own key, so a copy of a portal's database or backup holds none in the clear; a signature
+from each portal on its renewals would close the rest, and needs a key per portal (not here yet,
+the security review of 2026-11-26).
 
 **The sheet.** For Google the portal puts the spreadsheet link's address and the sheet's title in
 the state, sealed to the relay's own key (they open the portal's list to whoever reads them, and
@@ -124,7 +142,12 @@ and the person presses again.
    Google Auth Platform: Branding (the app's name and a support address), Audience External and
    Publish app, Data access with the `.../auth/drive.file` scope (Google's non-sensitive level,
    so no verification), then Clients, Create client, Web application, with the authorized
-   redirect URI `https://<relay>/back/google`. Copy its Client ID and secret.
+   redirect URI `https://<relay>/back/google`. Copy its Client ID and secret. For Sign in with
+   Google Analytics (2026-11-26), in the same project enable the Google Analytics Data API and the
+   Google Analytics Admin API, add the scope `.../auth/analytics.readonly` under Data access
+   (Google lists it as sensitive: until the app is verified, people see "Google hasn't verified
+   this app" and press Advanced, then Continue), and add the second redirect URI
+   `https://<relay>/back/google-analytics` to the same client.
 5. **Supabase.** In supabase.com/dashboard open your organization's settings, OAuth Apps, Add
    application. Give it a name and the redirect URL `https://<relay>/back/supabase`, and under
    permissions set Projects to Read and Secrets to Read, and, for the project's other sections in
@@ -136,16 +159,18 @@ and the person presses again.
    `data.records:read` and `schema.bases:read`. Do not generate a client secret: the portals renew
    the tokens with the id alone, and adding a secret later would stop every portal's renewals.
    Copy its Client ID into `AIRTABLE_CLIENT_ID`.
-7. **Each portal.** Add its address to `RELAY_PORTALS`, and as the Vendor set Settings, System,
+7. **PostHog.** Nothing to do: the relay serves its own client document.
+8. **Each portal.** Add its address to `RELAY_PORTALS`, and as the Vendor set Settings, System,
    "Sign-in service for Slack, Discord, Google, Supabase and Airtable" to `https://<relay>`. The
    Apps page then offers "Continue to Slack", "Continue to Discord" and "Create the sheet in
-   Google", and the data part's Connect Supabase and Connect Airtable pages "Sign in with Supabase"
-   and "Sign in with Airtable".
+   Google", the data part's Connect Supabase and Connect Airtable pages "Sign in with Supabase"
+   and "Sign in with Airtable", and the analytics pages "Sign in with PostHog" and "Sign in with
+   Google Analytics".
 
 ## Tests
 
-Inside the Workers runtime, with the token endpoints as a fetch the test answers: the five
-entries and their scopes; the portals it reads and the states it accepts; a known portal sent to
+Inside the Workers runtime, with the token endpoints as a fetch the test answers: the
+seven entries and their scopes; the portals it reads and the states it accepts; a known portal sent to
 Slack with its scope and to Google with a PKCE challenge; an unknown portal refused without a
 redirect, at the start and the return; Slack's code exchanged with the app's secret and only the
 channel's address sealed back with the relay's key, the access token dropped; Discord's webhook
@@ -165,5 +190,10 @@ renewal through `/renew/supabase` answered with new ones, a refused refresh toke
 Airtable's own rules; the code exchanged with the id alone, no secret and no Basic header, with
 the verifier whose challenge went out; the tokens, their lifetime and the id sealed back, nothing
 else; not set up without its id; an answer without a refresh token failed. A service it does not
-know: back to a listed portal as not set up, and a plain 404 without a state, for an unlisted
+know: back to a listed portal as not set up. PostHog: the client document at `/client/posthog`
+with its id, one way back, no secret, a name without PostHog's own and the scopes, kept an hour,
+none for a service with an app; the sign-in page given that id and a PKCE challenge; the code
+exchanged with the id alone and the verifier; the tokens, the projects allowed and the id sealed
+back. Google Analytics: the Google app, offline access and consent; the tokens sealed back; a
+renewal Google answers without a refresh token hands back the one given, and a plain 404 without a state, for an unlisted
 portal or on the way back.

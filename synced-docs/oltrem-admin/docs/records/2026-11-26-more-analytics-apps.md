@@ -70,4 +70,5 @@ flowchart LR
   address takes a folder but no other host, Google's property refuses a measurement ID.
 - `pnpm verify`, quoted in the commit.
 - Not checked: a live Google Analytics, Matomo or Fathom account (none is connected to this
-  project); phone tests P917 to P919 are owed.
+  project); phone tests P930 to P932 are owed (first numbered P917 to P919,
+  which the Data list took at the same time).
