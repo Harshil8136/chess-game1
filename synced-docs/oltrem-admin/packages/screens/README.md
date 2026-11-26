@@ -238,7 +238,12 @@ trips before a page's own first read; now a page waits for its slowest read.
   live block is fetched again. The panel is `ui-drawer ui-peek` (42 rem wide, the whole screen on
   a phone, its body a container so its panes lay out by its own width); a page wraps its body in
   `<div data-peek-body class="contents">`, which the page lays out as before. Without the script
-  every link opens the record's page. Used by Scheduled jobs.
+  every link opens the record's page. Used by Scheduled jobs. Later the same day: the panel has
+  its own 20 px gutter and clips sideways, so a row of tabs never makes it scroll left and right;
+  its tabs stay at its top as it scrolls; the open record's row is marked in the list
+  (`data-peeked`, a tint and a bar at its start); buttons marked `data-peek-step="-1"` or `"1"`
+  and the keys K and J open the previous or next record of the list without closing the panel;
+  an empty panel shows a soft placeholder while the record loads.
 - **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
   (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
   the unread figure (to "99+") and, since 2026-11-26, a tooltip naming it ("Notifications: 3
