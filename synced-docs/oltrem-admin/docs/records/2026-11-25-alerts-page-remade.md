@@ -58,7 +58,7 @@ flowchart LR
 
 The same evening the owner asked for a more compact sidebar and called the search box's list
 "really ugly, no color, completely blend". The sidebar, open, is now as wide as its longest row,
-between 12 and 16 rem, on a computer and a phone. The search list had lost its look: the frame
+between 12 and 16 rem, on a computer (on a phone too at first; see below). The search list had lost its look: the frame
 script named it `ui-finder`, a class with no style, so it showed bare. It is `.ui-go` again, and
 each row now has its section's icon on a coloured tile, the page's name over its section, the
 selected row in its colour with Enter, suggestions when nothing was opened yet, and a line of key
@@ -76,6 +76,15 @@ two tinted panels (the alert's colour and blue); When, Who, Email and The alert 
 columns in one card, each headed in its own colour with the labels one width; the note's box and
 button are one height; the actions are one bar, with Mark resolved solid, the mute choices one
 track and Copy and Delete at its end (P826). The stylesheet cap rose to 188 KiB for both.
+
+## The next morning: the account menu on a phone
+
+On 2026-11-26 the owner found the account menu broken in the phone's drawer: once the drawer
+followed its names it was too narrow, so the colour dots and the theme buttons ran past its edge
+and Look and colours and the email were cut short. The drawer keeps its full width again (16 rem,
+or the screen less 56 px), the colour dots wrap to a second line instead of leaving the menu, and
+on a computer the menu is never narrower than 15 rem, over the page beside a narrow sidebar
+(P820).
 
 ## Verified
 

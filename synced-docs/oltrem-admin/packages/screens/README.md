@@ -277,8 +277,12 @@ trips before a page's own first read; now a page waits for its slowest read.
   on a small tile of that colour (solid for the section on screen, whose row is tinted and bold,
   so it never rests on colour alone). The sidebar itself is tinted with the portal's colour
   (`--ui-side`). Open, it is as wide as its longest row, between 12 and 16 rem (2026-11-25, the
-  owner: "can be more compact"), on a computer and as the phone's drawer; the portal's name, the
-  search box and the account cut their words instead of widening it. Home's At a glance rows use
+  owner: "can be more compact"), on a computer; the portal's name, the search box and the account
+  cut their words instead of widening it, and the account's menu is never narrower than 15 rem, so
+  its colours and theme fit (over the page beside a narrow sidebar). The phone's drawer keeps its
+  full width, 16 rem or the screen less 56 px (2026-11-26: narrower, the account menu's colour dots
+  and theme buttons spilled out of it); the colour dots wrap to a second line rather than leave
+  the menu. Home's At a glance rows use
   the same colours.
 - **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
   that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
