@@ -1,10 +1,9 @@
 # @oltrem/core-audit
 
-The one audit log of a client Worker (plan sections 10, 11 and 13): who did what, to what, with
-what outcome. One writer, one table, written after the response so it costs the request
-nothing, every row hashed so a changed row is found, and never a secret in it. The audit
-module adds the page's routes, the export and the daily seal that chains the hashes into the
-bucket.
+The one audit log of a client Worker: who did what, to what, with what outcome. One writer, one
+table (`oltrem_audit_log`, migration `0003`), written after the response, every row hashed so a
+changed row is found, never a secret. The audit module adds the page's routes, the export, the
+90-day archive and the optional daily seal.
 
 ## Recording
 
@@ -25,42 +24,23 @@ audit.after(ctx.waitUntil, {
 
 | Field | Rule |
 |---|---|
-| `actor` | an email for a person, a job or module name for the system, the vendor's email |
-| `actorKind` | `person`, `system` or `vendor`; the plan's "Vendor actions loud" reads this |
+| `actor` | An email for a person or the vendor, a job or module name for the system |
+| `actorKind` | `person`, `system` or `vendor` |
 | `action` | `<module>.<verb>`, lower case |
-| `target` | what it was done to, as the module names it |
-| `outcome` | `ok`, `refused` or `failed`: a refused action is recorded too |
-| `details` | short, plain facts, at most 4 KB; a field whose name looks like a credential (`password`, `token`, `apiKey`, `client_secret`, …) is refused with `KIT-E-1102`; a whole record never belongs here |
+| `target` | What it was done to, as the module names it |
+| `outcome` | `ok`, `refused` or `failed` |
+| `details` | Short plain facts, `DETAILS_LIMIT` (4 KB); a field named like a credential (`password`, `token`, `apiKey`, `client_secret`) at any depth is `KIT-E-1102` |
 
-A bad entry is refused with `KIT-E-1101` in the request, where the programming error is; only
-the write itself is deferred. `record(entry)` writes at once and returns the row, for jobs.
-
-**Every row says from where.** The pipeline notes each change request's address, country and
-browser (`noteRequest`, `@oltrem/core-module`), and a row written for that request gets `ip`,
-`country` and `browser` added to its details, a module's own row as much as the automatic one; a
-fact the module gave itself wins. A job's row, with no request, gets nothing added.
-
-**What a module row holds.** So the log is worth reading, a module's row carries:
-
-| Fact | What it is |
-|---|---|
-| `name` | the record's name as it was when the row was written (`Invoice 12: Repairs`, a task's title, a role's name), so the log still says what it was after the record is gone; the Audit log page shows it under "To what" |
-| `changes` | on a change, `{ field: { from, to } }` for each field that changed and only those, from `changesOf(before, after, fields?, personal?)` |
-| `placeName`, `person` | the location's name, the person it concerns, when the record has them |
-
-`changesOf` cuts each side to `FACT_LIMIT` (120) characters, names at most `CHANGES_LIMIT` (10)
-fields and counts the rest in `more`, and drops any field whose name looks like a credential. A
-field named in `personal` (a customer's name or note, free notes, a list of addresses) is kept as
-`{ hidden: true }`: the log is kept for good and is not erased by a privacy request, so it says
-that a person's details changed, never to what. `shortFact` cuts one value the same way (a list
-to its first `LIST_LIMIT`, 40, items). In a module, `recorded` (`@oltrem/iam`) hands its work a
-`note(facts)` for these, written on the row whatever the outcome, a refusal included.
+A bad entry is `KIT-E-1101` in the request; only the write is deferred. `record(entry)` writes at
+once, for jobs. A module row also carries `name` (the record's name then, shown under "To what"),
+`changes` (`{ field: { from, to } }` from `changesOf(before, after, fields?, personal?)`), and
+`placeName` or `person`. `changesOf` cuts each side to `FACT_LIMIT` (120), names at most
+`CHANGES_LIMIT` (10) fields with the rest in `more`, drops credential-like fields, and keeps a
+`personal` field as `{ hidden: true }`, since the log is kept for good and not erased by a privacy
+request. `shortFact` cuts one value (a list to `LIST_LIMIT`, 40). `recorded` (`@oltrem/iam`) hands a
+module's work `note(facts)`, written whatever the outcome.
 
 ## The automatic row
-
-A module does not have to remember the audit. The pipeline tells the app of every change made
-through a route (`onChange`, `@oltrem/core-http`), and `createChangeAudit` writes it as a row
-after the response:
 
 ```ts
 const app = createApp({
@@ -69,68 +49,44 @@ const app = createApp({
 });
 ```
 
+The pipeline's `onChange` (`@oltrem/core-http`) is written as a row after the response:
+
 | Field | Value |
 |---|---|
-| `action` | `<module>.<verb>`: the route's `action`, or its method and fixed path segments |
-| `target` | the route's last parameter, the thing changed |
-| `outcome` | `ok` below status 400, `failed` from 500, `refused` between: the permission check's and the schema's refusals are recorded too |
-| `actor` | the caller; `outside` (as the system) for a call refused before anyone was let in, such as a key that is not one |
-| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the refusal's `reason` and `fields`, the `download` and `bytesOut` a read handed over, `notLoggedBefore` (below), and what the pipeline noted for the request (next table) |
+| `action`, `target` | The route's `action` (or method and fixed segments), its last parameter |
+| `outcome` | `ok` under 400, `failed` from 500, `refused` between (permission and schema refusals too) |
+| `actor` | The caller; `outside` (system) for a call refused before anyone was let in |
+| `details` | `method`, `route`, `status`, `ms`, and when present `code`, `reason`, `fields`, `download`, `bytesOut`, `notLoggedBefore` |
 
-What every row of a request carries, a module's own included:
+Every row of a request, a module's own too, gets what the pipeline noted (a fact the module gave
+wins; a job's row gets none): `ip`, `country`, `region`, `city` (never finer), `asn`, `network`,
+`browser`, `agent` (160 characters), `via` and `key` (an API key's public id; `local` on the owner's
+computer) and `session` (the IAM device id).
 
-| Fact | What it is |
-|---|---|
-| `ip`, `country`, `region`, `city` | the address and where the edge placed it, never finer than a city |
-| `asn`, `network` | the network the address belongs to, by number and owner: a home provider, a phone company or a cloud host |
-| `browser`, `agent` | the browser or program in words (`Chrome on Android`, `curl (a command-line program)`) and the user agent as sent, 160 characters at most |
-| `via`, `key` | `key` and the API key's public id for a key's call (never its secret); `local` on the owner's computer |
-| `session` | the sign-in the call rode on, its second: the IAM module's device id, so every row of one sign-in can be listed |
-
-Which calls are rows: every change; a read refused outside a page's own render (a page asking what
-to show is not an attempt); a read that handed over a file; a read marked `audited` (connected
-data, and the audit log itself: `audit.read`, PCI DSS 10.2.1.3); and every call made with an API
-key, reads included. A person's ordinary read is not a row: it would be most of the log and of the
-free plan's daily writes. Reads have a share so a stolen key cannot spend those writes: the same
-read of the same record stays quiet for ten minutes (`SAME_READ_QUIET_MS`), a caller writes at
-most `READ_ROWS_A_MINUTE` (10) rows of reads a minute in one isolate, and calls refused from
-outside share the same limit per address; what is held back is counted on the caller's next row
-as `notLoggedBefore`. Changes, downloads and a known caller's refusals are never held back.
-
-A module that writes its own row for the request (`record` or `after` with the request id) keeps
-its richer row, and the automatic one is not written beside it: the writer remembers, in the
-isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
+Rows are written for every change; a read refused outside a page's own render; a read that handed a
+file over; a read marked `audited` (connected data, and the audit log itself, `audit.read`, PCI DSS
+10.2.1.3); and every API key call. Ordinary reads are not rows. Reads are held back so a stolen key
+cannot spend the daily writes: the same read of the same record is quiet for `SAME_READ_QUIET_MS`
+(10 minutes), a caller writes `READ_ROWS_A_MINUTE` (10) read rows a minute per isolate, outside
+refusals share it per address, and what was held back is counted as `notLoggedBefore`. Changes,
+downloads and a known caller's refusals are never held back. A module that writes its own row for
+the request keeps it, and the automatic one is skipped (`takeRecorded`, the newest 512 ids).
 
 ## The public addresses
 
-Every call to a public hook (a provider's delivery report, an inbound webhook, a calendar or
-spreadsheet link another app reads) is a row too, for data-loss prevention and compliance :
-`createHookAudit` is the app's `onHook` (`@oltrem/core-http`).
-
-| Field | Value |
-|---|---|
-| `actor` | `outside`, as `system` |
-| `action` | `<module>.received` |
-| `target` | what the handler noted as `target` (the link's id), else empty |
-| `details` | `method`, `route` (the declared pattern, never the address), `status`, `ms`, `bytesIn`, `bytesOut`, the caller's `ip`, `country` and `browser`, and the handler's other notes (`name`, `person`, `rows`, `events`) |
-
-A route writes at most 30 rows a minute in one isolate (`HOOK_ROWS_A_MINUTE`), so a stranger
-hammering a public address cannot spend the database's daily writes; the calls past it are
-counted and the route's next row says how many (`notLoggedBefore`).
+`createHookAudit` is the app's `onHook`: each hook call is a row by `outside` (system),
+`<module>.received`, target what the handler noted, details `method`, `route` (the pattern, never
+the address), `status`, `ms`, `bytesIn`, `bytesOut`, `ip`, `country`, `browser` and the handler's
+notes. At most `HOOK_ROWS_A_MINUTE` (30) a route per isolate; the rest are counted on the next row.
 
 ## Reading and checking
 
-`list({ actor, action, target, module, outcome, kind, q, count, since, until, before, limit })` pages newest first (`module` reads every action of one module; `kind` is `people` or `automatic`, the portal's own rows; `q` finds words anywhere in the person, action, record or details, `%` and `_` taken literally; `count` adds `counts`, the rows of each result across every page of the same filter); the
-`before` it returns is the cursor for the next page. `range(since, until, limit)` returns the
-rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
-of every row in the range and names the rows whose content no longer matches (it also returns
-the stored hashes it read, in order, for the seal's chain), so the seal job
-and the Status page can say "the log is intact" and mean it. The hash covers every field
-but the sequence number; details are stored as canonical JSON (keys sorted), so the same facts
-always hash the same.
-
-The storage is the table `oltrem_audit_log`, migration `0003`, which depends on no other
-module's table. Rows are text ids and ISO timestamps; the sequence number orders them.
+`list({ actor, action, target, module, outcome, kind, q, count, since, until, before, limit })` pages
+newest first (`kind` `people` or `automatic`; `q` anywhere, `%` and `_` literal; `count` adds counts
+across every page) with a `before` cursor. `range(since, until, limit)` gives a range oldest first.
+`verify({ from, to })` recomputes each row's hash and names those that no longer match, returning the
+stored hashes for the seal. The hash covers every field but the sequence; details are canonical
+JSON.
 
 ## The audit module
 
@@ -143,73 +99,35 @@ const audit = createAuditModule<Env>({
 // audit.module goes in the client's module list, on bit plane 9
 ```
 
-| Route | Capability | What it answers |
+| Route | Needs | What it answers |
 |---|---|---|
-| `GET /entries?outcome=&module=&actor=&target=&action=&since=&until=&kind=&ip=&asn=&key=&session=&signal=&q=&count=1&offset=&countSince=&before=` | `audit.read` at the company | each reading is itself a row (`audit.read`); 50 rows, newest first, narrowed by outcome, module, person, time (`since`), people, the portal or API keys (`kind`), one address (`ip`), network (`asn`), API key (`key`) or sign-in (`session`), the signals (`signal=downloads` or `flagged`: sign-ins from a new country or browser), words (`q`, up to 100 characters; the Audit log page's search), with `counts` by result, `signals` (key calls, downloads, new places) and `days` (each day's counts by result, in the reader's clock when `offset` gives their minutes from UTC; over `countSince` when given, so a page can list one day and still count the range) when `count=1`, an end time (`until`), what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
-| `GET /since?at=` | `audit.read` at the company | Home's What changed card: what others did since `at` (the person's last Mark as seen; a day back without it, a week back at most, `SINCE_DAYS`), the kinds of change by action, the most made first, the first six (`SINCE_KINDS`) with their counts, and the total. Only a person's changes that went through count: not the person asking, not refusals or failures, not the system's own rows (the Vendor's count), and not coming and going (`iam.sign-in`, `iam.sign-out`, `iam.sign-out-everywhere`, `iam.device-end`). One grouped read on `oltrem_audit_log_at`, which reads the rows since that time, a week's at most; the card is an extra that starts off (`audit.since`, `@oltrem/core-config`) |
-| `GET /seals` | `audit.read` at the company | the newest 30 daily seals and whether each still holds |
-| `GET /export?since=&until=` | `audit.export` (admin class) at the company | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
-| `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands; nothing about the seal when `sealing` answers false (the Daily seal switched off) |
+| `GET /entries` | `audit.read` at the company | Each reading is a row (`audit.read`). 50 newest first, narrowed by `outcome`, `module`, `actor`, `target` (index `oltrem_audit_log_target`, migration `0059`), `action`, `since`, `until`, `kind`, `ip`, `asn`, `key`, `session`, `signal` (`downloads`, `flagged`), `q` (100 characters); `count=1` adds `counts`, `signals` and `days` (in the reader's clock by `offset`, over `countSince`); `before` pages |
+| `GET /since?at=` | `audit.read` at the company | Home's What changed: others' changes that went through since `at` (a day back by default, `SINCE_DAYS` 7 at most), by action, the first `SINCE_KINDS` (6) with counts and the total; not the asker, refusals, the system, or sign-ins and sign-outs; one grouped read on `oltrem_audit_log_at`; an extra that starts off (`audit.since`) |
+| `GET /seals` | `audit.read` at the company | The newest 30 seals and whether each holds |
+| `GET /export?since=&until=` | `audit.export` (admin) at the company | Whole UTC days as CSV, `EXPORT_MAX` (10,000) rows, through `csvFile`; recorded as `audit.export` |
 
-**The daily seal** is optional: the Features page switches it (`audit.seal`, an extra of the audit
-part in `@oltrem/core-config`), and a new portal starts with it off; off, `audit.seal`,
-`audit.recheck` and the check `audit.sealed` stop, and the log itself keeps every row. While on, the
-job `audit.seal` runs once a day. It closes the UTC day before today: the hash of the previous seal
-and of every row of that day, in order, hashed together (`chainHash`), so each seal depends on all
-before it. A day with no row is sealed too, which keeps the chain unbroken. The seal goes into
-`oltrem_audit_seals` (migration `0016`) and a copy with every row's hash goes into the bucket at
-`logs/audit/<day>.json`, where the backup's lifecycle rules keep it.
+Home's card (a module part): the last 24 hours' rows and the seal, nothing about the seal while
+`sealing` answers false.
 
-**The recheck.** The job `audit.recheck` runs every 15 minutes while it has seals to check, and
-every six hours once a run finds none left for the day (it answers `'idle'`). It checks again the newest 7
-seals (`RECHECK_SEALS`) not yet checked since today's UTC midnight, the one never checked or
-checked longest ago first: a row changed since (its hash no longer matches), a row removed or
-added (the chain no longer adds up) or a bucket copy that differs marks the seal broken and names
-the problem. One run hashes at most `RECHECK_ROWS` (200) rows again, so it fits a tick's share of
-the Free plan's 10 ms of CPU however busy the log is. A seal that fits is read once: `verify`
-returns the stored hashes it read (`hashes`), and the chain is computed from them. A larger seal
-is checked as a whole first, with the database joining its row hashes into one value
-(`group_concat ... ORDER BY seq`), so the Worker does one digest and no work per row; its rows
-are then checked in parts over the next runs, and the run that stops partway keeps its place
-(the day and the next row) in the bucket at `logs/audit/recheck.json`, removed once no seal is
-partly checked. With 96 runs a day this keeps up with about 2,700 rows a day; a busier log is
-checked over more than a day, never skipped. The daily seal no longer rechecks: before the
-change it rechecked all 7 seals in one run, which took most of a tick's CPU on its own
-(`archive/records/2026-11-01-cpu-budget.md`).
+| Job | Pace | What it does |
+|---|---|---|
+| `audit.seal` | Daily | Closes yesterday (UTC): the previous seal's hash and each row's, in order (`chainHash`); an empty day too. Into `oltrem_audit_seals` (migration `0016`) and `logs/audit/<day>.json` |
+| `audit.recheck` | 15 minutes, idle 6 hours | Rechecks the newest `RECHECK_SEALS` (7) not checked since midnight, oldest check first; a changed, removed or added row or a differing copy marks it broken. At most `RECHECK_ROWS` (200) rows a run; a larger seal is checked whole by the database (`group_concat ... ORDER BY seq`) then in parts, its place kept at `logs/audit/recheck.json`; about 2,700 rows a day keep up |
+| `audit.archive` | Hourly, idle daily | Keeps `KEEP_DAYS` (90) in D1: older rows, oldest first, `ARCHIVE_ROWS` (1,000) a run, one UTC day at a time, written whole with hashes to `logs/audit/rows/<day>/<first seq>.json` (`ARCHIVE_PREFIX`) before removal, by the same bounds as the read |
 
-**Ninety days in the database.** The log keeps its last 90 days in D1 (`KEEP_DAYS`, the owner's
-database review). The job `audit.archive` moves older rows into the bucket, oldest first, at most
-1,000 a run (`ARCHIVE_ROWS`), one UTC day at a time: each slice is written whole, with its hashes,
-to `logs/audit/rows/<day>/<first seq>.json` (`ARCHIVE_PREFIX`), and only then removed from the
-table, so a failed write removes nothing. The removal uses the same day and time bounds as the read,
-so a row written across midnight by another request, whose number falls among the slice's, stays for
-its own day's run. The job runs hourly while rows wait and daily once none do (it answers idle), so
-a portal behind by months, or one logging more than 1,000 rows a day, catches up at up to 24,000
-rows a day. The export reads those files for the days older than the database holds, and refuses an
-export that would need more than 40 of them (`ARCHIVE_FILES`) rather than run past a request's
-limits; a file listed but gone, or one that is not rows, fails the export by its name (`KIT-E-0500`)
-instead of leaving a day out. The page and Home read only the database. Only the newest 7 seals are
-rechecked, so moving older rows breaks no check; the files keep each row's hash, so the chain of a
-moved day can still be checked by hand, sealed or not (Daily seal is off by default). The moved rows
-are personal data like the table's (who did what): they stay in the bucket, with the bucket's
-backups, until removed by hand, and the privacy search reads only the database's 90 days (privacy
-module, "Find their data"), so an older day is answered with this export.
-
-**The check.** `audit.sealed`, in the audit lane of Status: failing when a seal is
-broken, a warning before the first seal and when the last seal is more than two days old (its
-message says where to switch Daily seal off, or to resume the job, and Status's Fix button
-opens Features), ok otherwise.
+The seal is an extra (`audit.seal`) that starts off; off, the seal, recheck and `audit.sealed`
+stop and the log keeps every row. `audit.sealed` (lane `audit`) fails on a broken seal, warns before
+the first and when the last is over two days old (its message points at Features). The export reads
+archive files for older days, at most `ARCHIVE_FILES` (40), and fails by name (`KIT-E-0500`) on a
+missing or wrong file. Archived rows are personal data kept in the bucket until removed by hand;
+the privacy search reads only the database's 90 days.
 
 ## Tests
 
-Inside the Workers runtime against a local D1 with the migration applied: a row with every
-field and a valid hash, a bad actor, kind, action, outcome or oversized details refused,
-credential-like fields refused at any depth while `tokenCount` and `keyName` pass, the deferred
-write and its reported failure, the filters and the paging, and a row changed by hand found by
-its sequence number. The module's own tests: the seal chained and copied, sealed once a day, an
-empty day sealed; a row changed and a row removed after the seal, each found by the next run
-and failing the check; a large seal checked over three runs from its kept place, a change late
-in it still found, and a row removed from it found by its first run; What changed by kind, the
-most first, the Vendor's counted, leaving out the asker, refusals, the system and sign-ins, a day back by default and a
-week at most; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
-the Home card, and the card with the seal switched off.
+Inside the Workers runtime on a local D1: `test/audit.test.ts` (a full row and its hash; bad
+actor, kind, action, outcome or size; credential fields at any depth while `tokenCount` passes; the
+deferred write; filters and paging; a hand-changed row found), `test/changes.test.ts` (the
+automatic row, held-back reads, `notLoggedBefore`), `test/hooks.test.ts` (hook rows and their
+limit), `test/module.test.ts` (the seal chained, copied, once a day, an empty day; changes and
+removals found; a large seal over three runs; What changed by kind and its exclusions; entries;
+the archive and the export reading it; the CSV export and its formula guard; Home with and without the seal).
