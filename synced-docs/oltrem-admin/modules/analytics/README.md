@@ -22,7 +22,9 @@ const modules = [iam.module, /* ... */ withPages(analytics.module, analyticsPage
 stands on the IAM module (sessions, the authorizer) and the audit log, and adds no binding, secret
 or variable. Its other options: `timeZone`, the company's time zone, which the hours of the week are
 read in (UTC without it; the client template passes the company clock's setting); `web`, which
-hands in the website reports (below); and `report`, where a failure of `web` is reported.
+hands in the website reports (below); `parts`, the sections the portal's modules bring to Reports
+(below; the client template lists every module that is on and has a `report`); and `report`,
+where a failure of `web` is reported.
 
 With `send`, a function that emails one message (the client template passes the portal's email
 module, with the template `analytics.message`), the module also has the Monday summary below.
@@ -84,7 +86,7 @@ with the first cause, so the Jobs page shows it.
 
 | Path | Shows |
 |---|---|
-| `/analytics` | remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it; and, when the portal hands reports in, **Website** (below). A part with nothing to show is left out |
+| `/analytics` | tabs in a sideways row (2026-11-26, [the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers** and **Work** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
 | `/analytics/csv` | the period's days as a CSV file (the same whose work): day, actions, automatic, vendor, people, sign-ins, refused, failed; numbers and dates only |
 
 The charts are the kit's report charts (`@oltrem/core-ui`, its README), SVG drawn on the server
@@ -105,12 +107,25 @@ the part is not shown; with it and no app connected, it says how to connect one;
 fails it is reported and the part says so. The Apps page caches each report (the Cache API, never
 KV), so a page view asks no app.
 
+### The modules' sections
+
+Each module that declares `report` (`@oltrem/core-module`, its README) brings a section to one of
+the tabs Money, Customers or Work: invoices, quotes and expenses under Money; customers and form
+answers under Customers; tasks and bookings under Work. The page asks `GET /parts` for the list
+and today's date, then only the open tab's sections, each from its own module's
+`GET /api/<module>/report` as the person and side by side. A section is a pane: its figures with
+their moves against the period before (none when the period before cannot be known), one line a
+day with the period before dashed, and its lists, each row opening its page. Amounts are shown in
+their currency. A section the person may not see (403) is left out; one that could not be read
+says so; a tab where none is left says so.
+
 ## The routes
 
 | Route | Capability | What it answers |
 |---|---|---|
 | `GET /activity` (`days` 7, 30 or 90, 30 when left out; `who` people, automatic or vendor) | `analytics.read` | the period's totals and those of the period before, every day of both, the areas with their move and each day's count (the eight busiest), the ten most frequent actions and the six refused or failed most with their moves, the people (new, back, the eight busiest by address), the week of hours on the company's clock, the named work, when the counts reach and how many rows wait for the next run |
 | `GET /web` (`days`) | `analytics.read` | whether the portal hands website reports in (`wired`), each connected app's report, and `failed` when they could not be read |
+| `GET /parts` | `analytics.read` | the sections the portal's modules bring to Reports (module, title, tab), whether `web` is wired, and today (UTC) as the day to read them to; the same list for everyone, since each section checks the person itself |
 
 ## Tables
 
@@ -129,8 +144,7 @@ check answers `KIT-E-0403`.
 
 - Website visitors without an analytics app: counting the portal's own website would belong to
   the website edition, with a privacy choice of its own.
-- Figures a module counts itself (emails delivered, files stored): the audit log counts what was
-  done; a module's own series would need a small contract in core-module.
+- Email, services and the money funnel as sections: the next batches of the plan of 2026-11-26.
 - Days in the company's own time zone (the hours are on its clock since 2026-11-26).
 
 ## Tests

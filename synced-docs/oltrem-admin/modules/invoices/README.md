@@ -135,6 +135,7 @@ save as a PDF, through `/account/open/invoices/<id>`, only while it is theirs an
 | `POST /invoices/:id/void` | `invoices.make` at its place | voids a draft or a sent invoice |
 | `GET /search?q=` | `invoices.view` | invoices by title or address where the person sees |
 | `GET /todo` | `invoices.make` | Needs you: how many sent invoices are past their day at the places the person makes them |
+| `GET /report?days=&to=` | `invoices.view` | the section on Reports, under Money: invoices sent, invoiced and paid (in the currency most of them use), overdue, a line of what was paid each day and the overdue ones, oldest first, at the places the person sees |
 
 Every step is audited: `invoices.create`, `invoices.change`, `invoices.send`, `invoices.resend`, `invoices.pay` and
 `invoices.void`, refusals included.

@@ -89,6 +89,7 @@ task, never to the person who wrote it.
 | `POST /bulk/remove` | `tasks.manage`, and each task at its place | removes up to 100 at once, the same way |
 | `GET /todo` | `tasks.read` | Needs you: how many open tasks are the person's, how many past due or due today |
 | `GET /search` | `tasks.read` | the portal's search: tasks by title at the places the person may see |
+| `GET /report?days=&to=` | `tasks.read` | the section on Reports, under Work: tasks made, done and overdue, a line of tasks done each day and who did the most, at the places the person may see |
 
 Every change is audited: `tasks.create`, `tasks.update`, `tasks.done`, `tasks.reopen`,
 `tasks.comment`, `tasks.remove`, refusals included; a bulk press writes one row per task with `bulk: true`, in the same batch as its change. One that went through can set off an automation.

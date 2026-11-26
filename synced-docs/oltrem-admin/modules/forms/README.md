@@ -132,6 +132,7 @@ us", oldest waiting first, opening the form's inbox on its new answers.
 | `POST /forms/:id/entries/:entry/read` | `forms.read` | mark an answer read for the team (`{ read: true }`, or no body), or unread again (`{ read: false }`); answers 204 |
 | `PATCH /forms/:id/entries/:entry`, `POST /forms/:id/entries/:entry/notes` | `forms.handle` | mark an answer, take it or let it go; add a note, or a reply by email |
 | `DELETE /forms/:id/entries/:entry` | `forms.remove` | remove an answer with its notes |
+| `GET /report?days=&to=` | `forms.read` | the section on Reports, under Customers: answers, forms answered and answers not taken yet, a line of answers each day and the answers by form, for the forms the person may see |
 
 Every change people make is audited (`forms.form-create`, `-update`, `-remove`;
 `forms.key-renew`; `forms.field-add`, `-remove`, `-move`; `forms.entry-update`, `-note`,

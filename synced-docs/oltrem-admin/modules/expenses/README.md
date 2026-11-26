@@ -108,6 +108,7 @@ sniffed).
 | `POST /claims/:id/withdraw` | `expenses.self`, and claimed it | withdraws it while it waits |
 | `GET /export?month=2026-10` | `expenses.decide` | the month's approved and paid claims at the places the person decides, by the day spent, as a CSV file (amounts as plain digits, text a spreadsheet would run as a formula defused); 5000 rows at most, the file's name ending `-first-5000` past it (2026-11-24) |
 | `GET /todo` | `expenses.decide` | Needs you: how many claims wait for the person's answer, and how many approved ones wait to be paid, with their sum |
+| `GET /report?days=&to=` | `expenses.decide` | the section on Reports, under Money: claims made, claimed and paid back, those waiting for an answer, a line of what was claimed each day and the claims by category, at the places the person decides |
 
 Every step is audited: `expenses.claim`, `expenses.receipt`, `expenses.approve`,
 `expenses.decline`, `expenses.pay`, `expenses.withdraw` and `expenses.export` (with the month and

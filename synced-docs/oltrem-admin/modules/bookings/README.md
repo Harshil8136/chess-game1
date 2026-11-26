@@ -69,6 +69,7 @@ booked from now on (`KIT-E-3102`), and its past bookings are kept.
 | `POST /bookings` | `bookings.book` at the resource's place | books it on a day, from a time, for a number of minutes |
 | `DELETE /bookings/:id` | `bookings.book`, and booked it or manages the place | cancels a booking that has not ended |
 | `GET /search` | `bookings.book` | the portal's search: what can be booked, by name, at the places the person may book |
+| `GET /report?days=&to=` | `bookings.book` | the section on Reports, under Work: bookings made, hours booked and cancelled, a line of hours booked each day and the busiest things to book, at the places the person may book |
 
 Every change is audited: `bookings.add`, `bookings.remove`, `bookings.book`, `bookings.cancel`,
 refusals included. One that went through can set off an automation: one on `bookings.book` emails

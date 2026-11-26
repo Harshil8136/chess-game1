@@ -199,6 +199,7 @@ The door's pages use the portal's look, without the staff sidebar; the mark at t
 | `POST /services/:id/off` | `customers.services` at the company | stops offering it; sign-ins made with it stay |
 | `POST /services/:id/remove` | `customers.services` at the company | removes it and its sealed secret |
 | `GET /search?q=` | `customers.view` | the portal's search: customers by name or address |
+| `GET /report?days=&to=` | `customers.view` | the section on Reports, under Customers: new customers, all customers and how many signed in, a line of new customers each day and who signed in most; sign-ins are kept 30 days after they end, so a period reaching further back shows no sign-in count |
 
 Every change is audited: `customers.add` (with whether the link went), `customers.import` (the
 counts only, never the addresses), `customers.change`,

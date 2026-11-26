@@ -111,6 +111,7 @@ withdrawn.
 | `POST /quotes/:id/withdraw` | `quotes.make` at its place | withdraws a draft or a sent quote |
 | `GET /search?q=` | `quotes.view` | quotes by title or address where the person sees |
 | `GET /todo` | `quotes.make` | Needs you: how many quotes customers accepted in the last week at the places the person makes them |
+| `GET /report?days=&to=` | `quotes.view` | the section on Reports, under Money: quotes sent, accepted and their value, a line of quotes sent each day and those waiting for an answer, oldest first, at the places the person sees |
 
 Every step is audited: `quotes.create`, `quotes.change`, `quotes.send`, `quotes.resend` and `quotes.withdraw`,
 refusals included, and the customer's `quotes.accept` or `quotes.decline`, recorded by the
