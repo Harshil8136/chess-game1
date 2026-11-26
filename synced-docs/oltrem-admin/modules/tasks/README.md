@@ -1,26 +1,19 @@
 # @oltrem/tasks
 
-Tasks: work given to people at the company's places. "Count the stock at North by Friday, Mo";
-"Call back about the quote, Sue". A task belongs to a place, so the roles held there decide who
-sees it and who makes, gives and changes it. The person it is given to sees it first on the Tasks
-page and on Home, is told by email, and marks it done. The people on a task talk about it in its
-comments, where the work is, instead of in a chat. An automation can make one too: when a
-website form is answered, a task to call back.
+Work given to people at the company's places ("Count the stock at North by Friday, Mo"). A task
+belongs to a place, whose roles decide who sees it and who makes, gives and changes it. The person
+it is given to sees it first on Tasks and Home, is emailed, and marks it done; the people on it talk
+in its comments. An automation can make one too.
 
 ## Using it
 
 ```ts
-import { createTasks } from '@oltrem/tasks';
-import { pages as tasksPages } from '@oltrem/tasks/pages';
-import { taskAction } from '@oltrem/automations';
-import { withPages } from '@oltrem/core-module';
-
 const tasks = createTasks<Env>({
   bindings: (env) => ({ db: env.DB }),
   send: async (env, m) => {
     await email.send(env, {
       tenantId: m.tenantId,
-      template: TASK_MESSAGE.id, // a template with a subject and a text
+      template: TASK_MESSAGE.id,
       to: [{ email: m.to }],
       data: { subject: m.subject, text: m.text },
       messageKey: m.key,
@@ -28,110 +21,80 @@ const tasks = createTasks<Env>({
   },
 });
 const modules = [iam.module, /* ... */ withPages(tasks.module, tasksPages)];
-// and, for automations: actions: [ /* ... */ taskAction(tasks.store)]
+// automations: actions: [/* ... */ taskAction(tasks.store)]
 ```
 
-`createTasks` returns the `store` and the module manifest. It stands on the IAM module (sessions,
-the authorizer, the access of the person a task is given to) and the audit log. `send` is
-optional: without it nobody is emailed. It adds no binding, secret or variable.
+It returns `store` and the manifest and stands on IAM and the audit log; without `send` nobody is
+emailed. No binding, secret or variable.
 
-## Who may do what
-
-Two capabilities on bit plane `18`, both read at the task's place, so a role at a place (or at a
-place above it) decides:
-
-| Capability | Lets them |
-|---|---|
-| `tasks.read` | see the tasks at the place; mark done, or open again, a task given to them |
-| `tasks.manage` | make, give, change, mark done and remove the tasks at the place |
-
-A task is given only to someone whose account is on and who holds `tasks.read` at its place,
-checked against their access as it is at that moment (`KIT-E-2901` otherwise). Someone who can
-see a task but neither manages it nor has it given to them cannot mark it done.
+Two capabilities on bit plane 18, read at the task's place: `tasks.read` (see tasks; mark done or
+reopen one given to them) and `tasks.manage` (make, give, change, mark done, remove). A task is
+given only to someone who is on and holds `tasks.read` there, by their access at that moment
+(`KIT-E-2901`); anyone may give one to themselves, the Vendor included, but nobody else gives one to
+the Vendor.
 
 ## A task
 
+Limits are `LIMITS` in `src/tasks.ts`.
+
 | Part | What it is |
 |---|---|
-| What is to be done | a title, 200 characters at most |
-| Place | where it belongs; fixed once made |
-| Given to | one person who may see the tasks at its place, or nobody yet. The person making or changing it may always give it to themselves, the Vendor included, who has no account of the company; nobody else gives a task to the Vendor |
-| Due on | a day, or none. "Past due" and "Due today" are read in UTC, as every time the portal keeps |
-| Notes | 4000 characters at most |
-| Done | by whom and when; it can be opened again |
-| Comments | by anyone who may see the task, 2000 characters each, the oldest first; 200 shown |
+| Title, notes | `title` (200), `notes` (4,000) |
+| Place | Fixed once made |
+| Given to | One person who may see it there, or nobody yet |
+| Due on | A day or none; Past due and Due today read in UTC |
+| Done | By whom and when; it can be reopened |
+| Comments | By anyone who may see it, `comment` (2,000) each, oldest first, `comments` (200) shown |
 
-When a task is given to someone by another person, or by an automation, they get one email: who
-gave it, the place, the due day and its link. Giving a task to oneself sends nothing. A comment
-is emailed to the person it is given to and the person who made it, while they may still see the
-task, never to the person who wrote it.
+Given by another person or an automation, the assignee gets one email (who, place, due day, link);
+giving to oneself sends nothing. A comment is emailed to the assignee and the maker while they may
+still see it, never to its writer.
 
-## The pages
+## Pages and routes
 
 | Path | Shows |
 |---|---|
-| `/tasks` | a row of Mine (the person's own open tasks at every place, with the count), Open and Done; for Open and Done, a row of the places they may see with their open counts; "New task" in a dialog where they manage the tasks: on Mine at any place they manage, the place a row of choices when there are several, on Open and Done at the place shown. Its "Given to" offers the person themselves first, as Me, and "Give it to me" fills in their own address; the tasks, open ones by due day; with two or more, a tick on each and the bar: Mark done (not on Done), Remove where they manage or on Done (after a dialog) |
-| `/tasks/:id` | the task, its state and place; a row with "Mark done" or "Open it again", "Change it", "All tasks" and "Remove it" (after a confirmation), each shown only to whoever may; its notes, its comments with a box to add one, and its history |
+| `/tasks` | Chips Mine (own open tasks everywhere, with count), Open, Done; for Open and Done, the places as chips with open counts. **New task** in a dialog where the person manages (place as chips when several; "Given to" offers Me first, **Give it to me**). Open tasks by due day; with two or more ticked, a bar: **Mark done**, **Remove** (confirmed) |
+| `/tasks/:id` | State and place; **Mark done** or **Open it again**, **Change it**, **Remove it** (confirmed), each only to whoever may; notes, comments with a box, history |
 
-## The routes
-
-| Route | Capability | What it does |
+| Route | Needs | What it does |
 |---|---|---|
-| `GET /tasks` (`view` mine, open or done; `place`) | `tasks.read` | the list, at most 100, with the places and their open counts |
-| `POST /tasks` | `tasks.manage` at the place | makes a task |
-| `GET /people` | `tasks.manage` somewhere | the person themselves first (`me`), then the people with an account that is on, 200 at most, for the form |
-| `GET /tasks/:id` | `tasks.read` at its place | one task, with what the person may do to it |
-| `PATCH /tasks/:id` | `tasks.manage` at its place | changes its title, notes, due day or the person it is given to |
-| `POST /tasks/:id/done` | `tasks.read`, and manages it or has it given to them | marks it done, or open again |
-| `POST /tasks/:id/comments` | `tasks.read` at its place | adds a comment; the people on it are told |
-| `DELETE /tasks/:id` | `tasks.manage` at its place | removes it with its comments; the audit log keeps its title |
-| `POST /bulk/done` | `tasks.read`, and each task by the rule of `/done` | marks up to 100 done at once; answers what was done and each refusal with its reason |
-| `POST /bulk/remove` | `tasks.manage`, and each task at its place | removes up to 100 at once, the same way |
-| `GET /todo` | `tasks.read` | Needs you: how many open tasks are the person's, how many past due or due today |
-| `GET /search` | `tasks.read` | the portal's search: tasks by title at the places the person may see |
-| `GET /report?days=&to=` | `tasks.read` | the section on Reports, under Work: tasks made, done and overdue, a line of tasks done each day and who did the most, at the places the person may see |
+| `GET /tasks` (`view` `VIEWS`: mine, open, done; `place`) | `tasks.read` | `listed` (100), with places and open counts |
+| `POST /tasks` | `tasks.manage` at the place | Makes a task |
+| `GET /people` | `tasks.manage` somewhere | `me` first, then people who are on, `people` (200) |
+| `GET /tasks/:id` | `tasks.read` at its place | One, with what the person may do |
+| `PATCH /tasks/:id` | `tasks.manage` at its place | Title, notes, due day, assignee |
+| `POST /tasks/:id/done` | `tasks.read`, and manages it or is its assignee | Done, or open again |
+| `POST /tasks/:id/comments` | `tasks.read` at its place | Adds a comment; the people on it told |
+| `DELETE /tasks/:id` | `tasks.manage` at its place | Removes it with its comments; the log keeps its title |
 
-Every change is audited: `tasks.create`, `tasks.update`, `tasks.done`, `tasks.reopen`,
-`tasks.comment`, `tasks.remove`, refusals included; a bulk press writes one row per task with `bulk: true`, in the same batch as its change. One that went through can set off an automation.
-
-## For automations
-
+Bulk actions on the manifest (`bulk`): **done** and **remove**, up to 100, each task by its one-task
+rule, answering what was done and each refusal with its reason. Module parts: Needs you (own open,
+past due, due today), search (titles where visible), Reports under Work (made, done, overdue, per
+day, who did most), and `store.calendar(env, session, from, to)` (own open tasks due in the range,
+`calendar` 200, all-day `Due: <title>`, for `@oltrem/connect`). For automations,
 `store.make(env, tenantId, { title, notes?, assignee?, dueInDays?, key })` makes a task at the
-company itself, once per `key`: a second call with the same key answers the first task. The
-automations module's `taskAction` calls it with the run's key, so a run that is retried makes one
-task.
+company once per `key`, so a retried run makes one.
 
-## Table
+Audited, refusals too: `tasks.create`, `.update`, `.done`, `.reopen`, `.comment`, `.remove`; a bulk
+press writes one row per task with `bulk: true`, in the batch of its change.
 
-Migrations, additive and idempotent: `0026_tasks.sql` makes `tasks_items` (the place, the title
-and notes, the person it is given to, the due day, the state, who made it and did it, and the
-automation run's key); `0030_tasks_comments.sql` makes `tasks_comments` (the task, who wrote it
-and their address as it was, the text, when).
+## Tables and errors
 
-## Errors
+Migrations `0026` (`tasks_items`: place, title, notes, assignee, due day, state, maker, doer, the
+automation run's key) and `0030` (`tasks_comments`: task, writer and their address then, text,
+when). Block `29xx`: `KIT-E-2901` cannot be given to that person; bad input is `KIT-E-0422`, no
+capability `KIT-E-0403`.
 
-The `29xx` block: `KIT-E-2901` the task cannot be given to that person. A title or a day out of
-bounds is the core's `KIT-E-0422`; a person without the capability at the place is `KIT-E-0403`.
-
-## Not here yet
-
-- Files attached to a task.
-- Repeating tasks: an automation on a schedule with the task action does it today.
-- A board view by state.
-- A task given to a group.
-
-## For Apps
-
-`store.calendar(env, session, from, to)` gives the open tasks given to the person and due between the two days, at most 200, as all-day items titled `Due: <title>`, each one they may still read: the calendar link of `@oltrem/connect` reads it.
+Not built: files on a task; repeating tasks (an automation on a schedule does it); a board view; a
+task given to a group.
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; a task made
-only by whoever manages the place, never given to someone who may not see it there or who has no
-account, the email to the person it is given to and none to oneself, every refusal audited; each
-person's places and their own list, Needs you; done by the person it is given to or a manager and
-by nobody else; comments by anyone who may see it, with the people on it told and never the
-writer; changed, given to another (who is told) and to nobody, removed with its title kept
-in the log; many at once, each by its one-task rule, the refused ones named and every row audited in one batch; the automations' task made once per key; the search; a task given to oneself, the Vendor included, and never to the Vendor by someone else. The pages, against answers of the API (`test/pages.test.ts`): New task on Mine, with the place to choose, and Me first in "Given to". The automations tests cover the
-task action's fields. The client template's screens test makes a task for today, sees it on Home,
-marks it done, opens it again, comments on it, changes it and removes it. The calendar items: only the open tasks given to the person and due in the range, and none once their role is taken away.
+| File | Covers |
+|---|---|
+| `test/tasks.test.ts` | The manifest; made only by managers, given only to someone who may see it, the email and none to oneself, refusals audited; places, own list, Needs you; done by assignee or manager only; comments and who is told; changed, given to another, removed; bulk with refusals named; the automation's task once per key; search; giving to oneself and the Vendor; Reports; calendar items |
+| `test/pages.test.ts` | New task on Mine with the place to choose and Me first; one place fixed, none no button |
+
+The client template's screens test makes a task for today, sees it on Home, marks it done, reopens,
+comments, changes and removes it.
