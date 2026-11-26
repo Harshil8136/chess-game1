@@ -94,7 +94,7 @@ From [README](../modules/data/docs/timed-check-and-home.md#editing):
 |---|---|---|
 | P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again |
 
-From [README](../modules/data/docs/pages.md#the-pages):
+From [README](../modules/data/docs/pages.md#connecting-and-the-tables):
 
 | # | Open | You should see |
 |---|---|---|
@@ -133,7 +133,7 @@ From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#a-sup
 | P755 | (Owner, once: redeploy the relay, and give the Supabase OAuth app Database, Edge Functions and Analytics Read where listed.) Remove a Supabase database, then on Data, Connect Supabase, press Sign in with Supabase and Connect | It connects with no access token pasted; its Logs, Functions, Advisors and Health's Requests and Backups open without "Add a Supabase access token" |
 | P756 | Come back to that database's Logs more than an hour later | The lines load (the token was renewed on the way); a sign-in Supabase ended instead says to paste a token or sign in again |
 
-From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#a-databases-usage-neon-turso-and-upstash):
+From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#a-databases-usage):
 
 | # | Open | You should see |
 |---|---|---|

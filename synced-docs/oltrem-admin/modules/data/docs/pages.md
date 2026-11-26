@@ -1,24 +1,59 @@
 ---
-title: "@oltrem/data: The pages: `/data`"
+title: "@oltrem/data: the pages"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/data/src; split from modules/data/README.md]
+sources: [modules/data/src/pages.tsx, module.ts, overview.ts, detect.ts]
 ---
 
-# @oltrem/data: The pages: `/data`
+# @oltrem/data: the pages
 
 > Part of [the @oltrem/data README](../README.md).
 
-## The pages
+## Connecting and the tables
 
 | Page | What it shows |
 |---|---|
-| `/data` (Work, Data) | Every connection: its service, address, how its last check went and how long ago; Connect a database for a manager |
-| `/data/connect` | One box that takes whatever the service gave (an address, a key, a connection string, or up to 8 lines of an `.env` file) and works out the service; under it a card for each service. `/data/connect/custom`, which the Apps page links, is the same page |
-| `/data/connect/<service>` | The service's steps in its own dashboard, with links (only `https://` ones are drawn), and its form: a name and the fields it needs (Neon's host is read from its connection string, so it is not asked for). After a paste the form comes first. Someone without `data.manage` (the Apps page links every card here) sees the steps and "Ask an Owner", not the form. Supabase's and Airtable's pages also offer "Sign in with Supabase" or "Sign in with Airtable" above them when the Apps part's connect relay is set (`GET /api/connect/oneclick`), and say in fixed words, with the service's name, why a sign-in brought nothing (`?trip=`); the Apps part's README, "Supabase, for the data part" and "Airtable, for the data part", has the journey. The tokens a sign-in fills (Airtable's `refresh`, `expires`, `client`) are never asked for |
-| `/data/connections/<id>` | Under its tabs, what can be done in one sideways row (Ask in SQL, Rename, Change key, Remove database, by permission), then its figures in one line (last check with its state, service, editing on or off, when connected; the address is in the head), then its tables as cards in a grid that fills the width (batch 6, 2026-11-25), a group per schema or Airtable base, each with a tile in its kind's colour (a table blue, a view violet, a key group amber), its comment or kind, and coloured tags: an Airtable table shows its description, its fields and its views, and its base's heading the key's access there (Read only, Commenter, Editor or Creator); a Supabase table shows its columns from the Data API, and with the access token its estimated rows, size and row security (RLS on with its policy count, or RLS off in red); from nine tables a box finds one by name as it is typed. For a Supabase project read with the access token the figures also give the project's state (Healthy, Paused), the database's size, the estimated rows, row security off on how many tables, the Postgres version and the region; without the token one line says how to add it. Then Editing and Recent changes (the order, so a phone shows the tables first). Editing says what it means, with Turn on editing or Turn off editing for a manager; a service whose rows cannot be changed here, Airtable or Upstash, says so instead; an Airtable sign-in that ended shows Signed out, with Sign in with Airtable again for a manager; Recent changes shows when there are any, or why they could not be read, ten at a time with Older changes and Newest changes. Check now sits in the head; Remove asks once. When the list of tables is cut (past 500, or past 10 Airtable bases), "Open a table by its name" opens any other the key may read, with how the service names one (Neon's with its schema; Airtable's by its base and table ids). A failed check says in plain words what happened (a refused key, or no answer) with the service's own words under it; it shows only while the tables do not load either, since tables that load now say more than an older check. Change key keeps the saved key when it is left empty only beside another field to change (the address of Supabase, Turso and Upstash); where the key is the only field (Neon, Airtable) it is required |
-| `/data/connections/<id>/rows` | One page of a table, read now: since 2026-11-25 its commands first (All tables in the database, and Hide or mask columns for a manager), a search, for an Airtable table its views as a row of chips, one line of figures (rows shown, with + when there are more; columns; the order; columns hidden from you), a sort by any sortable column (the column's header on a computer, a row of chips above the rows on a phone), Next page and First page (shown even when a page is refused, as is Clear the search); a grid on a computer whose columns scroll sideways under a first column that stays put, and a card for each row on a phone, its first value as the title and every field under it. Every value keeps to one line and is cut with an ellipsis (whole on hover and on the row's page): an ID as its first 8 characters with Copy, a time as `29 Apr 2026 16:49` in UTC, true and false as a dot with Yes or No, JSON as `{3 keys}` or `[4 items]`, a number on the right, no value as a dash; each column's header carries a dot in its kind's colour (ID, number, time, yes or no, JSON, text), worked out from its type or else its first value. In a table with a primary key, each row's first value links to the row's own page. Saved views keep the table, its search and its sort |
-| `/data/connections/<id>/row` | One row found by its key (`k`), read whole. Back to the table and Delete row first, one line of figures (columns, how many can change and are locked, editing on or off, the service), then a card a column in a grid that fills the width: a tile in its kind's colour (ID, number, time, yes or no, JSON, text), the name, its type (and whether it is part of the row's ID). With editing on and `data.edit`: a box in each card (a text box for a long or broken one, Yes and No as two chips for a yes-or-no column), No value for a column that may be empty, a locked column's value read whole (a time as a date, JSON as stored) with a lock and why, and a save bar at the foot with Save changes and Discard changes; with `data.delete` also Delete row (one confirm, which says rows the database removes with it are not put back). Otherwise the values, and why they cannot be changed, with a link to the database's page for a manager. A refused save keeps what was typed |
-| `/data/connections/<id>/rows`, hidden columns | Without `data.hidden.read`: the figures' Hidden from you, a masked column's header marked (masked) and its values masked. For a manager, Hide or mask columns in the table's commands opens a pop-up: each column but the key on one line with a Shown, Masked, Hidden switch, two or three columns across on a wide screen, and Save columns |
-| `/data/connections/<id>/ask` | A box for one question in SQL and Ask; the answer as rows (a table on a computer, a card a row on a phone), at most 100, saying when there were more or columns were left out. Download CSV gives the same answer as a file. Saved questions sit in a row of chips above the box: one opens filled in; a name and Save question keeps the typed one, and Remove saved question takes an opened one away. A refusal keeps what was typed. Linked from the database's page for someone with `data.questions.run`, on Neon, Turso and Supabase (which needs the connection's access token) |
+| `/data` (Work, Data) | Every connection: service, address, last check and its age; **Connect a database** for a manager |
+| `/data/connect` (and `/connect/custom`) | One box for whatever the service gave (address, key, connection string or up to `PASTE_LINES` (8) lines of an `.env`), which works out the service; a card per service |
+| `/data/connect/<service>` | The service's steps (only `https://` links) and its form (Neon's host comes from its string). Without `data.manage`: the steps and "Ask an Owner". Supabase and Airtable offer **Sign in with …** when the connect relay is set, and say why a sign-in brought nothing (`?trip=`); the tokens a sign-in fills are never asked for |
+| `/data/connections/<id>` | Commands in a row (Ask in SQL, Rename, Change key, Remove), figures in one line, then the tables as cards per schema or Airtable base (table blue, view violet, key group amber) with their tags: Airtable fields, views and the key's access; Supabase columns, and with the access token rows, size and RLS (off in red). A search from `FIND_FROM` (9) tables. Supabase with the token adds state, size, rows, RLS off count, Postgres and region. Then **Editing** (Airtable and Upstash say rows cannot change here; an ended Airtable sign-in shows **Sign in with Airtable again**) and **Recent changes**, ten at a time. Past `TABLES_MAX` (500) tables or `AIRTABLE_BASES` (10) bases, **Open a table by its name**. A failed check shows only while the tables also fail. An empty key on Change key keeps the saved one only beside another field |
+| `…/rows` | One page (`PAGE_ROWS`, 25) read now: commands, search, Airtable views as chips, figures, sort (header on a computer, chips on a phone), Next and First page. A grid with a fixed first column on a computer, a card a row on a phone. Values on one line: an id as 8 characters with Copy, a time in UTC, Yes or No, JSON as `{3 keys}`, numbers right, empty as a dash; each header dotted in its kind's colour. With a primary key the first value opens the row. Saved views keep table, search and sort |
+| `…/rows`, hidden columns | Without `data.hidden.read`: masked columns marked and masked, hidden ones counted. A manager's **Hide or mask columns** sets Shown, Masked or Hidden per column |
+| `…/row?k=` | One row whole: a card per column with its kind, type and key part. With editing on and `data.edit`, a box per card, **No value** where allowed, locked columns with why, and **Save changes**; `data.delete` adds **Delete row** (one confirm). A refused save keeps what was typed |
+| `…/ask` | One SQL question, at most `ANSWER_ROWS` (100) rows, saying what was cut; **Download CSV**; saved questions as chips. For `data.questions.run` on Neon, Turso and Supabase (with the access token) |
+| `…/changes/<change>` | By whom, when, each column before and after, **Open the row**, and **Undo** while it can, or why not |
+
+A new connection or key is checked at once: "Connected", or "Saved, but the database did not
+answer yet" with why. **Check now** within `CHECK_AGAIN_MS` (30 s) answers the last check.
+Nothing read is kept, except a change's values for `KEEP_DAYS` (30) so it can be undone.
+
+## A Supabase project's sections
+
+For `data.insights.read`, ten tabs with icons: Overview, Database, Users, Storage, Functions,
+Health, Advice, Usage, Logs, Settings. Settings, Functions, Logs, Advice, requests and backups need
+the access token; without it each says how to add one.
+
+| Tab | What it shows |
+|---|---|
+| Overview | One verdict, then **Needs you**, worst first, each with why and where to fix it (`src/overview.ts`: not healthy, disk, memory or connections past `BUSY` (75%) and `FULL` (90%), public tables with RLS off, Supabase's advice, a failed or two-day-old backup), the figures and what each means, and a card per section |
+| Database | The tables page above, with At a glance, Editing and Look closer side by side |
+| Users | `USERS_PAGE` (25) a page: email or phone, sign-in way, joined, last sign-in, Confirmed, Blocked. **Invite someone** (`data.edit`); a user's page (`?user=`) has password reset, mark confirmed, Block or Let back in (`data.edit`) and Delete (`data.delete`), each asking first |
+| Storage | A file manager: **New bucket** (`data.manage`: name, public, largest file, kinds), inside a bucket **Upload files** and **New folder** (`data.edit`), settings (`data.manage`), Empty and Delete (`data.delete`). A file's page (`?bucket&file`): size, type, image look, Open, Download, **Share link** (7 days), Rename or move, Delete. Bucket cards (amber public, green private) with **Use in Files**; folders first, `FILES_PAGE` (100) at a time |
+| Functions | Counts, then a card per Edge Function; its page (`?fn=`) has **Run** (`data.edit`, POST JSON or GET, once, for real), calls, failures, typical and slowest time over an hour, day or 7 days, a chart, and its secrets by name only |
+| Health | Memory, disk and connections as shares (past 75% look, past 90% failing), size, load; requests by service over an hour, day or 7 days; backups and point-in-time recovery |
+| Advice | Fix now, look at, note; Security then Speed, each with **How to fix**. Four carry SQL (`adviceFix`: RLS off, no fixed search path, a view as owner, an unindexed foreign key) and **Fix it** for `data.manage`, which asks first with what it changes |
+| Usage | The plan and a meter per limit (database, disk, files, monthly users, functions) with a link for egress and the bill |
+| Logs | A chip per log (API, Database, Auth, Storage, Functions, Realtime) and per stretch, a search, counts by level, the newest `LOGS_PAGE` (100) lines |
+| Settings | Services, Sign-in, Security and Extensions as panes, each setting a pill (green on, amber weak: no confirmation, guests, password under 8, built-in mail, no SSL, any IP); **Change these on Supabase** |
+
+## Usage for Neon, Turso and Upstash
+
+`…/usage`, for `data.insights.read`, under Tables and Usage chips; without the connection's API key
+it says how to add one ([the usage section](a-supabase-project-beyond-its-tables.md#a-databases-usage)).
+
+| Service | What it shows |
+|---|---|
+| Neon | This period's compute, active time, storage, written and sent out; project, region, Postgres; the compute's state, size and sleep; each branch |
+| Turso | The month's rows read and written, storage, bytes synced; organization, plan, group, region, delete protection; blocked reads or writes first; the account's quotas as meters where Turso gives them |
+| Upstash Redis | Today's commands, reads, writes, keys, connections, hit rate; meters where the plan sets a limit (requests, storage, cost against a budget); the other limits; plan, region, copies, eviction, backups; an inactive database said first |
