@@ -43,14 +43,13 @@ installed for you.
      now, which open to show them) and the checks. A check that needs a look says what is wrong
      and how to fix it; a fix you type is one command with **Copy**. **Check again** does the
      whole start again without closing anything.
-   - **Try it here:** the portal at a local address such as <http://localhost:8787>. **Which
-     data** picks a new portal (empty, no Cloudflare account), **a copy of your live portal**
-     (`npm run live`: a Cloudflare sign-in, then your real portal with a fresh copy of its data;
-     the live portal is only read) or **connected to your live portal** (the live database, files
-     and cache themselves: every save is real). For a new portal, **Who may open it** picks Only
-     this computer, This Wi-Fi or Anywhere: the last two are also open on other devices behind a
-     code shown when it starts, on your network or at a temporary Cloudflare address (this needs
-     `cloudflared` installed, and no account; see
+   - **Try it here:** **Which data** is **Local**, a new portal with its own data at a local
+     address such as <http://localhost:8787> (no Cloudflare account), or **Production**
+     (`npm run live`: a Cloudflare sign-in, then your real portal on this computer on its live
+     database, files and cache, so every save is real; never a copy of its data). For Local,
+     **Who may open it** picks Only this computer, This Wi-Fi or Anywhere: the last two are also
+     open on other devices behind a code shown when it starts, on your network or at a temporary
+     Cloudflare address (this needs `cloudflared` installed, and no account; see
      [sharing it](./templates/client/README.md#sharing-it-with-other-devices)). While it runs, the
      card shows its address with **Open** and **Stop**.
 
@@ -61,9 +60,10 @@ installed for you.
    portal reports while it runs gather in a small console there, each counted once. The header
    says Ready, Running, or how many things need a look.
 
-**A real client's portal, with a copy of its data:** on Windows, double-click `live-windows.cmd`
-instead. It does the same first steps, brings in the newest kit, then runs `npm run live` (below):
-Cloudflare's sign-in page the first time, then the portal on this computer, the live one only read.
+**A real client's portal, on production:** on Windows, double-click `live-windows.cmd` instead.
+It does the same first steps, brings in the newest kit, then runs `npm run live` (below):
+Cloudflare's sign-in page the first time, a typed yes, then the portal on this computer on its live
+data.
 
 Keep the window the file opened while you use the page: closing it stops everything. If the page
 does not open, the window shows its address, and if no browser opens it within two minutes, the
@@ -86,7 +86,7 @@ With Node 22 or newer, from this folder:
 | `npm install` | installs the kit (npm is all you need: it fetches the pnpm version `package.json` names) |
 | `npm start` | the start page above |
 | `npm run dev` | the portal on this computer; [the client template's README](./templates/client/README.md#on-your-own-computer) walks through the first run |
-| `npm run live` | a client's real portal on this computer with a fresh copy of its data, the live portal only read; `npm run live -- --connected` uses the live database, files and cache instead ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker---connected)) |
+| `npm run live` | a client's real portal on this computer, on its live database, files and cache after a typed yes ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker---yes)) |
 | `npm run update` | gets the newest kit and says what is new |
 | `npm run setup` | puts the portal on Cloudflare with the questions and progress in a page |
 | `npm run deploy` | the same, with the questions in the terminal |

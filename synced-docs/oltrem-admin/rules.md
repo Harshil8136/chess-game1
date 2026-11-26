@@ -268,7 +268,7 @@ AGENTS.md). Each says where its detail lives.
 - **Migrations that remove** something go in a later push than the code that stops using it.
 - **Batch, then check once.** Finish a batch, run `pnpm verify` once, push once. Least manual
   work for the owner: one press does the whole job, and every failure names its fix.
-- **Local work against a real portal** goes through `npm run live`: a copy of the portal's data in
-  this computer's own database, the live portal only read. `--connected` (the start page's
-  "Connected to your live portal") uses the live resources themselves, after a typed yes; never
-  point a binding at production any other way (`packages/cli/README.md`).
+- **Two ways to run a portal locally:** Local (`npm run dev`, its own data) or Production
+  (`npm run live`, the live resources themselves after a typed yes). Never copy production data
+  to a computer (data integrity, loss prevention), and never point a binding at production any
+  other way (`packages/cli/README.md`).

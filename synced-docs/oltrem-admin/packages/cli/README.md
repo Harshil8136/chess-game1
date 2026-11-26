@@ -18,7 +18,7 @@ on the kit's packages, free of keys and within the Worker's limits (research 18)
 **`release`**, the deploy workflow's release on `main` with its health check and step back, and
 **`operate`**, the jobs of the operations menu (research 18 §3.5), and **`fleet`**, which brings
 every client's portal up to date after each push to the kit (2026-11-11), and **`live`**, a real
-portal on the Vendor's computer with a copy of its data (2026-11-25).
+portal on the Vendor's computer, on production (2026-11-25).
 The tool runs on Node and has no runtime dependency.
 
 ## The look in a terminal
@@ -745,54 +745,53 @@ in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_
 portal is current or updated, `1` when one failed or was held or an account could not be read,
 `3` without a key or outside the kit.
 
-## `oltrem live [--portal <worker>] [--connected]`
+## `oltrem live [--portal <worker>] [--yes]`
 
-A client's real portal on this computer, for visual work in an editor or with an AI agent (the
-owner's ask of 2026-11-25). From the kit's root it is `npm run live`, which builds the tool first.
+A client's real portal on this computer, on production, for visual work in an editor or with an
+AI agent (the owner's asks of 2026-11-25 and 2026-11-26). From the kit's root it is
+`npm run live`, which builds the tool first; on the start page it is **Which data: Production**,
+beside **Local** (a new portal with its own data, `npm run dev`).
 
 1. **Signs in.** It takes wrangler's key (`wrangler auth token`); with none, it runs
-   `wrangler login`, which opens Cloudflare's page in the browser. `CLOUDFLARE_API_TOKEN`, when
-   set, is used instead. Sign in with the Cloudflare login that can see the portal's account.
-2. **Finds the portal** the way `fleet` does: every account the login reaches, each portal with
-   the choices its last deploy recorded. With several, it asks which; `--portal <worker>` names
-   one.
-3. **Builds the copy** in `.live/<worker>` beside `templates/` (ignored by git): the client
-   template with those choices written in (its name, Oltrem Mail or not), answering on
-   localhost rather than the portal's address.
-4. **Copies the data, read only.** The portal's database is read through Cloudflare's API with
-   SELECTs only, a page of rows at a time, and written into the copy's local database: the schema
-   as it stands, every row and the migrations ledger, then the indexes and triggers, so no
-   trigger fires on a copied row. Every start takes a fresh copy.
-5. **Runs it** with the template's `npm run dev`: it applies only the migrations newer than the
-   live portal, then starts the portal on localhost. Sign in on its page with your own address:
-   your real roles apply.
+   `wrangler login`, which opens Cloudflare's page in the browser. A saved sign-in Cloudflare
+   refuses (it ran out or was taken back) is renewed once by itself. `CLOUDFLARE_API_TOKEN`,
+   when set, is used instead.
+2. **Asks which portal**, found the way `fleet` finds them: every account the login reaches,
+   each portal with the choices its last deploy recorded. It always asks, even for one, and the
+   list ends with **Another Cloudflare login**: `wrangler logout`, Cloudflare's sign-in page, and
+   the search again, so a computer signed in to one client's account is never stuck on it.
+   `--portal <worker>` names one instead.
+3. **Builds its folder** in `.live/<worker>` beside `templates/` (ignored by git): the client
+   template with those choices written in, answering on localhost rather than the portal's
+   address. A folder an earlier, still running portal holds (Windows keeps its files open) is
+   said with its fix: close that window or press Stop.
+4. **Connects it to production.** It refuses while the live portal's database is behind this
+   kit's migrations (its pages would expect columns it lacks: push first, and the fleet updates
+   it), then asks for a typed `yes` (`--yes` gives it; the start page's choice says what it does).
+   The database, files and cache are the live ones (wrangler's remote bindings, their ids written
+   only into `.live/`), and events go to the live queue.
+5. **Runs it** with the template's `scripts/dev.mjs --connected`. Sign in on its page with your
+   own address: your real roles apply, and every save, delete or send is real. From a terminal or
+   `live-windows.cmd` the browser opens on the portal by itself; on the start page, **Open** does.
 
-**What never happens.** No binding of the copy points at Cloudflare, so nothing done in it
-reaches the live portal, its files or its queue. The keys the live portal sealed do not open on
-this computer (its KEK stays in Cloudflare), so no email or provider call leaves with the
-client's keys. **Not copied:** the files in the bucket (a file's row shows, its contents do not
-open) and Oltrem Mail's search index (made empty; it cannot be read back). The copy holds the
-client's real data on this computer: `.live/` is never committed.
+**Never a copy.** No production data is copied to a computer (the owner's ruling of 2026-11-26:
+data integrity and loss prevention); the copy this command made on 2026-11-25 is gone. Kept on
+this computer: no queue consumer (a send leaves from the live portal, with its own keys), no cron
+tick (the live portal runs its own) and no KEK, so nothing is sealed with a key the live portal
+could not open (pasting a provider's key fails here instead). Key-value writes count against the
+account's daily allowance.
 
-**Connected (`--connected`).** Instead of a copy, the portal on this computer uses the live
-database, files and cache themselves (wrangler's remote bindings, their ids written only into
-`.live/`), and its events go to the live queue. It first refuses while the live portal's database
-is behind this kit's migrations (its pages would expect columns it lacks: push first, and the
-fleet updates it), then asks for a typed `yes` (`--yes` gives it; the start page's choice says
-what it does). Every save, delete or send is real; a send leaves from the live portal, with its own
-keys. Kept on this computer: no queue consumer, no cron tick (the live portal runs its own) and
-no KEK, so nothing is sealed with a key the live portal could not open (pasting a provider's key
-fails here instead). Key-value writes count against the account's daily allowance.
+**Cloudflare Access.** wrangler links to the live resources through a preview Worker on the
+account's `workers.dev` address. On an account whose Access guards every Worker address, that
+link passes only after a sign-in through Access, which wrangler runs with `cloudflared` when it
+believes a person is at the keyboard: the dev script tells it so (`TTY_PRELOAD`), so a browser page
+opens and the person signs in with their own Cloudflare login (a member of the account). Without
+`cloudflared`, the first start installs it (`winget` on Windows, `brew` on macOS) and tries once
+more; elsewhere it names the download. Nothing is added to the account (the owner's choice of
+2026-11-26: no service token for local runs). A start waits up to six minutes for that sign-in.
 
-**When something stops (2026-11-25).** A saved sign-in Cloudflare refuses (it ran out or was taken
-back) is renewed once by itself with `wrangler login`. A copy folder an earlier, still running
-portal holds (Windows keeps its files open) is said with its fix: close that window or press Stop.
-A copy that does not load says wrangler's last line and keeps the whole output in
-`.live/<worker>/.oltrem/live-load.log`. From a terminal or `live-windows.cmd` the browser opens on
-the portal by itself once it answers; on the start page, **Open** does it.
-
-Exit `1` when it could not sign in, find the portal, load the copy or connect, each said with its
-fix; otherwise the exit of the portal's own run.
+Exit `1` when it could not sign in, find the portal or connect, each said with its fix; otherwise
+the exit of the portal's own run.
 
 ## `oltrem operate <operation> [dir] [--target X] [--confirm X]`
 
