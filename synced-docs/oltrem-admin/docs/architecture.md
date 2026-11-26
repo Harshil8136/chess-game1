@@ -2,7 +2,7 @@
 title: "Architecture guide: how the kit fits together, and where a change goes"
 status: living
 owner: vendor
-last_verified: 2026-10-27
+last_verified: 2026-11-26
 sources: [this repository's code, ai.md, the package and module READMEs]
 ---
 
@@ -25,7 +25,8 @@ sources: [this repository's code, ai.md, the package and module READMEs]
 | `templates/client` | what a client repository is: one Worker that mounts the modules, its manifest, migrations, workflow | core packages and modules |
 | `templates/module` | the module `oltrem new module` copies into a client repository | core packages |
 | `scripts/` | the verify chain and its gates, the install and dev runners | Node only |
-| `docs/` | this folder: the index, status, roadmap, records, generated references | nothing |
+| `docs/` | this folder: the index, status, roadmap, phone tests, generated references | nothing |
+| `archive/` | the records and proposals, dated and frozen, kept out of agents' searches | nothing |
 
 `eslint.config.js` enforces the "depends on" column (plan 15.6): a module importing another
 module it may not stand on fails `pnpm lint`.

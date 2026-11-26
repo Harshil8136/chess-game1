@@ -2,154 +2,90 @@
 title: "The fleet: every push to the kit updates every client's portal"
 status: living
 owner: vendor
-last_verified: 2026-11-11
-sources: [packages/cli/src/fleet.ts; packages/cli/src/choices.ts; packages/cli/src/release.ts; Cloudflare Workers Builds documentation (limits and pricing, configuration, GitHub integration, default build variables), read 2026-11-11; the owner's choice of 2026-11-11 16:38Z]
+last_verified: 2026-11-26
+sources: [packages/cli/src/fleet.ts; packages/cli/src/choices.ts; packages/cli/src/release.ts; Cloudflare Workers Builds documentation, read 2026-11-11; the owner's choice of 2026-11-11]
 ---
 
 # The fleet
 
 > **In plain words.** Every push to the kit's `main` updates every client's portal by itself.
-> Cloudflare's own builder runs it once, in the Vendor's own Cloudflare account. It updates the
-> Vendor's test portal first. When that one is healthy it updates each client in turn, each one
-> from the choices that client made at its first deploy (its name, its address, Oltrem Mail or
-> not), with the template's default for any choice never made. Every update saves a restore point,
-> applies the migrations, deploys, checks that the portal answers, and goes back to the version
-> before when it does not. A portal that did not update gets a GitHub issue, which closes itself
-> when a later push updates it.
+> Cloudflare's builder runs once, in the Vendor's own account: the Vendor's test portal first, then,
+> when it is healthy, each client in turn from the choices it made at its first deploy. Each update
+> saves a restore point, applies migrations, deploys, checks the portal answers, and steps back when
+> it does not. A portal that did not update gets a GitHub issue, closed by a later good run.
 
-The owner chose this on 2026-11-11 ("every push, test portal first"). It replaces the plan's
-GitHub Actions deploy in each client repository: no client repository is needed, and no GitHub
-Actions minutes are spent.
-
-## Why one build in the Vendor's account
-
-- **One connection.** Cloudflare's builder (Workers Builds) deploys from a GitHub repository, but
-  a GitHub account should point at one Cloudflare account only. So the kit repository is
-  connected once, to the Vendor's account, and the build reaches the clients' accounts with a key.
-- **Free.** The build uses the Vendor's account's own free build minutes: 3,000 a month, one build
-  at a time, 20 minutes at most per build (Cloudflare's limits page, read 2026-11-11). A portal
-  takes about one to two minutes. A portal whose code and choices did not change is skipped.
-- **No list to keep.** The build finds the portals itself in every account the key reaches.
-
-```mermaid
-flowchart TD
-  P[A push to main in the kit repository] --> B[Cloudflare's builder, in the Vendor's account]
-  B --> F[oltrem fleet: find every portal the key reaches]
-  F --> T[The test portal first]
-  T -- healthy --> C[Each client, one after the other]
-  T -- not healthy --> H[Every client held on the version it runs]
-  C --> R[Restore point, migrations, deploy, /healthz]
-  R -- answers --> OK[Recorded: this kit, these choices]
-  R -- does not answer --> S[Step back to the version before]
-  S --> I[A GitHub issue for that portal]
-  H --> I
-```
+No client repository and no GitHub Actions minutes are needed. The kit repository is connected once,
+to the Vendor's account (a GitHub account should point at one Cloudflare account), and reaches the
+clients' accounts with a key. It uses the Vendor's free build minutes (3,000 a month, one build at a
+time, 20 minutes each); a portal takes one to two minutes, and an unchanged one is skipped.
 
 ## What one run does
 
-1. **Finds the portals.** For every account the key can open, it looks for a database named
-   `<worker>-db` whose Worker carries `CLIENT_ID` set to `<worker>`. That is an Oltrem portal. A
-   database or Worker of anything else is left alone.
-2. **Reads each portal's choices.** Every `npm run deploy` records them in the portal's own
-   database (the `build_choices` row of `oltrem_meta`). A portal deployed before this existed is
-   read from its running Worker instead: its address (`PUBLIC_HOST`) and whether it has Oltrem
-   Mail's sending binding. Its name is then made from its Worker's name until the next deploy or
-   update records the real one.
-3. **Puts the test portals first.** These are the Workers named in `OLTREM_FLEET_FIRST`. If one of
-   them does not update, or the key cannot find it, no client is touched in that run.
-4. **Skips what is current.** After a good update, the run records a fingerprint of the kit's
-   folders (`packages`, `modules`, `vendor`, `templates/client`) and the choices. When neither has
-   changed, the portal is skipped. A push that changes only documents updates nobody.
-5. **Updates the rest.** For each portal it copies the client template beside it (`.fleet/`), writes
-   the choices in, and runs `oltrem release`: the restore point, the migrations, the deploy, the
-   health check and the step back. The database is never stepped back: the kit's migrations only
-   add, so the version before runs on it (`scripts/migrations.test.mjs` holds every kit migration to
-   that on each verify, 2026-11-24). After a good update on a portal's own address, the run makes
-   sure that zone has the rate-limit rule `oltrem_hooks`: at most 30 calls to `/hooks/` in 10
-   seconds from one address at one Cloudflare location, past which the edge refuses for 10 seconds
-   before the Worker runs. The free plan allows one such rule per zone; a zone that already has a
-   rule of the client's own is left as it is and the step says so. A key without Zone WAF Edit is
-   named with that fix and the update still counts.
-6. **Links the sign-in service** (2026-11-26, the owner: nobody should paste it). It looks for
-   the relay, the Worker `oltrem-relay` with its workers.dev address on, in the accounts the key
-   reaches. Each portal with an address of its own whose "Sign-in service" setting is empty gets
-   the relay's address, saved with its history as `oltrem fleet`, and its cached settings are
-   cleared so it shows within a minute. A value someone set is never replaced. The relay's
-   `RELAY_PORTALS` is kept to every portal's address, rewritten only when that list changes (each
-   portal's `relay_mark` row). No relay found is only said; a relay in two accounts links nothing
-   and turns the build red until one is removed.
-7. **Says how it went.** The build's log first names the accounts the key reaches and any
-   database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
-   `held` or `failed`, with the steps under it; a failed deploy ends with what wrangler said, its
-   error lines (since 2026-11-24, when builds failed for half a day with no reason shown). The build is red when any portal failed or was
-   held, or when the key found no portal at all. With the GitHub token, each portal that did not update gets an issue named
-   `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
-   closed by the first run that updates it.
+1. **Finds the portals**: in every account the key opens, a database `<worker>-db` whose Worker has
+   `CLIENT_ID` `<worker>`. Anything else is left alone.
+2. **Reads each portal's choices**: the `build_choices` row of its `oltrem_meta`, written by every
+   `npm run deploy`; for an older portal, its running Worker's `PUBLIC_HOST` and whether it has
+   Mail's sending binding (its name from the Worker's until a deploy records the real one).
+3. **Test portals first**: the Workers in `OLTREM_FLEET_FIRST`. If one fails or is not found, no
+   client is touched.
+4. **Skips what is current**: a fingerprint of `packages`, `modules`, `vendor`, `templates/client`
+   and the choices is kept after a good update; a docs-only push updates nobody.
+5. **Updates the rest**: copies the client template to `.fleet/`, writes the choices, and runs
+   `oltrem release` (restore point, migrations, deploy, health check, step back). The database is
+   never stepped back: kit migrations only add (`scripts/migrations.test.mjs`). On a portal's own
+   address it then makes sure the zone has the rate-limit rule `oltrem_hooks` (30 calls to `/hooks/`
+   in 10 s from one address at one location, refused 10 s at the edge); a zone with a rule of the
+   client's own is left as it is (the free plan allows one), and a key without Zone WAF Edit is
+   named with the fix.
+6. **Links the sign-in service**: finds `oltrem-relay` (workers.dev on) in the accounts the key
+   reaches; each portal with its own address and an empty "Sign-in service" setting gets the relay's
+   address (history `oltrem fleet`, cached settings cleared); a set value is never replaced. The
+   relay's `RELAY_PORTALS` is rewritten only when the portal list changes (`relay_mark`). No relay
+   is only said; a relay in two accounts links nothing and turns the build red.
+7. **Says how it went**: the accounts reached and any portal-like database passed over, then a line
+   per portal (`updated`, `unchanged`, `off`, `held`, `failed`) with its steps, and wrangler's error
+   lines on a failed deploy. Red when any portal failed or was held, or none was found. With the
+   GitHub token, an issue `Fleet: <worker> did not update` per portal (a comment when open), closed
+   by the first run that updates it.
 
-A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row; a later `npm run
-deploy` from the client's computer keeps that false. To put it back in the updates, set it to `true`
-in the row again. A portal whose repository has modules of its own is kept out by its own deploy
-(see Not done yet).
+**Kept out**: `autoUpdate` false in `build_choices` (a later `npm run deploy` keeps it); set it true
+to return. A repository with modules of its own records them as `ownModules` with `autoUpdate` false,
+since the fleet does not build them; it stays on `npm run deploy` from its repository.
 
 ## The one-time setup
 
-The Vendor does this once. Nothing is written in any repository, and no key is pasted anywhere
-but Cloudflare's build secrets.
+Nothing is written in a repository; the key lives only in Cloudflare's build secrets.
 
-1. **Be a member of every client's account.** In each client's Cloudflare account, the client adds
-   the Vendor's Cloudflare login under Manage Account, Members, as an Administrator. An account the
-   Vendor's login cannot open is not updated; it stays on `npm run deploy` by hand.
-2. **Have a test portal of your own.** Deploy one portal in the Vendor's own account with
-   `npm run deploy`, from the kit's `templates/client`. A bad push then breaks this portal and no
-   client's.
-3. **Make the fleet key.** In the Vendor's Cloudflare profile: My Profile, API Tokens, Create
-   Token, Custom token. Not an account's own API Tokens page: a token made there reaches that one
-   account only, and the first real run found no portal for that reason. These permissions:
+1. **Be a member of every client's account**: Manage Account, Members, Administrator. An account the
+   Vendor cannot open stays on `npm run deploy` by hand.
+2. **Have a test portal**: `npm run deploy` from `templates/client` in the Vendor's own account.
+3. **Make the fleet key** under My Profile, API Tokens, Custom token (not an account's own API Tokens
+   page, which reaches one account only):
    - Account: Workers Scripts Edit, D1 Edit, Workers KV Storage Edit, Workers R2 Storage Edit,
      Queues Edit, Account Settings Read.
-   - Zone: Workers Routes Edit (a portal on its own address), Zone WAF Edit (the rate-limit rule
-     on its public hooks, 2026-11-24).
+   - Zone: Workers Routes Edit, Zone WAF Edit.
    - User: Memberships Read, User Details Read.
-   - Account Resources: the accounts that hold portals, your own and each client's. All accounts
-     works too: the fleet only ever acts on an Oltrem portal and the sign-in service
-     (`oltrem-relay`), and only reads the lists of any other account. Zone Resources: All zones. TTL: no shorter than a year.
-4. **Connect the kit once.** In the Vendor's account: Workers and Pages, Create, Import a
-   repository, pick the kit repository, name the project `oltrem-fleet`, with these build
-   settings (all of it works from a phone):
-   - Branch: `main`. Root directory: `/`.
-   - Build command: `npm install && npm run build`.
-   - Deploy command: `npm run oltrem -- fleet`.
-   - Build watch paths, include: `packages/*`, `modules/*`, `vendor/*`, `templates/*`.
-   - Build variables and secrets:
-     - `OLTREM_FLEET_TOKEN` (secret): the fleet key of step 3.
-     - `OLTREM_FLEET_FIRST` (variable): the Worker name of the test portal of step 2; several are
-       separated by commas.
-     - `OLTREM_FLEET_GITHUB_TOKEN` (secret, optional): a fine-grained GitHub token with Issues read
-       and write on the kit repository only.
-     - `OLTREM_FLEET_REPO` (variable, optional): the kit repository as `owner/name`, for the issues.
-5. **Try it.** Run the build once from the dashboard (Deployments, Retry). The log lists every
-   portal found. A key that finds no portal at all turns the build red. `npm run oltrem -- fleet --check`, with `OLTREM_FLEET_TOKEN` set, says the same
-   from a computer without changing anything.
+   - Account Resources: the accounts with portals, or All (the fleet acts only on portals and
+     `oltrem-relay`). Zone Resources: All zones. TTL: at least a year.
+4. **Connect the kit once**: Workers and Pages, Create, Import a repository, the kit, project
+   `oltrem-fleet`:
+   - Branch `main`, root `/`; build `npm install && npm run build`; deploy `npm run oltrem -- fleet`;
+     watch paths `packages/*`, `modules/*`, `vendor/*`, `templates/*`.
+   - `OLTREM_FLEET_TOKEN` (secret, the key); `OLTREM_FLEET_FIRST` (the test portal's Worker, commas
+     for several); optional `OLTREM_FLEET_GITHUB_TOKEN` (fine-grained, Issues read and write on the
+     kit only) and `OLTREM_FLEET_REPO` (`owner/name`).
+5. **Try it**: Deployments, Retry; the log lists every portal. `npm run oltrem -- fleet --check` with
+   the key set says the same from a computer, changing nothing.
 
-## The key
-
-One key reaches every client's account, so it is kept in one place: Cloudflare's build secrets,
-which are never shown again and never reach a portal. It can deploy Workers and change their
-databases, storage and queues, and a zone's rate-limit rule, and nothing else: it cannot change
-members, billing, DNS records or Access. Rotate it yearly, or at once if it may have been seen: make a new one from the same
-permissions, replace the build secret, delete the old one. Its row is in the
+**The key** can deploy Workers, change their databases, storage and queues and a zone's rate-limit
+rule, and nothing else (not members, billing, DNS or Access). Rotate it yearly, or at once if seen:
+a new key with the same permissions, replace the secret, delete the old one. Its row is in the
 [token registry](tokens.md).
 
 ## Not done yet
 
-- **The door.** An update keeps the portal's Access as it is, since the key cannot change Access. A
-  door change reaches a portal only with `npm run deploy`; so nothing the screens need signed in may
-  sit on a path an older door opened (the actions moved to `/do/` on 2026-11-12 for that reason).
-- **Client modules.** A client's own modules (`oltrem new module`) live in a client repository,
-  which the fleet does not build. So every `npm run deploy` of a repository with modules of its
-  own records them in `build_choices` (`ownModules`) with `autoUpdate` false, and the fleet lists
-  that portal as kept out of updates with that reason: it stays on `npm run deploy` from its
-  repository until the fleet learns to build its modules.
-- **Checked on a real account.** Everything above runs against stand-ins in
-  `packages/cli/test/fleet.test.ts`, and a real build of a client's portal from `.fleet/` was
-  bundled by wrangler. The first run in Workers Builds is the owner's setup above.
+- **The door**: an update keeps the portal's Access (the key cannot change it); a door change needs
+  `npm run deploy`, so nothing the screens need signed in may sit on a path an older door opened.
+- **Client modules**: built only by the client's own `npm run deploy` (above).
+
+Tested with stand-ins in `packages/cli/test/fleet.test.ts`.
