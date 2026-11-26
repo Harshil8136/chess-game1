@@ -2,7 +2,7 @@
 title: "The Alerts page remade, and sign-in alert emails that were refused (2026-11-25)"
 status: record
 owner: vendor
-last_verified: 2026-11-25
+last_verified: 2026-11-26
 sources: [modules/alerts/src/alerts.ts; modules/alerts/migrations/0096_alerts_manage.sql; modules/iam/src/care.ts; packages/screens/src/alerts.tsx]
 ---
 
@@ -87,6 +87,44 @@ on a computer the menu is never narrower than 15 rem (P820). The same morning th
 fitted sidebar "TOO thin": the portal's name was cramped and the address cut. The sidebar is now a
 steady 17 rem, on a computer and as the phone's drawer (P819).
 
+## The incident-management review (2026-11-26)
+
+The owner sent a long review of the page as security incident management, asking to take its
+hints without making the system complicated. What changed, with no new dependency:
+
+- **Standard words.** I am on it became Assign to me, Nobody on it Unassigned, Mark resolved
+  Resolve incident, What was seen Observed activity, What to do Recommended response, the alert's
+  key the event fingerprint, Change Edit notification settings, Copy Copy alert details.
+- **A row's head** reads severity · kind, the title, then Open or Resolved and who it is assigned
+  to; once resolved, its reason and who resolved it.
+- **One time zone.** Every time reads in the viewer's zone with its short name; a sign-in
+  alert's "on 2026-11-26 at 05:18 UTC" is rewritten the same way. UTC stays only in the folded
+  technical details.
+- **Facts regrouped** as Timing, Ownership, Notifications (with the recipients, for whoever may
+  manage) and Classification, under plain grey headings instead of one colour each.
+- **A reason with each resolve.** Resolve incident opens a dialog: Legitimate activity verified,
+  Unauthorized activity contained, False positive, Duplicate, Problem fixed, or Other with a few
+  words, kept in the new `resolution` column (migration `0098`, one added column) and in the
+  audit entry. Ticked alerts can be resolved with a reason too, except Other.
+- **Recommended response** for an account-access alert is two short lists, if it was them and if
+  it was not, with links to Users and the sign-in history, pages that exist; no new action.
+- **The note** is a full-width box with a footer row (who sees it, Remove note, Save note); an
+  empty note cannot be saved. Only one note per alert is kept, so there is no note history.
+- **Mute** says what it does, Mute emails for this alert, and when muted, until when, with Unmute.
+- **Bulk actions** sit in a bar at the foot that shows only once an alert is ticked, with the
+  count and Clear selection, counted by the stylesheet with no script.
+- **Settings** in one quiet row above the list: Email notifications, Quiet hours, Resolved alerts
+  kept, Times shown in, Edit notification settings.
+
+The refusals now say what happened: someone else is already assigned, or someone may have
+resolved it already. Every action still goes through the alerts API's permission check and audit
+entry, which were already there. P841-P847.
+
+The same push took three portal-wide points from the owner's review of Supabase Settings: the
+lone "Data >" row above a page inside a section is now one link back with its arrow pointing
+back; the bell has a tooltip naming it and how many are unread (its spoken name, hover and count
+were already there); and every page's figures read label first, then the number (P848, P849).
+
 ## Verified
 
 - `modules/alerts` tests: let go, note, mute that survives a new alert and unmute, delete only
@@ -95,6 +133,11 @@ steady 17 rem, on a computer and as the phone's drawer (P819).
 - `modules/iam` test: the sign-in-moved key passes Email's message-key rule.
 - `packages/screens` tests: the views and kinds, the actions and ticks for a manager only,
   Delete only on a resolved alert for whoever may delete, the empty states.
+- 2026-11-26: `modules/alerts` tests for a resolve's reason (Other without words refused, an
+  unknown reason refused, the words kept after the label, a bulk reason); `packages/screens` tests
+  for the new words, the bar, the settings row, times in a zone with its name and the sign-in
+  alert's steps and links; the client template's test resolving a reported sign-in with a reason
+  through the page and reading it back from the API.
 - `packages/screens` and the client template's tests: one palette outside the sidebar, opened
   by every Search, no link to a search page, `/search` sending a page request Home and answering
   the pop-up's JSON; Files' link opening the palette with its words.

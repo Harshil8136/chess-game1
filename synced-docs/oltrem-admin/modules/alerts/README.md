@@ -92,15 +92,25 @@ every alert ever raised on each run. Status's last resolved alerts are read the 
 The Alerts page (`packages/screens/src/alerts.tsx`) lists every alert as one row under its day,
 in the viewer's time zone, with a severity edge: the title, how many times it was seen, Critical
 or Warning, the section in its sidebar colour, who is on it and what became of its email. Chips
-pick the view (Open, Nobody on it, Mine, Critical, Resolved, Everything) and the kind (Checks,
-Errors, Sign-ins and reports), and a search reads the title, detail, section, key, who is on it
-and the note. A row opens in place to what was seen, what to do (a kit error's own words, else
-what fits its kind), when, who, the email, the alert's key, the technical details folded, and a
-note. Its actions, for whoever holds `alerts.manage`: I am on it or Let go, Mark resolved, Mute
-emails for 1, 7 or 30 days or Unmute, and Copy (the title and detail, to paste to whoever fixes
-it). Ticked rows are taken, resolved or deleted together. A resolved one has Delete, through the
-kit's confirm dialog, for whoever holds `alerts.delete`. One line above the list says who is
-emailed and the quiet hours, with a link to change them (only for whoever may manage).
+pick the view (Open, Unassigned, Assigned to me, Critical, Resolved, Everything) and the kind
+(Checks, Errors, Account access), and a search reads the title, detail, section, key, who is on it
+and the note. Since 2026-11-26 (the owner's incident-management review) the words are the
+standard ones and every time reads in the viewer's zone with its name ("Nov 26, 12:18 AM EST");
+UTC stays in the technical details. A row's head gives the severity and kind, the title, Open or
+Resolved and who it is assigned to; it opens to Observed activity and Recommended response (for
+an account-access alert, what to do if it was them and if it was not, with links to Users and the
+sign-in history), then Timing, Ownership, Notifications and Classification, the technical details
+folded (the event fingerprint with its own copy button, the alert id, the source, both times in
+UTC), and an internal note. Its actions, for whoever holds `alerts.manage`: Assign to me or
+Unassign, Resolve incident, which asks why (Legitimate activity verified, Unauthorized activity
+contained, False positive, Duplicate, Problem fixed, Other with a few words) and keeps it as the
+alert's `resolution` (migration `0098`), Mute emails for this alert for 1, 7 or 30 days or Unmute,
+and Copy alert details. Ticked rows are assigned, resolved (with a reason if picked; Other is
+for one alert at a time) or deleted together from a bar that shows only once one is ticked, with
+the count and Clear selection. A resolved one has Delete, through the kit's confirm dialog, for
+whoever holds `alerts.delete`. One row above the list gives the email recipients, the quiet
+hours, how long resolved alerts are kept and the zone times are shown in, with Edit notification
+settings (the recipients and the link only for whoever may manage).
 
 A mute belongs to the problem, not the one alert: a new alert under the same key, raised while
 the mute lasts, is listed but not emailed, and one waiting to be sent is dropped. Unmuting ends

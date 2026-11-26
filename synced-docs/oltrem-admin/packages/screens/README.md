@@ -162,7 +162,8 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Save a setting (`/settings/:key`): text, a number, On or Off, a choice, or a list one item per line (blank lines dropped), turned into the setting's type; a refused value comes back in its box | `PUT /api/settings/values/:key` | `?done=setting-saved` |
 | Reset a setting to its default (`/settings/:key/reset`, the row's quiet button) | `PUT /api/settings/values/:key` with the default the list names | `?done=setting-reset` |
 | One value for the settings that share a name (`/settings/same/:name`, as `currency`): each saved in turn through the API, so each is checked and audited as if saved alone; the first refusal stops it, and the ones before it stay saved | `PUT /api/settings/values/:key`, once each | `?done=settings-same` |
-| I am on it (`/alerts/:id/acknowledge`) | `POST /api/alerts/items/:id/acknowledge` | `?done=acknowledged` |
+| Assign to me (`/alerts/:id/acknowledge`) | `POST /api/alerts/items/:id/acknowledge` | `?done=acknowledged` |
+| Resolve incident (`/alerts/:id/resolve`): the reason picked and a few words, needed for Other | `POST /api/alerts/items/:id/resolve` with `{ reason, words }` | `?done=alert-resolved` |
 | Download as CSV: two dates, the last 7 days by default; the browser asks the API itself, so the file downloads | `GET /api/audit/export?since=&until=` | the CSV file |
 
 A change that worked redirects to its page with a `done` key, which the page turns into a fixed
@@ -228,7 +229,8 @@ trips before a page's own first read; now a page waits for its slowest read.
   off.
 - **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
   (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
-  the unread figure (to "99+"), read on every
+  the unread figure (to "99+") and, since 2026-11-26, a tooltip naming it ("Notifications: 3
+  unread"), read on every
   page beside the page's own reads (one indexed read more; none without the users module). Since
   2026-11-14 a bell opens a panel over the page (`notify-panel`, closed by X, Escape or a tap
   outside) filled from `/notifications`, whose list works inside it; without the script it opens
@@ -288,7 +290,8 @@ trips before a page's own first read; now a page waits for its slowest read.
   marked tab names the page, so no word shows twice (a screen reader hears "Email: Sent"); a page
   inside a tab (a message, `Connect an integration`) keeps the set's row and tabs and puts its own
   title under them; a page inside a section with no tabs (a list in Lists, Create form) shows a
-  breadcrumb back to the section above its title. The tabs are links on an underline, the marked
+  link back to the section above its title (since 2026-11-26 one link with its arrow pointing
+  back, "‹ Data", where a lone "Data >" read as an orphan). The tabs are links on an underline, the marked
   one in the group's colour and never bold (no label moves), a count beside a tab when the page
   gives one (`counts` in a page's answer, by the tab's path). On a phone the row scrolls sideways
   into the gutters, which fade; since 2026-11-22 (the owner: the tabs jumped on every page) the frame script opens the same row scrolled where it was on the page before, and moves it only as far as shows the marked tab whole. A page's commands start its content, under the tabs, so the head and the tabs are the same on every page of a set; the arrow
