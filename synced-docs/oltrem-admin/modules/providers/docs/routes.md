@@ -31,6 +31,7 @@ instances and pastes their keys.
 | `POST /instances/:id/activate` | manage, at the company | this instance sends; the one that was active becomes the first failover |
 | `POST /instances/:id/disable` | manage, at the company | out of the failover order |
 | `POST /instances/:id/probe` | manage, at the company | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
+| `GET /checkup` | read, at the company | every connection the tenant holds, of every kind (email, data, storage, analytics and the rest), not suggested or switched off: its title, label, last check (ok, when, how long, the words), a retiring API (`sunset`, `deprecated`) and what the checkup fixed by itself (`fixed`); never a key. `probe=1` reads nothing, for the Checkup tab |
 | `POST /detect` | manage, at the company | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
 | `DELETE /instances/:id` | manage, at the company | removes it with its credential; the active one is refused (`KIT-E-1405`) |
 | `POST /keys/rewrap` | manage, at the company | after the KEK secret changed: every tenant's data key wrapped again under the current key |
@@ -102,7 +103,9 @@ email module never names a provider.
   `speed` (429), `allowance` (402, or a 429 that names a quota or credits), `account` (401, 403:
   the key, the account or the sending domain), `message` (another 4xx), `provider` (5xx) or
   `other`; an SMTP reply before `DATA` says nothing was sent. A probe never throws: it answers
-  `{ ok, checkedAt, latencyMs, detail }`. A definition's `probe.ready` (up to five
+  `{ ok, checkedAt, latencyMs, detail }`, with `sunset` (the `Sunset` header, RFC 8594, 64
+  characters at most) and `deprecated` (a `Deprecation` header, RFC 9745) when the provider said
+  it is retiring the API (`retiringOf`). A definition's `probe.ready` (up to five
   `{ path, is, problem }`) says what the probe's answer must also hold for the account to send:
   a key the provider accepts on an account it has not switched sending on fails the probe with
   `problem`, which says what to do. Brevo's reads `relay.enabled` from `GET /v3/account` (a new

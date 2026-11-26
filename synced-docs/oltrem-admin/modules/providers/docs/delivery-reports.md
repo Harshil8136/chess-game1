@@ -82,6 +82,18 @@ it changed, or once a day: one row a day for a service that keeps working. A wri
 turns an OK into a warning that says the answer could not be kept, so a database fault is never
 blamed on the service.
 
+## The checkup
+
+`providers.checkup`, a job every hour (2026-11-26, the owner's Vendor checkup): the three
+connections of this part's own kinds (not data, storage or analytics, which their parts check)
+with a key and no check in the last 20 hours (`CHECKUP_BATCH`, `CHECKUP_DUE_MS`), the never
+checked first. Each is probed; a passing failure (`passingFailure`: no answer in time, a lost
+connection, 408, 425, 429 or 5xx, never a refused key) is asked once more after 2 seconds
+(`CHECKUP_RETRY_MS`), and an answer then is kept with `fixed`. The result goes on the row as the
+probe route keeps it, and in the audit log as `providers.checkup` (actor `providers.checkup`,
+outcome ok or failed, the service, its words, `fixed`, `sunset`, `deprecated`). `GET /checkup`
+lists every kind for the screens' Checkup page.
+
 ## Credentials
 
 The secret fields are sealed together under the tenant's data key to the instance's row, so a

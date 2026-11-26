@@ -132,3 +132,15 @@ From [record](../archive/records/2026-11-26-api-keys-safer-retries-replay.md):
 |---|---|---|
 | P998 | Integrations, Developer, a webhook, Rotate secret, 1 day | The new secret once; the webhook reads The old secret also signs until tomorrow's time |
 | P999 | A webhook switched off after failures, with events since | Resend missed events; after pressing, it is on and the notice says they go ten every five minutes |
+
+### Vendor checkup of every connection, 26 November
+
+From [record](../archive/records/2026-11-26-vendor-checkup.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1003 | Status | A Checkup chip under the tabs; it opens Status, Checkup with Status still marked |
+| P1004 | Status, Checkup | Every connected service (email, databases, storage, analytics), the failing first, each with its logo, what its last check said and when, and Open |
+| P1005 | Status, Checkup, Check every connection now | Back on the page with "Checked every connection", each row checked just now; with more than six, "Press again for the rest" |
+| P1006 | Status, Checkup, Checks in the audit log | The audit log narrowed to Integrations: a row for each check of a service, the daily ones by providers.checkup |
+| P1007 | Status, Checkup, on a phone | No sideways scroll; each row's name wraps, the Open link and the state stay on screen |

@@ -18,4 +18,4 @@ This README is split by section, so each part can be read whole.
 | [definitions](docs/definitions.md) | The definitions: Send, Key, Probe, Reports, Allowance |
 | [definitions-2](docs/definitions-2.md) | The definitions, continued (2) |
 | [routes](docs/routes.md) | Routes; The adapters |
-| [delivery-reports](docs/delivery-reports.md) | Delivery reports; Detection; Status and the failover order; The connections check; Credentials; Tables and errors; Not here yet; Tests |
+| [delivery-reports](docs/delivery-reports.md) | Delivery reports; Detection; Status and the failover order; The connections check; The checkup; Credentials; Tables and errors; Not here yet; Tests |
