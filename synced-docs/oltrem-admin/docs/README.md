@@ -8,115 +8,84 @@ sources: [this repository]
 
 # Documentation: index and where things stand
 
-> **In plain words.** This folder is the written side of the kit, kept so the owner can follow
-> the work on a phone. This page says where the work stands, lists every document and the fact
-> each one owns. The plan the work follows lives elsewhere and is
-> linked below.
+> **In plain words.** The written side of the kit, kept so the owner can follow the work on a
+> phone: where the work stands, every document and the fact each one owns.
 
 ## Where things stand
 
 The kit is in **phase 6, release pipeline and upgrade**, with the first features for any business
-built beside it. What still waits is on [the status page](status.md); what comes next, and why it
-sells, is in [the roadmap](roadmap.md). A person or an agent new to the repository reads
-[the architecture guide](architecture.md) after ai.md. Proposals and earlier plans, decided or
-built, are frozen in [archive/proposals](../archive/proposals/README.md).
+built beside it. What waits is on [the status page](status.md); what comes next, in
+[the roadmap](roadmap.md). Someone new reads [the architecture guide](architecture.md) after ai.md.
+Decided or built proposals are frozen in [archive/proposals](../archive/proposals/README.md); the
+records (dated, frozen) are kept out of this folder so no agent loads them for a task:
+[the records index](../archive/records/README.md).
 
-## The plan
+The plan, its research and the owner's decisions live in the first client's documentation, on
+[the public docs mirror](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/cf-admin/documentation/program/platform-kit);
+its plan document is the authority on the design.
 
-The plan, its research and the owner's decisions are kept in the first client's documentation
-and published on the public docs mirror:
-[the platform-kit folder on the mirror](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/cf-admin/documentation/program/platform-kit).
-Its plan document is the authority on the design.
-
-## Where these documents are published
-
-On every push to `main` the verify workflow's `mirror-docs` job runs the identifiers gate, then
-copies this folder, the records in `archive/`, the root `.md` files, each package, module and template README and LICENSE
-to [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin)
-on the docs mirror, and every Oltrem Mail document (`vendor/mail/published/`, in each
-pack) to `synced-docs/oltrem-mail`, each with a provenance file. Nothing is redacted: the gate
-is the scanner, and all of it is written as if public (R-04). It signs in with
-`PERSONAL_PAT` ([registry](reference/tokens.md)).
+**Published.** On every push to `main`, the verify workflow's `mirror-docs` job runs the
+identifiers gate, then copies this folder, `archive/`, the root `.md` files, every package, module
+and template README and LICENSE to
+[synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
+and Oltrem Mail's documents (`vendor/mail/published/`) to `synced-docs/oltrem-mail`, each with a
+provenance file, signing in with `PERSONAL_PAT` ([registry](reference/tokens.md)). Nothing is
+redacted: all of it is written as if public (R-04).
 
 ## Index
 
-| Document | Owns | Kind |
-|---|---|---|
-| [Where things stand](status.md) | the parts still waiting, and on whom | living |
-| [Roadmap](roadmap.md) | what buyers pay for, the editions, module states, what comes next | living |
-| [Architecture guide](architecture.md) | the parts, how a request and a job travel, what a module is, the numbers taken, where a change goes | living |
-| [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
-| [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
-| [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
-| [Versions and release notes](release.md) | how packages are versioned and how a change's note is written | living |
-| [The fleet](reference/fleet.md) | every push to the kit updates every client's portal: how, the one-time setup, the key | living |
-| [Phone tests owed](phone-tests.md) | every phone test still owed, by page, with what to see; passed and failed ones | living |
-| [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
-| [Phone tests owed: Users and access](phone-tests-users.md) | the phone tests owed on the Users and access pages, split from the list above | living |
-| [Phone tests owed: Connected data](phone-tests-data.md) | the phone tests owed on the Data pages from 22 November on (Sign in with Supabase), split from the flows list | living |
-| [Phone tests owed: the Apps page](phone-tests-apps.md) | the phone tests owed on the Apps page, from its makeover on 22 November on | living |
-| [Phone tests owed: Home and the frame](phone-tests-frame.md) | the phone tests owed on Home and the frame, split from the list above | living |
-| [Phone tests owed: Files](phone-tests-files.md) | the phone tests owed on the Files page from its rebuild on 23 November | living |
-| [Phone tests owed: Reports](phone-tests-reports.md) | the phone tests owed on Reports, from its remake on 26 November on | living |
-| [Phone tests owed: Backups and Status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and Status, split from the list above | living |
-| [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
-| [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
-| [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
-| [How documents are written and sized](reference/doc-policy.md) | the size caps, the documents budget and its allowances, the shape of a document and of a record | living |
-| [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
-| [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
-| [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
-| [@oltrem/cli](../packages/cli/README.md) | the `oltrem` tool: the manifest check and format, `new module`, `deploy`, the restore drill, the run report, the doctor's checks, exit codes | written, beside the code |
-| [@oltrem/core-errors](../packages/core-errors/README.md) | how an error is defined, the code blocks, and the problem document every failure answers with | written, beside the code |
-| [@oltrem/core-module](../packages/core-module/README.md) | the module contract: routes, capabilities, schemas, event types, jobs, flows, health checks, migrations, settings, errors, what it refuses | written, beside the code |
-| [@oltrem/core-http](../packages/core-http/README.md) | the request pipeline, the same-origin rule, the identity headers and the token's claims, the startup hook, the session hook, the three Worker handlers | written, beside the code |
-| [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
-| [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, hashing and verify; the module with its page's routes, the export and the daily seal | written, beside the code |
-| [@oltrem/core-jobs](../packages/core-jobs/README.md) | the one tick: how a job is declared, how it is leased, run and recorded, and the table it owns; the one Workflow: how a flow is started and run step by step | written, beside the code |
-| [@oltrem/core-health](../packages/core-health/README.md) | system health: how a module declares its checks, how the tick runs them and opens a problem after two failures, and the table it owns | written, beside the code |
-| [@oltrem/core-crypto](../packages/core-crypto/README.md) | envelope encryption for stored credentials: the one key-encryption key, a data key per tenant, each value sealed to its row, key rotation; a seal for one sign-in trip | written, beside the code |
-| [@oltrem/relay](../packages/relay/README.md) | the connect relay: the Vendor's one Worker for one-click sign-in (Slack, Discord, Google, Supabase, Airtable), its secrets, how to set it up, what it never keeps | written, beside the code |
-| [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
-| [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities, roles, scopes, groups, bindings, overrides, the check, sessions, governance, the Vendor and the handover, the door, tables, errors | written, beside the code |
-| [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
-| [@oltrem/records](../modules/records/README.md) | the company's own lists: places and the four capabilities, the kinds of field, search, the CSV, routes, tables, errors | written, beside the code |
-| [@oltrem/forms](../modules/forms/README.md) | forms for the company's website, built with no code, and the inbox where answers are taken and tracked | written, beside the code |
-| [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders, uploads, links that end, the trash, pages, routes, tables, settings, errors | written, beside the code |
-| [@oltrem/automations](../modules/automations/README.md) | automations: an event or a schedule, one action, run within the tick's budget, the kit's two actions and how to add one, the pages, routes, tables, errors | written, beside the code |
-| [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
-| [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, routes, table | written, beside the code |
-| [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
-| [@oltrem/data](../modules/data/README.md) | Connected data: the dialects that read a client's own Turso, Neon, Supabase, Airtable and Upstash Redis over their web APIs, how each stays on its own host and reads only, the errors; the two permissions and why reading sits in the Manage level, the routes, the Data pages and the paste box | written, beside the code |
-| [@oltrem/connect](../modules/connect/README.md) | Apps: the catalogue, one-click sign-in and why it is safe, Any other app, chat alerts, a calendar link for each app and live spreadsheet links, who may make them, when a link stops working, the logos, the routes and the table | written, beside the code |
-| [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
-| [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
-| [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, vacation days a year, the reason kept private, the routes and the table | written, beside the code |
-| [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the month's CSV, the routes and the table | written, beside the code |
-| [@oltrem/assets](../modules/assets/README.md) | equipment: who sees and manages it at a place, one tag one item, handed over with every move kept, retired when nobody holds it, the routes and the tables | written, beside the code |
-| [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the email code, OpenID Connect, who manages customers, the routes and the tables | written, beside the code |
-| [@oltrem/quotes](../modules/quotes/README.md) | quotes: who sees and who makes them at a place, drafts until sent, lines and total in the company's currency, the customer's answer once, the routes and the table | written, beside the code |
-| [@oltrem/invoices](../modules/invoices/README.md) | invoices: who sees and who makes them at a place, drafts until sent, from an accepted quote, paid once, overdue in Needs you, voided, the routes and the table | written, beside the code |
-| [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until published, an email each, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
-| [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, the payroll CSV, the routes and the table | written, beside the code |
-| [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
-| [@oltrem/developer](../modules/developer/README.md) | developer tools: outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
-| [@oltrem/jobs](../modules/jobs/README.md) | Scheduled jobs: every job the parts declare, found from their manifests, a health line and four views, a page per job, run now, run soon, a pause that can end by itself, behind jobs.read, jobs.run and jobs.manage, the routes, check and error | written, beside the code |
-| [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
-| [@oltrem/email, campaigns and mail](../vendor/mail/README.md) | email, campaigns and the Oltrem Mail add-on, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
-| [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
-| [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
-| [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
-| [@oltrem/screens](../packages/screens/README.md) | the portal's screens: the frame and its row, each page and the API it reads, the first run, the stylesheet | written, beside the code |
-| [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the two workflows, the two secret names | written, beside the code |
-| [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies, written as the client's how-to | written, beside the code; copied by the generator |
+| Document | Owns |
+|---|---|
+| [ai.md](../ai.md), [rules.md](../rules.md) | The session start, the rules in one line each, the commands; every rule in full |
+| [Where things stand](status.md) | The parts still waiting, and on whom |
+| [Roadmap](roadmap.md) | What buyers pay for, the editions, what is started or later |
+| [Architecture guide](architecture.md) | The parts, how a request and a job travel, what a module is, the numbers taken |
+| [The licence in plain words](licence.md) | What the Oltrem Licence allows and how to ask for more |
+| [Versions and release notes](release.md) | Versioning and how a change's note is written |
+| [The fleet](reference/fleet.md) | How every kit push updates every client's portal |
+| [How documents are written and sized](reference/doc-policy.md) | The caps, the budget and its allowances, the shape of a document and a record |
+| [Adding a module to the kit](reference/kit-module.md) | Steps, files, numbers, mounting, tests and documents of a new module |
+| [Token registry](reference/tokens.md) | Every credential by name (generated from `tokens.registry.json`) |
+| [What verify runs](reference/verify.md) | The gates and what each refuses (generated from `scripts/lib/gates.mjs`) |
+| [Dependencies](reference/dependencies.md) | Every third-party package and why (generated from `dependencies.registry.json`) |
 
-The records (the kit's history, dated and frozen) live outside this folder so no agent loads
-them for a task: [the records index](../archive/records/README.md).
+**Phone tests owed**, by page, with what to see: [the main list](phone-tests.md),
+[Email and Mail](phone-tests-email.md), [Users and access](phone-tests-users.md),
+[Connected data](phone-tests-data.md), [Apps](phone-tests-apps.md),
+[Home and the frame](phone-tests-frame.md), [Files](phone-tests-files.md),
+[Reports](phone-tests-reports.md), [Backups and Status](phone-tests-system.md), and
+[the flows fixed on 15 November](phone-tests-flows.md).
 
-## How this folder is checked
+**Packages**, each README beside its code: [core-module](../packages/core-module/README.md) (the
+module contract), [core-http](../packages/core-http/README.md) (the pipeline),
+[core-config](../packages/core-config/README.md) (settings, parts),
+[core-errors](../packages/core-errors/README.md), [core-outbox](../packages/core-outbox/README.md),
+[core-audit](../packages/core-audit/README.md), [core-jobs](../packages/core-jobs/README.md) (the
+tick, the Workflow), [core-health](../packages/core-health/README.md),
+[core-crypto](../packages/core-crypto/README.md), [core-ui](../packages/core-ui/README.md) (tokens,
+primitives), [screens](../packages/screens/README.md) (the frame and pages),
+[cli](../packages/cli/README.md) (the `oltrem` tool), [relay](../packages/relay/README.md) (one-click
+sign-in).
 
-`pnpm docs:check` holds every document to [the doc policy](reference/doc-policy.md).
+**Modules**: Core [iam](../modules/iam/README.md) (the permission model),
+[users](../modules/users/README.md), [privacy](../modules/privacy/README.md),
+[alerts](../modules/alerts/README.md), [jobs](../modules/jobs/README.md),
+[backup](../modules/backup/README.md), [github](../modules/github/README.md); Work
+[records](../modules/records/README.md), [forms](../modules/forms/README.md),
+[files](../modules/files/README.md), [tasks](../modules/tasks/README.md),
+[approvals](../modules/approvals/README.md), [announcements](../modules/announcements/README.md),
+[bookings](../modules/bookings/README.md), [timeoff](../modules/timeoff/README.md),
+[expenses](../modules/expenses/README.md), [assets](../modules/assets/README.md),
+[timeclock](../modules/timeclock/README.md), [shifts](../modules/shifts/README.md),
+[quotes](../modules/quotes/README.md), [invoices](../modules/invoices/README.md),
+[customers](../modules/customers/README.md), [automations](../modules/automations/README.md),
+[analytics](../modules/analytics/README.md), [connect](../modules/connect/README.md); Admin
+[data](../modules/data/README.md); Messages [providers](../modules/providers/README.md) and Oltrem
+Mail's [email, campaigns and mail](../vendor/mail/README.md) (a packed copy); Developer
+[developer](../modules/developer/README.md).
 
-## How to read this on a phone
+**Templates**: [the client template](../templates/client/README.md) (a client repository) and
+[the module template](../templates/module/README.md) (what `oltrem new module` copies).
 
-Every document opens with a short summary in plain words. Tables are kept narrow.
+`pnpm docs:check` holds every document to [the doc policy](reference/doc-policy.md). Every
+document opens with a short summary in plain words, and tables are kept narrow.
