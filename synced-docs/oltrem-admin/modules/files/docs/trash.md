@@ -1,43 +1,43 @@
 ---
-title: "@oltrem/files: The trash; The pages; Search"
+title: "@oltrem/files: the trash, the pages, search"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/files/src; split from modules/files/README.md]
+sources: [modules/files/src/drive.ts, pages.tsx, module.ts]
 ---
 
-# @oltrem/files: The trash; The pages; Search
+# @oltrem/files: the trash, the pages, search
 
 > Part of [the @oltrem/files README](../README.md).
 
 ## The trash
 
-Moving an item to the trash hides it and everything inside it, and ends its links. A restore
-brings it back to its folder, or to the top of its place when that folder is gone, numbered on a
-clash. Only an item in the trash is deleted for good (`KIT-E-2404` otherwise), with everything
-inside it, their content and their links. The job `files.empty-trash` runs daily and deletes what
-has stayed longer than the setting `files.trash_days` (30 by default), 100 items a run at most,
-then removes link rows that ended a month ago. Its check (the jobs page's **Check for work**,
-2026-11-21) counts what the next run would delete, and deletes nothing.
+The trash hides an item and everything in it, and ends its links. Restore puts it back in its
+folder (or the top of its place when the folder is gone), numbered on a clash. Only a trashed item
+is deleted for good (`KIT-E-2404`), with its contents, content and links. The daily job
+`files.empty-trash` deletes what has stayed past `files.trash_days` (30), 100 a run, then removes
+link rows ended a month ago; its check counts and deletes nothing.
 
 ## The pages
 
+Every page of Files has one title, "Files"; the marked chip says where you are. Each list or part
+is a card headed by a coloured tile, its name and a count.
+
 | Path | Shows |
 |---|---|
-| `/files` | a file manager: Files' menu is the page's own row under its head, drawn by the portal as Email's folders are, on every screen, never in the sidebar: the places, Starred, Recent, Shared with me, Shared links and Trash as chips, then under More Access review, Held for review, Limits and Storage for whoever manages access at a location, and the Storage meter (the visible places' bytes against the bucket's 10 GB). The folder is one panel: its head holds the path (earlier folders muted, the current one bold, each a place to drop dragged rows) with the folder's own folders, files and size under it, then a search box (names in this folder; Type chips under the head, All and each kind it holds with a count, `?type=`, shown once it holds two kinds; on a phone a search button beside Sort until a search is made, and the totals hidden, so the folder and its tools take one row), a Sort menu (`?sort=`, `-` for the largest or newest first; the list's headings sort too), List or Grid (`?view=grid`, pictures as thumbnails) and **New** (Upload files, Upload a folder, New folder), the page's one filled button (a + on a phone). Compact rows: a tile coloured by the file's kind, the name, a short date (`24 Nov`, the full time on hover) and the size; on a phone the size and date under the name. Ticks show on hover, once one is ticked, or always on a touch screen; the bar with **Move to the trash** shows only while something is ticked. A menu on each row (also a right click: Download, Details, Make a copy, Restore, Move to the trash); a held file shows an amber dot and Held. A file's name opens a details panel over the right of the page, the rest dimmed (`?item=`, a press outside closes it; Previous and Next step through the list as shown, also by the arrow keys or a sideways swipe) with a preview of a picture, video, sound, PDF or text, its type in words ("Program (EXE)", "PDF document"), size, when it changed and by whom (the name given under Users, else the address) in the viewer's own time zone (the `oltrem_tz` cookie), where it is, Download for a file and, for a person who manages access there, **Who has access** as on the item's page (posting to the item and coming back to the panel), and for a person who may delete for good or manage access its Activity (the last 30 of its audit rows: an icon of each action's colour, the person's name, the action in words, the item's name left out when it is the one shown, the time in their zone). An empty folder says to drop files or press New. With the browser script, files dropped or pasted on the page upload one at a time with a bar each and Stop; dragged rows move into a folder row or a folder of the path, and files dropped on a folder row upload into it; F2 opens an item, Delete trashes it. Without it the upload form still works. After a move to the trash, a notice with **Undo** and the days it stays there |
-| `/files?show=held` | Held for review, for whoever manages access at a location: each held file there with its place, why it is held, Release and Move to the trash, each leading back to the list |
-| `/files?show=shared` | Shared with me: the folders and files given to the person by Manage access, with their places |
-| `/files?show=starred`, `/files?show=recent` | Starred and Recent: what the person starred, and the files changed most lately at their locations, with their places |
-| `/files?show=access` (`ends=soon`, `ends=ended`) | Access review: every entry of Manage access at the locations the person manages, with ticks and **End access** |
-| `/files?show=links` | Shared links: every open link and customer share the person made or may end, with its file, location, who made it, its downloads and its end, and **End it** |
-| a file's page and its details panel | made over: the head is one card in the file's colour (a one-hue wash, a big tile, the name, its type, size and date and where it is on one line, the star, the menu and Download); a preview only when the browser can show one (a text file shows its text; no box at all otherwise); every card is headed by a coloured tile (Who has access, Activity, Details, Links, Customers, File requests, Versions, Keep). The panel's head is the same card with Close; its Activity is a card. **New** opens its menu right under itself, each row on a coloured tile |
-| every page of Files | one title, "Files", on every page: the lists, Limits, Storage and a file's own page return the section's name, so the frame draws the same head everywhere and the marked row or chip says where you are; each list or part is a card headed by a coloured tile, its name and a count, and a file's page heads its content with its tile, name, line and buttons |
-| the whole page, reviewed | 2026-11-25: no card clips what opens over it (New, Sort); New closes when a row is picked or files are chosen (the frame script); the details panel starts below the phone bar, never squeezes a card (it scrolls) and leaves a text file's text to its page (a PDF framed short there, never on a phone), slides in from the right and out on Close; the upload box is one blue toast (title and Stop on a line, each file's percent and bar); Moved to the trash is two lines with Undo beside the second and carries Star, Open (view-only), Download and, in the trash, Restore; the grid has two columns on a phone with two-line names; Held sits after the name and a folder's size is a dash; Restore lands in the file's folder; the trash names its place; an upload held for review says so on its line; a kept file is not offered Move or the trash; a missing file offers Back to Files, an empty search Clear the search; the page refuses a form it does not know |
-| several at once, and asking first | 2026-11-25 (his "go with all your recommendations"): in the trash the rows can be ticked and deleted for good (the bulk route, after the bulk bar's question), and **Empty the trash** deletes every item there (up to 100 a press) after a confirm; in a folder **Move** joins the bulk bar for the ticked items, its dialog naming every folder of the place by its path (`Accounts / 2026`), the page script moving each with one request (without it the page says to move them one by one); ending a link, a file request or a customer's share asks first; a folder's search offers **Search all of Files** (the portal's search) |
-| `/files/:id` | one item (made over): beside its title Star, a More menu (rename, move, make a copy, upload a new version, trash, restore, delete for good behind a confirmation) and its one filled button (Download, Open when it is View only, none when held (Release and Move to the trash are in its notice), Open the folder for a folder), under it the kind, size and date, then where it is; on the left its preview, **Who has access** for a person who may change it (the folder's general access with Restrict, one row per person, group or role with its level and a remove button, entries from the folders above with Change it there, and Add people in a dialog: first A person, A group or A role in a sideways row and then only that list, a level with what each lets them do, View only and Ends on; levels on badges of their colour; open links counted on a row) and its activity; on the right cards for its details, links (New link), the customers it is shared with (Share: an address and 30 days, 90 days or a year), a folder's file requests, versions and Keep, each form in a dialog; on a phone the cards follow the access and the activity comes last |
+| `/files` | The page's own menu row under the head (never the sidebar): the places, Starred, Recent, Shared with me, Shared links, Trash; under More, Access review, Held for review, Limits and Storage for whoever manages access; the storage meter. The folder panel: the path (each folder a drop target), its counts and size, a search box, Type chips (`?type=`, with two kinds or more), Sort (`?sort=`, `-` for largest or newest), List or Grid (`?view=grid`) and **New** (Upload files, Upload a folder, New folder). Rows: a kind-coloured tile, name, short date, size; ticks on hover or touch; the bulk bar (trash, **Move**) only while ticked; a row menu (also right click); held files marked. A name opens the details panel (`?item=`): preview, type in words, size, who changed it when in the viewer's zone (`oltrem_tz`), Download, **Who has access** and Activity for those who may. With the script: drop or paste to upload with a bar each and Stop, drag rows into folders, F2 opens, Delete trashes; without it the form works. After a trash, **Undo** with the days left |
+| `/files?show=held` | Held files at the person's locations, with why, Release and Move to the trash |
+| `/files?show=shared`, `starred`, `recent` | Shared with me; Starred; Recent |
+| `/files?show=access` (`ends=soon`, `ends=ended`) | The access review (below), with ticks and **End access** |
+| `/files?show=links` | Open links and customer shares the person made or may end, with **End it** |
+| `/files/:id` | One item: Star, a More menu (rename, move, copy, new version, trash, restore, delete for good behind a confirm) and one filled button (Download; Open when View only; none when held; Open the folder). Its preview, **Who has access** (general access with Restrict, a row per person, group or role with its level, inherited entries with Change it there, Add people in a dialog: who as a sideways row, a level, View only, Ends on) and Activity; cards for details, links, customers, file requests, versions and Keep, each form in a dialog |
+
+In the trash, rows can be ticked and deleted for good, and **Empty the trash** deletes up to 100 a
+press after a confirm. **Move** names every folder of the place by its path (`Accounts / 2026`).
+Ending a link, request or customer share asks first. A folder's search offers **Search all of
+Files**. A kept file is not offered Move or the trash. A missing file offers Back to Files.
 
 ## Search
 
 The portal's search (`GET /api/files/search?q=`, `files.read`) finds files and folders by name,
-folders first, in the places the person's roles reach and never in the trash; it never reads what a
-file holds.
+folders first, in the places the person's roles reach, never in the trash or inside a file.

@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/iam: The model in one paragraph; Declaring capabilities; Compiling and checking"
+title: "@oltrem/iam: the model, declaring capabilities, compiling and checking"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/iam/src; split from modules/iam/README.md]
+sources: [modules/iam/src/capabilities.ts, compile.ts, can.ts, bits.ts]
 ---
 
-# @oltrem/iam: The model in one paragraph; Declaring capabilities; Compiling and checking
+# @oltrem/iam: the model, declaring capabilities, compiling and checking
 
 > Part of [the @oltrem/iam README](../README.md).
 
@@ -43,7 +43,7 @@ export const ROOMS = defineCapabilities({
 | `class` | `read`, `operate` or `admin`: how the screens group it |
 | `label` | a few words a person reads, in English at least |
 | `floor` | `owner`: granted only through the Owner role or by the Vendor; `vendor`: the Vendor's alone |
-| `freshSignIn`, `secondPerson` | the route runs those gates after an allow (plan 7.2, step 5) |
+| `freshSignIn`, `secondPerson` | the route runs those gates after an allow |
 
 `defineCapabilities` refuses a bad declaration when the module loads (`KIT-E-2001`). A module
 declares the same thing on its manifest, as `bitPlane` and `capabilities` in `defineModule`
@@ -90,8 +90,7 @@ kilobytes.
 4. An Owner (the Owner role at the root, in force) with no deny of their own, for a capability
    not on the vendor floor: `owner` (allow) at once, with no walk. The compile marks an Owner
    that has one (`narrowed`).
-5. Walk from the scope up to the root once: a deny bit on any node is `deny`, for an Owner too
-   (since 2026-11-14, the owner's ask for "a specific owner with less permission").
+5. Walk from the scope up to the root once: a deny bit on any node is `deny`, for an Owner too.
 6. A capability on the vendor floor is held only through an allow bit the Vendor gave: `allow`,
    else `vendor_floor`.
 7. An Owner: `owner` (allow).

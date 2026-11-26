@@ -16,9 +16,9 @@ This README is split by section, so each part can be read whole.
 
 | Part | Sections |
 |---|---|
-| [model-in-one-paragraph](docs/model-in-one-paragraph.md) | The model in one paragraph; Declaring capabilities; Compiling and checking |
-| [sessions-and-the-authorizer](docs/sessions-and-the-authorizer.md) | Sessions and the authorizer |
-| [governance](docs/governance.md) | Governance; The Vendor and the handover |
-| [care-on-the-tick](docs/care-on-the-tick.md) | Care on the tick; The door, and who gets in; API keys |
-| [routes](docs/routes.md) | The routes; Permission names; Tables |
-| [errors](docs/errors.md) | Errors; Tests |
+| [model-in-one-paragraph](docs/model-in-one-paragraph.md) | The model; declaring capabilities; compiling and checking |
+| [sessions-and-the-authorizer](docs/sessions-and-the-authorizer.md) | Sessions, devices, blocks, sign-in comparison; the authorizer |
+| [governance](docs/governance.md) | The grant rules; the Vendor, invitations and the handover |
+| [care-on-the-tick](docs/care-on-the-tick.md) | Care on the tick; Needs you; the door and who gets in; API keys |
+| [routes](docs/routes.md) | The routes; permission names; tables |
+| [errors](docs/errors.md) | Errors; tests |

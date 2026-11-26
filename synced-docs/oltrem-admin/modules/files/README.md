@@ -13,7 +13,7 @@ This README is split by section, so each part can be read whole.
 | Part | Sections |
 |---|---|
 | [using-it](docs/using-it.md) | Using it; Who may do what: the place of a file; Storage locations |
-| [folders-names-and-uploads](docs/folders-names-and-uploads.md) | Folders, names and uploads; Links that end; File requests; Shared with a customer |
+| [folders-names-and-uploads](docs/folders-names-and-uploads.md) | Folders, names and uploads; what a file is, and room; links that end; file requests; shared with a customer |
 | [trash](docs/trash.md) | The trash; The pages; Search |
 | [routes](docs/routes.md) | The routes; Tables; Settings; Errors |
 | [tests](docs/tests.md) | Tests |
