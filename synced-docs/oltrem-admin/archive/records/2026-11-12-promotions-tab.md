@@ -3,7 +3,7 @@ title: "Why the test email landed in Promotions: Oltrem Mail cc48720 taken in (2
 status: record
 owner: vendor
 last_verified: 2026-11-12
-sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-11-12-promotions-tab-cause.md; vendor/mail/published/docs/setup.md]
+sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/archive/records/2026-11-12-promotions-tab-cause.md; vendor/mail/published/docs/setup.md]
 ---
 
 # Why the test email landed in Promotions
@@ -27,7 +27,7 @@ sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-
 
 What was checked, the cause, the references and the client's own steps are in Oltrem Mail's
 record, published with the release:
-[2026-11-12-promotions-tab-cause.md](../../vendor/mail/published/docs/records/2026-11-12-promotions-tab-cause.md),
+[2026-11-12-promotions-tab-cause.md](../../vendor/mail/published/archive/records/2026-11-12-promotions-tab-cause.md),
 and its setup page's section 6.
 
 ## How it was checked

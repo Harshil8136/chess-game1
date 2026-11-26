@@ -3,7 +3,7 @@ title: "Campaigns go as plain letters, and say which Gmail tab they will reach: 
 status: record
 owner: vendor
 last_verified: 2026-11-15
-sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-11-15-campaigns-as-letters.md; vendor/mail/published/docs/setup.md]
+sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/archive/records/2026-11-15-campaigns-as-letters.md; vendor/mail/published/docs/setup.md]
 ---
 
 # Campaigns go as plain letters, and say which Gmail tab they will reach
@@ -40,7 +40,7 @@ flowchart LR
 What was checked in the owner's campaign, what no portal can control (the tab itself, an offer
 being a promotion, the unsubscribe link every campaign must keep) and what helps most are in
 Oltrem Mail's record, published with the release:
-[2026-11-15-campaigns-as-letters.md](../../vendor/mail/published/docs/records/2026-11-15-campaigns-as-letters.md),
+[2026-11-15-campaigns-as-letters.md](../../vendor/mail/published/archive/records/2026-11-15-campaigns-as-letters.md),
 and its setup page's section 6.
 
 ## How it was checked

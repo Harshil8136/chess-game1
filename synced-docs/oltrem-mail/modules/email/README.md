@@ -137,7 +137,7 @@ so first, with a button to the page that fixes the first one, and lists what to 
 window as tall as the screen: the fields flush inside it, the message growing down to the Send
 bar, edge to edge on a phone.
 
-Since 2026-10-31 (the kit's record `docs/records/2026-10-31-email-console-remake.md` in oltrem-admin) the email
+Since 2026-10-31 (the kit's record `archive/records/2026-10-31-email-console-remake.md` in oltrem-admin) the email
 pages are drawn with the console pieces of `@oltrem/core-ui`. Write is a mail app's compose card:
 From, To, Cc and Bcc (folded), Subject as lines, the message under them, Send, Save draft and Send
 later in a bar at its foot, and how the marks look beside it on a wide page. Drafts and Scheduled
@@ -174,7 +174,7 @@ asked once a page, and one that fails shows none. The page's head is one slim ro
 moving between Email pages keeps the folders and the list still while the marked folder glides
 and an opened email slides in (core-ui's mail rules, the kit's record of 2026-11-10).
 
-Since 2026-11-11 the left pane is grouped as Gmail's (docs/records/2026-11-11-gmail-style-email.md):
+Since 2026-11-11 the left pane is grouped as Gmail's (archive/records/2026-11-11-gmail-style-email.md):
 the add-on's everyday folders with Sent and Drafts, those it marks `group: 'more'` under More
 (open by itself when one of them is the current page), the labels, then the pages that manage
 mail (Delivery log, Templates, what an add-on keeps last, **Usage and limits** at `/email/usage`).
@@ -191,7 +191,7 @@ allowance is protected, and the Cloudflare plan's figures from the kit's budgets
 Database reads and Time per request: a meter for each figure measured, and since 2026-11-11 the
 ones not measured yet named in one line under the reason, instead of a row of empty bars each.
 
-Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
+Since 2026-11-01 (the kit's record `archive/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
 compose card in the manner of Gmail and Resend, and every part still works without the script.
 From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
 suggestions; empty Cc and Bcc fold behind one **Cc/Bcc** button on the To line (since
@@ -245,7 +245,7 @@ a draft saved that way mends itself on its next save or preview). Going back to 
 the box shows the code as the composer's lines, which go as the code again. The composer is shared
 (`RichBox`, `rich-box.tsx`) with an address's signature.
 
-Since 2026-10-31 (the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin) Write
+Since 2026-10-31 (the kit's record `archive/records/2026-10-31-write-templates-and-code.md` in oltrem-admin) Write
 starts from the company's saved templates for Write (see [Saved templates](#saved-templates)):
 
 | Part | What it does |
@@ -416,7 +416,7 @@ over them were taken out the same night, the owner: boxes that waste the page go
 
 What an address sends is a tag in its colour on every row and in the dialogs: **Everyday mail**
 green, **Campaigns** purple, **Bulk and everyday** amber (one address for both is what put a test
-letter in Gmail's Promotions tab, `docs/records/2026-11-12-promotions-tab-cause.md`), and the
+letter in Gmail's Promotions tab, `archive/records/2026-11-12-promotions-tab-cause.md`), and the
 default it is in blue. **Edit** opens on a card of the address in its avatar's colour (its name,
 address and tags), then three parts each with its icon: **Who it is from** (the name people see,
 and what it sends, now chosen here: Everyday, Bulk or Both; while it is a default the words say
@@ -429,8 +429,8 @@ the view its form is on, its words or its refusal shown there.
 ## Saved templates
 
 The letters and designs the company writes with, kept in D1 as the company's (stage 3 of the
-bulk sending plan, `docs/records/2026-10-28-saved-templates.md`; Write since 2026-10-31,
-the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin). They are not the typed
+bulk sending plan, `archive/records/2026-10-28-saved-templates.md`; Write since 2026-10-31,
+the kit's record `archive/records/2026-10-31-write-templates-and-code.md` in oltrem-admin). They are not the typed
 templates above, which are code; a saved template is data a person builds on the page Email,
 Templates (`/email/templates`): a row filters them (all, for Write, for campaigns, with code,
 archived), and one opens to Edit, Preview (as a phone, a desktop or in dark mode) and Versions.
@@ -470,7 +470,7 @@ a send. Every change is audited: `email.template-add`, `email.template-save`,
 ## Saved lists
 
 The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk sending plan,
-`docs/records/2026-10-28-saved-lists.md`), on the page Campaigns, Lists (`/email/lists`).
+`archive/records/2026-10-28-saved-lists.md`), on the page Campaigns, Lists (`/email/lists`).
 
 | Part | What it does |
 |---|---|
@@ -740,7 +740,7 @@ page is linked.
 ## Not here yet
 
 - A screen of the do-not-mail list in this module comes with the later bulk sending stages
-  (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen and changed on
+  (archive/records/2026-10-28-senders-and-domains.md); until then the list is seen and changed on
   the Campaigns pages. (The daily cap exists: `campaigns.daily_limit`.) Since stage 5 a campaign picks a saved template and a saved
   list, and the campaigns module's engine is what calls `bulk.route` and `bulk.send`.
 - A list is filled from a file or typed addresses; filling one from the customers module is

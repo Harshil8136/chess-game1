@@ -28,7 +28,7 @@ sources: [modules/campaigns/src/message.ts; modules/campaigns/src/campaigns.ts; 
 
 The sending was right. Gmail's help describes Promotions as "deals, offers, and other promotional
 emails", and this was an offer that looked like one. The earlier research
-([2026-11-12](2026-11-12-promotions-tab-cause.md), and section 6 of [the setup page](../setup.md))
+([2026-11-12](2026-11-12-promotions-tab-cause.md), and section 6 of [the setup page](../../docs/setup.md))
 found the same signs named by every provider's guidance, and one large split test in which the
 plain version of an email reached Primary and the designed one Promotions.
 

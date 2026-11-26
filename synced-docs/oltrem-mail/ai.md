@@ -93,7 +93,7 @@ Package names, tables, routes and hook addresses never change in a move.
 | What a module does | its README and a note from `pnpm changeset` |
 | A gate | `scripts/lib/gates.mjs`, a test, then `pnpm docs:build` |
 | A dependency | the catalog and `dependencies.registry.json`, then `pnpm docs:build` |
-| A big change | a dated record in docs/records/, linked from docs/README.md |
+| A big change | a record (4 KB at most) in archive/records/, from its template, in its README |
 
 ## 8. Where things stand
 

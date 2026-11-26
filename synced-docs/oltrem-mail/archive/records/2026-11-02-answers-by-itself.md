@@ -14,7 +14,7 @@ sources: [modules/mail/src/inbox.ts; modules/mail/src/module.ts; modules/mail/sr
 > above the reply box and go in with one press. A conversation that staff answered and heard
 > nothing back on for three days comes back to the top, marked "No answer yet", so nobody is
 > forgotten. And the Owner can make Undo send last from 5 to 30 seconds. This is bundle B of
-> [the research on making mail easier](../research/2026-11-02-easier-mail.md), built at the
+> [the research on making mail easier](../../docs/research/2026-11-02-easier-mail.md), built at the
 > owner's choice of all five bundles.
 
 ## What changed

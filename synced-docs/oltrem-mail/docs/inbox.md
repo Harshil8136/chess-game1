@@ -12,7 +12,7 @@ sources: [Cloudflare docs read 2026-11-02 (email handler, Email Routing, subdoma
 > spending the Worker's 10 ms, where each part is kept so the portal's one database never fills,
 > how a message is read safely on a phone, and how threads hold together. Part of
 > [the plan](plan.md), approved 2026-11-02; built in phase 4
-> ([the record](records/2026-11-02-phase-4-inbox.md)). Where the build differs from the design,
+> ([the record](../archive/records/2026-11-02-phase-4-inbox.md)). Where the build differs from the design,
 > this page says how it was built and why; `modules/mail/README.md` lists the routes and settings.
 
 The owner said an inbox is not needed but welcome. It costs nothing on Cloudflare and comes in
@@ -170,7 +170,7 @@ setting keeps both in bounds.
 
 Built from [the research on making mail easier](research/2026-11-02-easier-mail.md), bundle A,
 so the inbox works the way Gmail, Outlook and Yahoo taught everyone
-([the record](records/2026-11-02-familiar-inbox.md)):
+([the record](../archive/records/2026-11-02-familiar-inbox.md)):
 
 - **Updates beside the inbox.** Mail from a list or a machine (it carries `List-Id` or
   `List-Unsubscribe`, `Precedence: bulk`, or `Auto-Submitted`) goes to Updates by itself, out of
@@ -197,7 +197,7 @@ so the inbox works the way Gmail, Outlook and Yahoo taught everyone
 ## 8. The inbox answers by itself (as built, bundle B)
 
 Bundle B of [the same research](research/2026-11-02-easier-mail.md)
-([the record](records/2026-11-02-answers-by-itself.md)):
+([the record](../archive/records/2026-11-02-answers-by-itself.md)):
 
 - **Automatic reply** on each mailbox (Mailboxes and rules, under the mailbox): on or off, an
   optional first and last day on the company's clock, a subject (or `Re:` and theirs) and the
@@ -216,7 +216,7 @@ Bundle B of [the same research](research/2026-11-02-easier-mail.md)
 ## 9. Gmail's stars, labels, keys and pane (as built, 2026-11-11)
 
 From [the research on making Email feel like Gmail](research/2026-11-11-gmail-style.md)
-([the record](records/2026-11-11-gmail-style-email.md)):
+([the record](../archive/records/2026-11-11-gmail-style-email.md)):
 
 - **Stars.** A star on each row and on the open conversation, kept on the conversation for the
   whole team (`mail_threads.starred`), with a Starred folder and `is:starred` in search.

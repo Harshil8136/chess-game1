@@ -3,7 +3,7 @@ title: "Coded emails found anywhere, one dropdown, and Write without the portal'
 status: record
 owner: vendor
 last_verified: 2026-11-12
-sources: [packages/core-ui/src/primitives/dropdown.tsx; packages/core-ui/src/theme.css; packages/screens/src/client/frame.js; packages/screens/test/frame.test.ts; packages/screens/test/css.test.ts; packages/core-ui/test/dropdown.test.tsx; vendor/mail/published/docs/records/2026-11-12-coded-email-anywhere.md]
+sources: [packages/core-ui/src/primitives/dropdown.tsx; packages/core-ui/src/theme.css; packages/screens/src/client/frame.js; packages/screens/test/frame.test.ts; packages/screens/test/css.test.ts; packages/core-ui/test/dropdown.test.tsx; vendor/mail/published/archive/records/2026-11-12-coded-email-anywhere.md]
 ---
 
 # Coded emails found anywhere, one dropdown, and Write without the portal's bar on a phone
@@ -13,7 +13,7 @@ sources: [packages/core-ui/src/primitives/dropdown.tsx; packages/core-ui/src/the
 > choosing HTML then handed over the editor's own lines of the code instead of the code. The
 > owner also asked for one dropdown used everywhere, for signatures that can be designed like
 > templates, for the To line's chips not to touch the line above, and for a calmer Write screen on
-> a phone. Oltrem Mail's record ([coded email anywhere](../../vendor/mail/published/docs/records/2026-11-12-coded-email-anywhere.md))
+> a phone. Oltrem Mail's record ([coded email anywhere](../../vendor/mail/published/archive/records/2026-11-12-coded-email-anywhere.md))
 > tells the email side; this one tells the kit's.
 
 ## What changed in the kit

@@ -13,7 +13,7 @@ sources: [Gmail Help and Google Workspace help pages, 9to5Google, TechCrunch, Ma
 > non-technical client understands. This page is what was found: Gmail's layout and shortcuts,
 > the features a Gmail user expects, which open-source projects may be reused and how, how the big
 > products show storage and quotas, and the free plans' limits today. What was built from it is in
-> [the record](../records/2026-11-11-gmail-style-email.md).
+> [the record](../../archive/records/2026-11-11-gmail-style-email.md).
 
 Prepared 2026-11-11. Web research only. No personal data is included.
 

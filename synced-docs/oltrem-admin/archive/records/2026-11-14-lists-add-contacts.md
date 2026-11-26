@@ -3,7 +3,7 @@ title: "Lists made plain and no blank fields: Oltrem Mail 7d8f1ff taken in (2026
 status: record
 owner: vendor
 last_verified: 2026-11-14
-sources: [packages/screens/src/client/frame.js; packages/screens/test/frame.test.ts; packages/screens/README.md; templates/client/test/screens.test.ts; vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-11-14-lists-add-contacts-and-personalization.md]
+sources: [packages/screens/src/client/frame.js; packages/screens/test/frame.test.ts; packages/screens/README.md; templates/client/test/screens.test.ts; vendor/mail/oltrem-mail.json; vendor/mail/published/archive/records/2026-11-14-lists-add-contacts-and-personalization.md]
 ---
 
 # Lists made plain and no blank fields
@@ -15,7 +15,7 @@ sources: [packages/screens/src/client/frame.js; packages/screens/test/frame.test
 > offers the people you emailed to tick, and a campaign now refuses to start while anyone would
 > get a blank variable. The kit's part is the file preview and taking the new Mail in. The full
 > account is
-> [Oltrem Mail's record](../../vendor/mail/published/docs/records/2026-11-14-lists-add-contacts-and-personalization.md).
+> [Oltrem Mail's record](../../vendor/mail/published/archive/records/2026-11-14-lists-add-contacts-and-personalization.md).
 
 ## What the kit changed with it
 

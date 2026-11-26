@@ -14,7 +14,7 @@ sources: [modules/email/src/clean.ts; modules/email/src/people.ts; modules/email
 > inboxes such as `info@` are marked, and `noreply@` addresses are left out, since nobody reads
 > them. In the next few minutes the portal checks each domain on the list for a mail server, and
 > campaigns skip the people no email can reach. Nobody has to press anything for any of it. This is
-> bundle L of [the research on making mail easier](../research/2026-11-02-easier-mail.md), built
+> bundle L of [the research on making mail easier](../../docs/research/2026-11-02-easier-mail.md), built
 > at the owner's choice of all five bundles.
 
 ## What changed

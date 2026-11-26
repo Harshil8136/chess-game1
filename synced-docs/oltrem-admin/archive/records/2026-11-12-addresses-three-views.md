@@ -3,7 +3,7 @@ title: "Addresses in three views, and the Edit dialog in parts: Oltrem Mail 5ee9
 status: record
 owner: vendor
 last_verified: 2026-11-12
-sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-11-12-addresses-in-three-views.md; vendor/mail/published/modules/email/README.md; packages/core-ui/src/theme.css; templates/client/test/screens.test.ts]
+sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/archive/records/2026-11-12-addresses-in-three-views.md; vendor/mail/published/modules/email/README.md; packages/core-ui/src/theme.css; templates/client/test/screens.test.ts]
 ---
 
 # Addresses in three views, and the Edit dialog in parts
@@ -13,7 +13,7 @@ sources: [vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-
 > sideways row of three views (Addresses, Domains, Kinds of mail), each address's tags in their
 > colours, one Add an address at the top, and an Edit dialog in three parts with what the address
 > sends chosen there. The full account is
-> [Oltrem Mail's record](../../vendor/mail/published/docs/records/2026-11-12-addresses-in-three-views.md).
+> [Oltrem Mail's record](../../vendor/mail/published/archive/records/2026-11-12-addresses-in-three-views.md).
 
 ## What the kit changed with it
 

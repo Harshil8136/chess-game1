@@ -34,7 +34,7 @@ list of a few thousand people makes tens of thousands of rows per minute of clic
 | Cloudflare's cache (Cache API) | It does nothing on a `workers.dev` address, where the live portal runs. |
 | **Read less on the server** (chosen) | The campaign keeps its counters on its own row (`n_total`, `n_sent` and the others, already written by the sender), and the slower figures are kept for a minute while it sends and ten minutes once it is over (`tally`, migration `1012`). Measured on a list of 1,500 people: a campaign page under 60 rows, the list of campaigns under 60, the people tab under 250. |
 
-Oltrem Mail's [record](../../vendor/mail/published/docs/records/2026-11-10-campaigns-reads-and-run-now.md)
+Oltrem Mail's [record](../../vendor/mail/published/archive/records/2026-11-10-campaigns-reads-and-run-now.md)
 holds the detail, with the campaign page's other changes from the same request: the steps, the
 footer written in step 3, **Run now** and the live Run log.
 

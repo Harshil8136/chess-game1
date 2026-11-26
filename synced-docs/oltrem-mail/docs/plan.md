@@ -17,7 +17,7 @@ sources: [Cloudflare docs read 2026-11-02 (Email Service overview, FAQ, limits, 
 > from scratch: both routes send from large networks that mailbox providers already know. What we
 > look after is the business's domain: its records, a slow start and low complaints, and the
 > portal does most of that by itself. **Status:** approved by the owner on 2026-11-02 with his
-> revisions (section 14); phase 1 is done ([the record](records/2026-11-02-phase-1-move.md)).
+> revisions (section 14); phase 1 is done ([the record](../archive/records/2026-11-02-phase-1-move.md)).
 
 ## Contents
 

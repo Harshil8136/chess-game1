@@ -3,7 +3,7 @@ title: "Mail: company checks, proven senders and safer reading (2026-11-20)"
 status: record
 owner: vendor
 last_verified: 2026-11-20
-sources: [modules/mail/src/module.ts; modules/mail/src/inbox.ts; modules/mail/src/arrival.ts; modules/mail/src/reader/reader.js; modules/email/src/email.ts; modules/campaigns/src/campaigns.ts; modules/campaigns/src/module.ts; oltrem-admin docs/records/2026-11-20-security-and-access.md, the kit's side of the same review]
+sources: [modules/mail/src/module.ts; modules/mail/src/inbox.ts; modules/mail/src/arrival.ts; modules/mail/src/reader/reader.js; modules/email/src/email.ts; modules/campaigns/src/campaigns.ts; modules/campaigns/src/module.ts; oltrem-admin archive/records/2026-11-20-security-and-access.md, the kit's side of the same review]
 ---
 
 # Mail: company checks, proven senders and safer reading

@@ -52,7 +52,7 @@ and no provider call.
 
 ## What only the client can do
 
-They are in [the setup page's section 6](../setup.md#6-landing-in-gmails-primary-tab-not-promotions):
+They are in [the setup page's section 6](../../docs/setup.md#6-landing-in-gmails-primary-tab-not-promotions):
 send letters in Words from a person's name, give campaigns their own address, put the reply
 address on the same domain, and ask regular customers to move one email to Primary.
 

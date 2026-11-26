@@ -233,7 +233,7 @@ unread count shows beside Inbox on every Email page (`addMailFolderCounts`). Mai
 (`/email/mailboxes`), the last of Email's folders and beside them: each mailbox with its state and what stands in its way, add, change, switch
 off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
 
-Since 2026-11-11 the inbox works as Gmail does (docs/records/2026-11-11-gmail-style-email.md):
+Since 2026-11-11 the inbox works as Gmail does (archive/records/2026-11-11-gmail-style-email.md):
 the folders in Gmail's groups (Inbox, Starred, Snoozed with Email's Sent and Drafts; Updates,
 Archived, Spam and All under More), the labels with their colours and a + to make one, and the
 Mail storage gauge under them (`addMailPane`); a top bar with the search, the tick-all box, the

@@ -63,7 +63,7 @@ flowchart TD
   whether it is ready for Gmail, Yahoo and Outlook; a domain that has not passed in a day warns
   on System health; everyday mail goes through the backup first once the main provider is down
   to its last tenth. The record is
-  [records/2026-11-02-sets-itself-up.md](records/2026-11-02-sets-itself-up.md).
+  [records/2026-11-02-sets-itself-up.md](../archive/records/2026-11-02-sets-itself-up.md).
 
 ## 2. "Use Cloudflare email"
 
@@ -177,9 +177,9 @@ instead of trusting this list):
 
 ## 5. Forwarding, as ImprovMX does it
 
-Built in bundle F ([its record](records/2026-11-02-forwarding.md)), on its own page, Forwarding
+Built in bundle F ([its record](../archive/records/2026-11-02-forwarding.md)), on its own page, Forwarding
 (`/email/forwarding`), under Email's Settings tab (since 2026-11-22). Since 2026-11-12
-([its record](records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
+([its record](../archive/records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
 **ImprovMX** and **Cloudflare**. A visit opens on ImprovMX, unless Cloudflare already forwards a
 domain and ImprovMX is not connected.
 
@@ -319,13 +319,13 @@ email landed in Promotions. It was a newsletter design with "Deal" in its subjec
 preview line, a hero picture, a button and Unsubscribe and View in browser links that went
 nowhere, sent from the one address that also sent the client's campaign. That is what Gmail calls
 a promotion; the record says what was checked
-([2026-11-12](records/2026-11-12-promotions-tab-cause.md)).
+([2026-11-12](../archive/records/2026-11-12-promotions-tab-cause.md)).
 
 What 2026-11-15 showed: the owner's first campaign reached its four people, in Promotions. Its
 sending was right; it was a sales letter with package offers, lines in capital letters, rows of
 exclamation marks and a From name beginning "News Email from", inside the grey card every plain
 campaign then went out in. The card is gone and the page now names the rest before a campaign
-goes ([the record](records/2026-11-15-campaigns-as-letters.md)). Nothing makes Gmail put a
+goes ([the record](../archive/records/2026-11-15-campaigns-as-letters.md)). Nothing makes Gmail put a
 campaign in Primary: a letter that reads as one person writing to another has the best chance,
 and an offer belongs in Promotions by Gmail's own definition.
 

@@ -3,7 +3,7 @@ title: "Forwarding through ImprovMX, and plainer Forwarding and Mail setup pages
 status: record
 owner: vendor
 last_verified: 2026-11-12
-sources: [modules/providers/src/definition.ts; modules/providers/src/definitions/forwarding.ts; modules/providers/src/definitions/index.ts; modules/providers/test/definitions.test.ts; packages/screens/src/pages.tsx; vendor/mail/oltrem-mail.json; vendor/mail/published/docs/records/2026-11-12-forwarding-through-improvmx.md; vendor/mail/published/docs/setup.md]
+sources: [modules/providers/src/definition.ts; modules/providers/src/definitions/forwarding.ts; modules/providers/src/definitions/index.ts; modules/providers/test/definitions.test.ts; packages/screens/src/pages.tsx; vendor/mail/oltrem-mail.json; vendor/mail/published/archive/records/2026-11-12-forwarding-through-improvmx.md; vendor/mail/published/docs/setup.md]
 ---
 
 # Forwarding through ImprovMX, and plainer Forwarding and Mail setup pages
@@ -14,7 +14,7 @@ sources: [modules/providers/src/definition.ts; modules/providers/src/definitions
 > account's domains and aliases, changes them at ImprovMX, checks a domain's records and shows the
 > mail ImprovMX forwarded. The same night Mail setup was made to lead with its one next step, and
 > the boxes of figures on Addresses were removed. The full account is
-> [Oltrem Mail's record](../../vendor/mail/published/docs/records/2026-11-12-forwarding-through-improvmx.md).
+> [Oltrem Mail's record](../../vendor/mail/published/archive/records/2026-11-12-forwarding-through-improvmx.md).
 
 ## What the kit changed with it
 

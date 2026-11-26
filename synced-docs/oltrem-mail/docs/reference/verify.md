@@ -18,7 +18,7 @@ sources: [scripts/lib/gates.mjs]
 | 2 | tokens | `node scripts/check-tokens.mjs` | a secret name used in a workflow or a `wrangler secret put` command without a row in the token registry; a row with a missing field, an unknown status or a duplicate name |
 | 3 | identifiers | `node scripts/check-identifiers.mjs` | a name of the first client's existing platform or repositories anywhere in the repository; a UUID shape, a long hex identifier or an email address |
 | 4 | deps | `node scripts/check-deps.mjs` | a dependency without a row in the dependency registry, one not pinned once in the catalog, a package.json carrying its own version, a registered row nothing uses; a kit package with no packed file in kit/ or at another version |
-| 5 | docs | `node scripts/check-docs.mjs` | a generated document that differs from its source; a document under docs/ missing from the index or without front matter; a document over its size budget; a relative link that points nowhere |
+| 5 | docs | `node scripts/check-docs.mjs` | a generated document that differs from its source; a document under docs/ missing from the index or without front matter; a document over its size budget; a record left in docs/records/ (records live in archive/records/), or one dated after 2026-11-26 over 4 KB; a relative link that points nowhere |
 | 6 | format | `pnpm exec prettier --check .` | a code file not formatted by Prettier (run pnpm format) |
 | 7 | lint | `pnpm exec eslint .` | an ESLint finding |
 | 8 | typecheck | `pnpm -r run typecheck` | a type error in either module, its Worker code against the Workers runtime and its pages against the DOM, with the kit's packed packages as they are in kit/ |
