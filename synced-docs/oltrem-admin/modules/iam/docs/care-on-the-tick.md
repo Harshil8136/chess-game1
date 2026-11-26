@@ -115,8 +115,14 @@ its secret is kept, compared in constant time. A call carries it to `/hooks/api/
 alert or fresh sign-in, and checks its capabilities like anyone's. A key that ends stops at that
 time; Revoke (`DELETE /keys/:id`) switches its account off and ends its session at once. Its last
 use is written at most once an hour (`KEY_USE_EVERY_MS`); a company holds 20 keys at most
-(`KEYS_MAX`). Making and revoking need `iam.keys.manage`, held to the Owner role (`floor: 'owner'`).
-Tests: `test/keys.test.ts`.
+(`KEYS_MAX`). Making and revoking need `iam.keys.manage`, held to the Owner role (`floor: 'owner'`)
+and a recent sign-in (`freshSignIn`). A key's account takes a role only through its key (`grant`'s
+`forKey`, which `keys.ts` alone passes and no route can): a grant, override or group membership
+given to it elsewhere is refused with `KIT-E-2018`. Tests: `test/keys.test.ts`.
+
+**Idempotency-Key.** `iam.idempotency` (`src/idempotency.ts`) keeps the first answers
+`@oltrem/core-http` gives again (its pipeline page has the rules) in `iam_idempotency`; the daily
+job `iam.tidy`, not an extra, removes rows past a day. Tests: `test/idempotency.test.ts`.
 
 **Limits and management** (migration `0090_iam_api_key_limits.sql`). A key also carries, set when it
 is made and changed later (`PATCH /keys/:id`, the end reaching its grant too): calls a minute

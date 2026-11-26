@@ -129,4 +129,6 @@ its index, which nothing has read ever or written since kit `053f26e`; marked `-
 shipped a release after the code that stopped writing it (the live portal's last row, read through
 the Cloudflare connector on 2026-11-22, was from before that release). Migration
 `0089_iam_api_keys.sql` adds `iam_api_keys`: a key's id, company, service account, name, the hash of
-its secret, who made it and when, its end, last use and revoke time.
+its secret, who made it and when, its end, last use and revoke time. Migration
+`0101_iam_idempotency.sql` adds `iam_idempotency`, keyed by key and Idempotency-Key: the first
+call's method, path, body hash, claim and time, and its answer.

@@ -23,7 +23,8 @@ fit, `KIT-E-2013` a review closed with grants undecided, `KIT-E-2014` a second c
 `KIT-E-2015` an invitation that cannot be used (unknown, used, withdrawn, a week old),
 `KIT-E-2016` an invitation taken with another address, `KIT-E-2017` a sign-in while the account
 is blocked, with the time it ends (`iam_principals.blocked_until`, migration `0065`, written by
-the Users module). A sign-in at another Access application
+the Users module), `KIT-E-2018` a grant, override or group for an API key's account, whose access
+changes on the key's page. A sign-in at another Access application
 answers with the core's `KIT-E-0401`; a grant, request, approval, review or invitation that does
 not exist with the core's `KIT-E-0404`.
 

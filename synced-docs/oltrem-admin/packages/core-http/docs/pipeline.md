@@ -60,6 +60,17 @@ connected database's tables or rows) is marked `audited: true` on its route and 
 way, so every read of outside data is on record too; `audited` on any other method is refused by the
 contract.
 
+**Idempotency-Key and limits on a key's call.** With `idempotency` given, a key's POST, PATCH or
+DELETE sending `Idempotency-Key` (1 to 255 printable characters) runs once (`src/idempotency.ts`;
+draft-ietf-httpapi-idempotency-key-header). The first call claims it with its method, path and body
+hash and keeps the answer (the body when at most 8 KB of text). For a day a repeat gets it with
+`Idempotent-Replayed: true`; another request is 422; a repeat while the first runs, or of an answer
+too big to keep, is 409 `KIT-E-0409`. A throw or 5xx frees the key; a failing store never fails the
+call. Cost: one read and up to two writes, only for a change sent with the header. With `limiter`
+given, every answer to a known key carries `RateLimit-Policy: "key";q=<60 / weight>;w=60`
+(draft-ietf-httpapi-ratelimit-headers-11), a 429 also `RateLimit: "key";r=0;t=60`; a key past its
+limit writes at most one `iam.key-refused` row a minute.
+
 **A page's own calls to the API stay in process.** The screens render a page by calling the
 portal's API inside the page's request (Home makes about 25 such calls). Each used to go through
 `app.fetch`, the whole pipeline again, which cost most of a page's CPU. The app now keeps an

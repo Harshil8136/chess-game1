@@ -97,6 +97,7 @@ The records since 16 November:
 | [Files: menu in the page, trash, moving several](2026-11-25-files-menu-trash-move.md) | Menu row, Empty the trash, Move ticked, confirm ends, search all; P587-P591 |
 | [API key pages made over](2026-11-25-api-key-pages-made-over.md) | How to use as coloured cards: Quick start in cURL, JS, Python, endpoints open to a ready call, errors with their fix, the checks in order; the list, Details, Calls and History with figures and coloured tags; P667-P669, P678, P679 |
 | [API reference with fields, an OpenAPI file, keys in Needs you](2026-11-25-api-reference-and-openapi.md) | each route's fields and an example body, one part at a time; an OpenAPI 3.1 file for the portal or a key; Needs you names keys ending this week or unused for 90 days; P794-P796 |
+| [API keys made safer, retries without doubles, webhook replay](2026-11-26-api-keys-safer-retries-replay.md) | a key's account takes a role only on its page; Idempotency-Key and RateLimit headers; webhook secret overlap and Resend missed events; P995-P999 |
 | [Scheduled jobs](2026-11-25-scheduled-jobs-page.md) | a page per job; P720-P725 |
 | [Scheduled jobs remade](2026-11-25-scheduled-jobs-remade.md) | Run now, timed pause; P880-P885 |
 | [Scheduled jobs in panes](2026-11-26-scheduled-jobs-panes.md) | rows that open, pills; P960-P964 |

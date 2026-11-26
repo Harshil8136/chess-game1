@@ -40,7 +40,7 @@ it.
 
 | Range | Owner |
 |---|---|
-| `0400` to `0599` | `core`: the HTTP shapes (`0401` unauthenticated, `0403` forbidden, `0404` not found, `0422` invalid input, `0429` rate limited, `0440` cross-site request refused, `0500` internal, `0503` unavailable) |
+| `0400` to `0599` | `core`: the HTTP shapes (`0401` unauthenticated, `0403` forbidden, `0404` not found, `0409` clashes with an earlier request, `0422` invalid input, `0429` rate limited, `0440` cross-site request refused, `0500` internal, `0503` unavailable) |
 | `1001` to `1099` | `core`: module definition faults, found at build time |
 | `1100` to `1199` | the audit log |
 | `1200` to `1299` | the outbox |

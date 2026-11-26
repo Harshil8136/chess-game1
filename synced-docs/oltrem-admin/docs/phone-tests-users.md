@@ -43,7 +43,7 @@ From [record](../archive/records/2026-11-25-api-reference-and-openapi.md):
 | # | Open | You should see |
 |---|---|---|
 | P794 | API keys, How to use: tap another part's chip, then open a POST route | One part's routes at a time; the route lists its Body fields (kind, required, limits) and a cURL call with a body of its required fields |
-| P795 | How to use, OpenAPI file; then a key's How to use, OpenAPI file | A JSON file downloads (portal-openapi.json, then key-…-openapi.json with only that key's routes); Postman or Insomnia imports it |
+| P795 | How to use, OpenAPI file; then a key's How to use, OpenAPI file | A JSON file for the section open under Endpoints downloads (portal-iam-openapi.json, then key-…-iam-openapi.json with only that key's routes in it); Postman or Insomnia imports it |
 | P796 | Home, as an Owner, with a key that ends within 7 days or one not used for 90 days | Needs you says 1 API key ends this week, or 1 API key unused for 90 days, and opens the key |
 
 From [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md):
@@ -262,3 +262,13 @@ From the 2026-11-26 row in the [verification log](../archive/records/2026-11-25-
 | P992 | Their Permissions, light and dark | A ring and "N of M permissions" beside Find a permission; the modules as tiles side by side, each with a coloured bar and a coloured level pill; no full-width row per module |
 | P993 | Open Alerts on it, then pick Deny on one row | Alerts takes the whole row, its permissions compact, two side by side on a computer, each with a green tick or a dash; Deny turns red |
 | P994 | Their Overview, then Sessions | Roles with a shield tile; What they can do with each area's tile, a short bar and its level; each session with a computer or phone tile |
+
+### API keys made safer, webhook replay, 26 November
+
+From [record](../archive/records/2026-11-26-api-keys-safer-retries-replay.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P995 | A key's page, Rotate | Stop it now is already chosen; Rotate key shows the new secret once |
+| P996 | A key's page and its Requests tab | Rate limit N per minute, Permissions, Sections; Requests per day and Latest requests |
+| P997 | Settings, recent sign-in window on; sign in, wait past it, then make a key | It asks you to sign in again first |

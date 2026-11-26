@@ -123,3 +123,12 @@ From [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md):
 | P945 | Apps, Analytics, Connect on PostHog | A pop-up: Continue with PostHog first, the key under "Or connect with a key", closed |
 | P946 | Apps, Data, Connect on Supabase; then Any other database | Each a pop-up over Apps with its fields; the second takes pasted details and finds the database |
 | P947 | Every Connect pop-up, and Customers and Files settings | No box shows the browser's password dots as a password field, and no button says "Sign in with" |
+
+### API keys made safer, webhook replay, 26 November
+
+From [record](../archive/records/2026-11-26-api-keys-safer-retries-replay.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P998 | Integrations, Developer, a webhook, Rotate secret, 1 day | The new secret once; the webhook reads The old secret also signs until tomorrow's time |
+| P999 | A webhook switched off after failures, with events since | Resend missed events; after pressing, it is on and the notice says they go ten every five minutes |
