@@ -113,8 +113,8 @@ The relay seals every answer with its own key, and answers the key's public half
 time an answer comes back, and opens only what that key sealed. A trip's state travels in
 addresses that the service, the browser's history and any proxy can see; without the relay's key,
 someone who read it could seal an answer of their own and have the portal make an alert to their
-channel (found in the security review of 2026-11-22). The key is made once, straight into the
-secret, so it never shows on the screen:
+channel (found in the security review of 2026-11-22). The first deploy makes the key itself
+(below); to replace it later, straight into the secret, so it never shows on the screen:
 
 ```sh
 node packages/relay/scripts/seal-key.mjs | pnpm --filter @oltrem/relay exec wrangler secret put RELAY_SEAL_KEY
@@ -128,9 +128,13 @@ and the person presses again.
 `<relay>` below is the relay's address once deployed, as `oltrem-relay.<your subdomain>.workers.dev`.
 
 1. **Deploy it** to the Vendor's Cloudflare account: `pnpm --filter @oltrem/relay run deploy`
-   after making the seal key (above) and setting the other ten secrets with
-   `pnpm --filter @oltrem/relay exec wrangler secret put <NAME>` (or in the dashboard, under the
-   Worker's Settings, Variables and Secrets).
+   (`scripts/deploy.mjs`). wrangler refuses `secret put` before the Worker exists, so the first
+   deploy asks in the terminal for every secret not set yet: the portals' addresses, then each
+   app's client ID and secret (a secret typed unseen; Enter skips a service not set up yet, kept
+   blank so it answers "not set up"). It makes the seal key itself, hands them all to wrangler in a
+   file deleted straight after, and deploys. Later deploys ask only for a secret added since; a
+   skipped service is set any time with `pnpm --filter @oltrem/relay exec wrangler secret put
+   <NAME>` (or in the dashboard, under the Worker's Settings, Variables and Secrets).
 2. **Slack.** At api.slack.com/apps press Create New App, From scratch, name it and pick any
    workspace of yours. Under OAuth & Permissions add the redirect URL `https://<relay>/back/slack`
    and the bot scope `incoming-webhook`. Under Manage Distribution, activate public distribution
@@ -197,3 +201,7 @@ exchanged with the id alone and the verifier; the tokens, the projects allowed a
 back. Google Analytics: the Google app, offline access and consent; the tokens sealed back; a
 renewal Google answers without a refresh token hands back the one given, and a plain 404 without a state, for an unlisted
 portal or on the way back.
+
+The deploy script (`scripts/relay-deploy.test.mjs`, on Node): the required secrets read from
+`wrangler.jsonc`; a Worker not deployed yet read as having none, any other failure of wrangler's
+list reported as it came; the portals asked until named, a service skippable, a secret typed unseen.
