@@ -1,151 +1,93 @@
 ---
-title: "@oltrem/screens: The frame: A page's reads go together"
+title: "@oltrem/screens: the frame: toolbar, reads, views, panel, bell, sidebar, tabs, width"
 status: living
 owner: vendor
 last_verified: 2026-11-26
 sources: [packages/screens/src; split from packages/screens/README.md]
 ---
 
-# @oltrem/screens: The frame: A page's reads go together
+# @oltrem/screens: the frame (1 of 3)
 
-> Part of [the @oltrem/screens README](../README.md).
+> Part of [the @oltrem/screens README](../README.md). Every page sits in one frame, drawn on the
+> server. Next: [the frame, 2 of 3](frame-2.md).
 
 ## The frame
 
-Every page sits in one frame, drawn on the server:
+| Part | What it does | Where |
+|---|---|---|
+| Toolbar | One line. Filter rows after the search that do not fit fold behind a Filters button with the count of active filters; on a phone every row folds, hidden by the stylesheet before the script runs. A state chip shows its `tone` as a dot, a thing chip its `hue`. | `foldFilters` in `client/frame.js` |
+| A module switched off | Gone for that request: no sidebar entry, tab, Home card, Needs you or search hit; its pages answer 404. In the browser the page says which part is off; the Vendor and Owners get Switch on (`POST /do/switch`, back to the same address). | `partsOff` from `@oltrem/core-http`, `PartOff` |
+| Reads go together | A page learns who is signed in (no trip of its own), then starts the bell's count, the tabs the person may open, the saved views and its own reads at once, so it waits for its slowest read only. | `probe`, `beside` in `src/screens.tsx` |
 
-The toolbar is one line: the page script (`foldFilters` in `client/frame.js`) folds the
-`.ui-filters` rows after a page's search that do not fit on its line behind a Filters button there,
-with how many filters the address narrows by; on a phone every such row folds, hidden by the
-stylesheet before the script runs. A chip that names a state shows its `tone`, one that names a
-thing its `hue`, as a dot before its words (Users' Active and Invited, a role; the Audit log's
-Refused and Failed, each section).
+- **Saved views** (a list whose page sets `views`: a records list, a form's inbox, the audit log):
+  the person's views as a sideways row of chips, All first, the current one marked; Save view (a
+  small button, its dialog asks the name; folds behind Filters) or Remove view. Posts to
+  `/do/views` and `/do/views/remove`, which call `@oltrem/users`'s `/api/users/me/views`. Twelve
+  views a page at most. One D1 read; none when users is off.
+- **A record beside its list** (frame script): a link inside `[data-peek="<dialog id>"]` whose
+  path starts with that dialog's `data-peek-panel` opens in the dialog. The script fetches the
+  page, shows its `[data-peek-body]` in `[data-peek-slot]`, names it from `[data-peek-title]` in
+  `[data-peek-name]` and points `[data-peek-full]` (Open as a page) at it. Links under the same
+  path stay in the panel; a form posts from it and shows its answer there; any other link closes
+  it; after a change the list's live block is fetched again. The panel is `ui-drawer ui-peek` (42
+  rem, full screen on a phone, its own 20 px gutter, tabs pinned at its top). The open row is
+  marked (`data-peeked`); `data-peek-step="-1"`/`"1"` buttons and the keys K and J step through
+  the list. Without the script every link opens the record's page. Used by Scheduled jobs.
+- **A time that counts down** (frame script): `data-count-to="<ISO time>"` is rewritten each
+  second ("in 4 min 12 s", "Due now"); `data-count="tick"` rolls on to the next minute. The server
+  writes the first value. Used by Scheduled jobs.
+- **Notifications**: a bell at the right of the head from 1024 px, and in the phone's top bar,
+  with the unread figure (to "99+") and a tooltip. One indexed read a page; none without users.
+  The bell opens a panel (`notify-panel`; X, Escape or a tap outside close it) filled from
+  `/notifications`; without the script it opens that page: All or Unread chips, Mark all read,
+  each row (unread bold) through `/notifications/:id`, which marks it read and opens its page;
+  thirty a page with Older; then "How you are told": In the portal and By email per module, saved
+  as each flips.
+- **Keep portal emails in your main inbox** (`#primary` on `/notifications`, while email names a
+  domain): **Gmail filter** (`/notifications/gmail-filter.xml`: mail from the portal's domains to
+  Primary, never Spam, marked important), **Add to contacts** (`/notifications/portal-contact.vcf`,
+  one vCard 3.0 with every sender) and **Send me a test** (`POST /notifications/primary-test`, which
+  calls `POST /api/email/primary/test`); then steps for a computer, a phone and Outlook. Built in
+  `src/primary.ts` from `GET /api/email/primary`. One more read; none without email.
+- **Bulk actions** (a module that declares `bulk`): a tick on each row and one for the page, and
+  `BulkBar` with the module's actions. The script counts the ticks and holds the buttons until one
+  is ticked; a destructive action asks in a dialog. Posts to `/do/bulk`, which calls
+  `POST /api/<module>/bulk/<action>` once and returns with
+  `?bulk=<module>.<action>.<done>.<refused>`; the list reports both counts in the kit's words.
+- **The sidebar**, from 1024 px, tinted with the portal's colour (`--ui-side`). From the top: an
+  arrow that closes it, the mark, Search, Home, the sections by group, and who is signed in. Rows
+  36 px (44 px on touch). Search (or `Ctrl K`, `⌘K`, "/") opens the palette `dialog#go-palette`:
+  the pages that match from `template[data-go]` (`GoList`, every page and tab the person may
+  open), then what `/search?as=json` finds; empty, the pages opened last (`oltrem_recent` in the
+  browser, cleared at sign out). `data-palette data-q` opens it with words. There is no search
+  page.
+- **Groups**, in order: Customers (rose), Work (green), Team (amber), Email (cyan), Admin
+  (violet). A module joins its group at its `before`; an unknown group sits before Admin
+  (`groupRank` in `src/layout.tsx`). Each group's colour (`hueOf`) tints its heading, dot and each
+  section's icon tile (solid for the section on screen, whose row is also tinted and bold). Open,
+  the sidebar and the phone's drawer are 17 rem (less 56 px on a narrow screen); the account menu
+  at least 15 rem. Home's At a glance uses the same colours.
+- **Tabs.** Sections naming the same `tabs` (`PageNav.tabs`) fold into one sidebar entry, leading
+  to the first tab (`tabSet`, `sideEntries` in `src/layout.tsx`). The tabs sit under the head
+  (`PageHead`): on a set's pages the heading is the set's name and the marked tab names the page; a
+  page inside a tab keeps the row and puts its title under it; a page in a section without tabs
+  shows one back link ("‹ Data"). Tabs are links on an underline, the marked one in the group's
+  colour, never bold, with a count from the page's `counts`. On a phone the row scrolls sideways
+  and reopens where it was; arrow keys, Home and End move between tabs. From 1024 px the row sticks
+  at the top (`scroll-state` where supported). Five tabs a set at most: a page that belongs to a
+  tab names it in `under`, marks it while open, and shows as an "Also here" chip. Each tab shows to
+  whoever its `NavEntry.may` allows.
+- **Width.** A page is a `console` (default) or a `form` (`kind` in its answer). A console runs to
+  96 rem with gutters of 16 px on a phone and 32, 40 and 48 px from 1024, 1280 and 1536 px; a form
+  keeps its content to 56 rem under a head as wide as a console's. Sign-in pages are a 40 rem
+  column. The scrollbar's room is always kept (`scrollbar-gutter: stable`). A page with no entry
+  of its own sits under the entry its path starts with (`/email/sent/7` under Sent). With every kit
+  module on, the sidebar holds 19 entries besides Home:
 
-A module switched off on the Features page (the `partsOff` set `@oltrem/core-http` puts on each
-request) is gone for that request: no sidebar entry or tab, no Home card or Needs you, nothing in
-the search; its pages, a module's own by their pattern and a kit section by its address, answer 404.
-Opened in the browser, such a page says which part it belongs to and that it is switched off
-(`PartOff`); the Vendor and Owners get Switch on, which posts to `/do/switch` and comes back to the
-same address with its query. Switched back on, all of it is there on the next request.
-
-**A page's reads go together**. Each read is a trip to the database, tens to a few hundred
-milliseconds from where the Worker runs, and a page that makes them one after another waits for
-their sum. So a page first learns who is signed in (the session, which every read needs and which
-costs no trip of its own), then starts everything else at once: the bell's count, the tabs the
-person may open (`probe`), the saved views and the page's own reads (`beside` in `src/screens.tsx`).
-The count, the tabs and the reads used to wait for each other, three or four trips before a page's
-own first read; now a page waits for its slowest read.
-
-- **Saved views**, above a list page that keeps them (`views` on a module's page; a records list, a
-  form's inbox and the audit log): the person's views as a sideways row of chips, All first and the
-  one on screen marked, then Save view (since 2026-11-24 a small button whose dialog asks the name,
-  and the row folds behind the toolbar's Filters button with the filter rows), or Remove view on a
-  saved one. Both post to `/do/views` and `/do/views/remove`, which call `@oltrem/users`'s
-  `/api/users/me/views` and return to the list; a refusal (twelve views on the page already) is
-  shown with the way back. One D1 read per such page; nothing when users is off.
-- **A record beside its list** (the frame script; the owner: a job opens in a panel from the right,
-  not a page of its own): a link inside `[data-peek="<dialog id>"]` whose path starts with that
-  dialog's `data-peek-panel` opens in the dialog instead. The script fetches the linked page, shows
-  its `[data-peek-body]` in the dialog's `[data-peek-slot]`, names it from its `[data-peek-title]`
-  in `[data-peek-name]` and points `[data-peek-full]` (Open as a page) at it. Links under the same
-  path (the record's tabs) stay in the panel, a form posted in it is sent from it and its answer
-  shown there (a confirm dialog over the panel closes first), any other link closes the panel and
-  opens as usual, and once the panel closes after a change the list's live block is fetched again.
-  The panel is `ui-drawer ui-peek` (42 rem wide, the whole screen on a phone, its body a container
-  so its panes lay out by its own width); a page wraps its body in `<div data-peek-body
-  class="contents">`, which the page lays out as before. Without the script every link opens the
-  record's page. Used by Scheduled jobs. Later the same day: the panel has its own 20 px gutter and
-  clips sideways, so a row of tabs never makes it scroll left and right; its tabs stay at its top as
-  it scrolls; the open record's row is marked in the list (`data-peeked`, a tint and a bar at its
-  start); buttons marked `data-peek-step="-1"` or `"1"` and the keys K and J open the previous or
-  next record of the list without closing the panel; an empty panel shows a soft placeholder while
-  the record loads.
-- **A time that counts down** (the frame script): an element with `data-count-to="<ISO time>"` is
-  rewritten each second as "in 4 min 12 s", "in 9 s" or "Due now"; with `data-count="tick"` it rolls
-  on to the next minute once it passes, as the scheduler's tick does. The server writes the first
-  value, so without the script it still reads right when the page was made. Used by Scheduled jobs'
-  Next tick and a job's next run.
-- **Notifications**: a bell at the right of the page's head from 1024 px , and on the phone's bar
-  along the top, with the unread figure (to "99+") and, a tooltip naming it ("Notifications: 3
-  unread"), read on every page beside the page's own reads (one indexed read more; none without the
-  users module). Since 2026-11-14 a bell opens a panel over the page (`notify-panel`, closed by X,
-  Escape or a tap outside) filled from `/notifications`, whose list works inside it; without the
-  script it opens `/notifications`: All or Unread as chips, Mark all read, each notification a row
-  (unread ones bold) that opens through `/notifications/:id`, which marks it read and goes to its
-  page (a path inside the portal, else the list); thirty a page with Older; under them "How you are
-  told", a grid of two switches per module, In the portal and By email (both on is `both`, neither
-  is `off`), saved as one flips (a Save button only without the page script); only what changed is
-  sent. Since 2026-11-22, under them, **Keep portal emails in your main inbox** (`#primary`, while
-  email is on and names a domain): Gmail puts the portal's notices under Updates, and only the
-  reader's own filter or contact keeps them in Primary. A sideways row of three: **Gmail filter**
-  (`/notifications/gmail-filter.xml`, a filter file in Gmail's own export format: mail from any of
-  the portal's domains to Primary, never to Spam, marked important; import it on a computer), **Add
-  to contacts** (`/notifications/portal-contact.vcf`, one vCard 3.0 contact with every sender
-  address, for a phone) and **Send me a test** (`POST /notifications/primary-test`, which calls
-  `POST /api/email/primary/test` and comes back with "A test email is on its way"); then the steps
-  for a computer, a phone and Outlook, and who the mail comes from. Both files are built in
-  `src/primary.ts` from `GET /api/email/primary` (`@oltrem/email`); with nothing to name, each link
-  leads back to the page. One more read on the page, none without email.
-- **Bulk actions**, on a list whose module declares `bulk` (the tasks): a tick on each row and card,
-  one in the header for the whole page, and the bar (`BulkBar`) above the list with the module's
-  actions. The frame script counts the ticks ("3 tasks chosen"), keeps a row's two ticks alike and
-  holds the buttons until one is ticked; a destructive action asks in a dialog. A press posts to
-  `/do/bulk`, which calls `POST /api/<module>/bulk/<action>` once and returns to the list with
-  `?bulk=<module>.<action>.<done>.<refused>`; the list shows how many were done and how many
-  refused, in the kit's own words, never words from the address.
-- **The sidebar**, from 1024 px wide, down the left edge in a tint of the portal's colour with one line
-  beside it. From the top: an arrow that closes it, the portal's mark, Search (since 2026-11-25 a
-  button that looks like a box; closed to icons, a search icon; on a phone, the bar's Search; or
-  `Ctrl K`, `⌘K` or "/" from anywhere) that opens the palette, one pop-up over the page
-  (`dialog#go-palette`, outside the sidebar): its box, then the pages that match as you type, from
-  the sidebar's `template[data-go]` (`GoList`: every page and tab the person may open, without
-  the probed tabs), then what the portal finds (`/search?as=json`); empty, the pages opened last,
-  kept in the browser's `oltrem_recent` alone and cleared at sign out; Enter or a tap opens one in
-  place and closes it, Escape or a press outside closes it. Files' "Search all of Files" opens it
-  with its words (`data-palette data-q`). There is no search page any more), Home, then every mounted section under its group,
-  and at the foot who is signed in. Rows are 36 px (44 px on a touch screen).
-- **Groups**, in this order: Customers, Work, Team, Email, Admin (the five the owner picked on
-  2026-11-22, in place of Work, Company, Users and access, Messages, System; since 2026-10-29, few
-  entries, sub-pages as tabs). A module's page joins its group wherever the module is listed, at its
-  `before` when it names one; a group the kit does not know sits before Admin (`groupRank` in
-  `src/layout.tsx`). The colours: Customers rose, Work green, Team amber, Email cyan, Admin violet.
-  Each group has a colour (`hueOf`): its heading, its dot, and each section's icon on a small tile
-  of that colour (solid for the section on screen, whose row is tinted and bold, so it never rests
-  on colour alone). The sidebar itself is tinted with the portal's colour (`--ui-side`). Open, it is
-  17 rem wide, and so is the phone's drawer, less 56 px on a narrow screen; the account's menu is
-  never narrower than 15 rem and its colour dots wrap rather than leave it. Home's At a glance rows
-  use the same colours.
-- **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
-  that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
-  and `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
-  follow in the sidebar's order. The tabs sit under the page's head, as a console's do (`PageHead`):
-  on a set's own pages the heading is the set's name (Email) and the marked tab names the page, so
-  no word shows twice (a screen reader hears "Email: Sent"); a page inside a tab (a message,
-  `Connect an integration`) keeps the set's row and tabs and puts its own title under them; a page
-  inside a section with no tabs (a list in Lists, Create form) shows a link back to the section
-  above its title (since 2026-11-26 one link with its arrow pointing back, "‹ Data", where a lone
-  "Data >" read as an orphan). The tabs are links on an underline, the marked one in the group's
-  colour and never bold (no label moves), a count beside a tab when the page gives one (`counts` in
-  a page's answer, by the tab's path). On a phone the row scrolls sideways into the gutters, which
-  fade; the frame script opens the same row scrolled where it was on the page before, and moves it
-  only as far as shows the marked tab whole. A page's commands start its content, under the tabs, so
-  the head and the tabs are the same on every page of a set; the arrow keys, Home and End move
-  between tabs. From 1024 px the row stays at the top while a long page scrolls, on the page's
-  colour once stuck, where the browser can tell (`scroll-state` queries; elsewhere it scrolls with
-  the page). The head and the tabs keep still in a page change; only the content below them fades.
-  Users and access is one entry whose pages are tabs, each shown to whoever its `may` says yes for
-  (`NavEntry.may`). A set holds five tabs at most: a page that belongs to a tab but is no tab of its
-  own names it in `under`, so it is left out of the row, marks that tab while it is open, shows as a
-  chip under the tabs ("Also here") or in a Settings tab's Set up list, and is still found by the
-  search box.
-- **Width.** A page is a console or a form (`kind` in a page's answer; `console` by default). A
-  console uses the screen up to 96 rem, its gutters 16 px on a phone and 32, 40 and 48 px from 1024,
-  1280 and 1536 px; a form (Settings, Connect an integration) keeps its content to 56 rem under a
-  head and tabs as wide as a console's, so they never move between the two. The sign-in pages
-  stay a 40 rem column.
-- **No sideways shift.** The document keeps the scrollbar's room on every page (`scrollbar-gutter:
-  stable`), so a short page and a long one start at the same place; before 2026-11-01 a classic
-  scrollbar (Windows) came and went between pages and moved the centred page by half its width. A
-  page with no entry of its own sits under the module's entry its path starts with (`/email/sent/7`
-  under Sent). With every kit module on, the sidebar holds 19 entries besides Home; the addresses
-  did not change, only the names and the groups:
+| Group | Entries (tabs) |
+|---|---|
+| Customers | Customers (Customers, Privacy requests), Bookings, Sales (Quotes, Invoices), Forms |
+| Work | Tasks, Lists, Files, Approvals, Reports |
+| Team | Time (Time off, Time clock, Shifts), Expenses, Equipment, Announcements |
+| Email | Email (Compose, Inbox with Mail, Drafts, Sent, Delivery log, Templates), Campaigns (Campaigns, Mailing lists), Email settings (Setup, Addresses; with Mail, also Mail setup and Forwarding) |
+| Admin | Integrations (Apps, Email services, Developer), Automations, Users and access (Users, Roles, Groups, Locations, Settings; Signed in today and Access requests open under Users, Access reviews and Vendor access under Settings), Settings (Features, Settings), System (Status, Alerts, Backups, Deployments, Audit log, Settings) |

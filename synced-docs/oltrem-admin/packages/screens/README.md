@@ -27,7 +27,7 @@ This README is split by section, so each part can be read whole.
 | [pages-4](docs/pages-4.md) | The pages: `/settings`, `/alerts`, `/audit` |
 | [pages-5](docs/pages-5.md) | The pages: Withdraw an invitation (asked first), Send an invitation again, Give the group a role, end one, Paste the key again |
 | [pages-6](docs/pages-6.md) | The pages, continued (6) |
-| [frame](docs/frame.md) | The frame: A page's reads go together |
-| [frame-2](docs/frame-2.md) | The frame: No reloads, The page alone, Live blocks |
-| [frame-3](docs/frame-3.md) | The frame: Compose boxes, The composer |
+| [frame](docs/frame.md) | The frame: toolbar, reads, saved views, record panel, bell, bulk, sidebar, groups, tabs, width |
+| [frame-2](docs/frame-2.md) | The frame: account, phone bar, one sidebar; no reloads; the page alone; live blocks |
+| [frame-3](docs/frame-3.md) | The frame: compose boxes, the composer, what the script leaves to the browser, Not found |
 | [stylesheet-and-the-script](docs/stylesheet-and-the-script.md) | The stylesheet and the script; Not here yet; Tests |
