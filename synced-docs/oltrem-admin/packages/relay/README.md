@@ -165,10 +165,10 @@ and the person presses again.
    Copy its Client ID into `AIRTABLE_CLIENT_ID`.
 7. **PostHog.** Nothing to do: the relay serves its own client document.
 8. **Each portal.** Add its address to `RELAY_PORTALS`, and as the Vendor set Settings, System,
-   "Sign-in service for Slack, Discord, Google, Supabase and Airtable" to `https://<relay>`. The
+   "Sign-in service for Slack, Discord, Google, Supabase, Airtable and PostHog" to `https://<relay>`. The
    Apps page then offers "Continue to Slack", "Continue to Discord" and "Create the sheet in
-   Google", the data part's Connect Supabase and Connect Airtable pages "Sign in with Supabase"
-   and "Sign in with Airtable", and the analytics pages "Sign in with PostHog" and "Sign in with
+   Google", the data part's Connect Supabase and Connect Airtable pages "Continue with Supabase"
+   and "Continue with Airtable", and the analytics pages "Continue with PostHog" and "Continue with
    Google Analytics".
 
 ## Tests

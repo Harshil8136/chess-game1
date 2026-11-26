@@ -233,7 +233,7 @@ Integrations (the email keys) Email services, under Admin, Integrations.
 | P374 | A role, Policy JSON at the foot; Copy; paste `{"Version":"oltrem-2026-11","Statement":[{"Effect":"Allow","Action":"lists.*","Resource":"loc:*"}]}`, Import | The JSON lists names like `lists.read`; Copy copies it; after Import, "The policy was imported" and only Lists' permissions are ticked | [record](../archive/records/2026-11-22-permissions.md) |
 | P375 | The same box with `"Effect":"Deny"`; then a user's Permissions, See their access as Policy JSON | Refused: a role only allows, deny on their Permissions page; your text stays in the box. The user's JSON lists each role and their own Allow or Deny with its location | [record](../archive/records/2026-11-22-permissions.md) |
 
-The Apps page's tests (P376-P385, P468-P474, P512-P514, P797-P798, P910-P916, P930-P939) are in [Phone tests owed: the Apps page](phone-tests-apps.md).
+The Apps page's tests (P376-P385, P468-P474, P512-P514, P797-P798, P910-P916, P930-P947) are in [Phone tests owed: the Apps page](phone-tests-apps.md).
 
 ### Connected data, the Data pages, 22 November
 

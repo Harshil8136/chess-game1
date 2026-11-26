@@ -89,3 +89,19 @@ address set (the relay's README, Google).
 | P938 | Remove the portal's access in PostHog (or your Google account's third-party access); wait a day, then Home | Under Needs you: "PostHog stopped answering"; it opens the page with Sign in with PostHog at the top; signing in again clears the line | [record](../archive/records/2026-11-26-analytics-sign-in.md) |
 | P939 | Admin, Data, with a Supabase database connected (its card has "Add another"); then Apps at full width | The other cards in the row keep their own height; no card grows to match a taller one | [record](../archive/records/2026-11-26-analytics-sign-in.md) |
 
+
+### Every Connect a pop-up, in colour, no fake login, 26 November
+
+Since this batch, P933 to P938 read "Continue with PostHog" (or Google Analytics) and "Reconnect"
+where they say "Sign in with" and "Sign in again".
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P940 | Apps, on a phone and at full width | Each app's logo on its own colour in a large tile; the head and first cards within the top fifth | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P941 | Apps, a connected app's card | What it holds as a dot and a word (for example "3 events"), not a grey line | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P942 | Apps, Chat, Connect on Slack (or Discord) | A pop-up with numbered steps; with the sign-in service set, Continue with Slack | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P943 | Apps, Analytics, Connect on Plausible | A pop-up over the Apps page, never a page of its own; Cancel or Escape leaves you on Apps | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P944 | In that pop-up, a wrong key, then Connect | The pop-up opens again with what went wrong and what you typed, still on Apps | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P945 | Apps, Analytics, Connect on PostHog | A pop-up: Continue with PostHog first, the key under "Or connect with a key", closed | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P946 | Apps, Data, Connect on Supabase; then Any other database | Each a pop-up over Apps with its fields; the second takes pasted details and finds the database | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |
+| P947 | Every Connect pop-up, and Customers and Files settings | No box shows the browser's password dots as a password field, and no button says "Sign in with" | [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md) |

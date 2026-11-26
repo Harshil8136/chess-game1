@@ -323,7 +323,7 @@ access, renewed through the relay's `/renew/google-analytics`.
 A renewal is done just before a read, a check or a report, never on a schedule of its own. Two
 requests renewing at once: the one that loses reopens the connection and uses the tokens the
 other kept. A refused renewal (400 or 401) or a refused read under a sign-in says "PostHog asked
-you to sign in again. Press Sign in with PostHog on the connection." Pasting a key into a
+you to sign in again. Press Reconnect on the connection." Pasting a key into a
 signed-in connection drops its tokens; signing in again drops a key.
 
 **The daily check** (`connect.analytics-check`, every three hours, listed on Scheduled jobs as
@@ -332,21 +332,28 @@ the oldest first, one after another, so a run stays far inside the 50 calls a Wo
 change of state (working to failing or back) is logged once; a run that changes nothing writes
 only the check's time. **Home** (Needs you, `GET /api/connect/todo`, for someone with
 `connect.analytics.manage`): "PostHog stopped answering" for each failing connection, opening its
-page, where Sign in with PostHog sits at the top when the last check failed.
+page, where Reconnect sits at the top when the last check failed.
+
+**The words on the screen (2026-11-26).** The buttons say "Continue with PostHog" and
+"Reconnect", never "Sign in with": Google Safe Browsing flagged the owner's portal as phishing the
+day Sign in with PostHog shipped, and a company's logo beside "Sign in" and a password box is what
+a fake login page looks like. So no page or pop-up shows a company's logo with sign-in words and a
+key box together, and a key box is `SecretInput` (typing hidden, no password box). This document
+still calls the way Sign in with PostHog.
 
 ## The page
 
 | Path | Shows |
 |---|---|
-| `/connect` | Connected (one line of how many work and how many need a look, then the rows, their health and actions, the databases of the data part among them); the filters; the cards by group; "Any other app". A card already connected shows its health and how it is doing (its last delivery, use or check) and opens what is running: the webhook's page, the link's row, the database's page, or Connected when there are several; "Add another" sits under it (2026-11-23) |
-| `/connect?show=chat` | the four chat cards and "Any other app"; a card's window: "Continue to Slack" when one-click is set up, otherwise (or under "Or paste a webhook link instead") Open <app>, the steps, the link, "Tell me when", the name, "Connect and send a test" |
+| `/connect` | Connected (how many work and how many need a look as dots on its title line, then the rows, their health and actions, the databases of the data part among them); the filters; the cards by group, each app's logo a tile in its own colour with the mark in white (the name on its own line from 640 px); "Any other app". Every Connect is a pop-up on this page, never a page of its own (2026-11-26, the owner): the chat and automation apps, the calendars and sheets, the analytics apps, the databases and "Any other database" (for whoever may connect one; anyone else gets the data part's page, which says why). A card already connected shows its health and how it is doing (its last delivery, use or check) and opens what is running: the webhook's page, the link's row, the database's page, or Connected when there are several; "Add another" sits under it (2026-11-23) |
+| `/connect?show=chat` | the four chat cards and "Any other app"; a card's window, as numbered steps joined by a line: "Continue to Slack" and three steps when one-click is set up, otherwise (or under "Or paste a link instead") the steps with Open <app> on the first and the link on the one that says to paste it; the events and the name folded under Options; "Connect and send a test" |
 | `/connect?show=calendar` | Google Calendar, Apple Calendar, Outlook and "Another calendar app"; a card's window makes that app's link; once made, the button that adds it to that app (Outlook.com and Outlook for work or school for Outlook) and the link to copy |
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
-| `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
-| `/connect?show=analytics` | PostHog, Plausible, Umami, Cloudflare Web Analytics, Google Analytics, Matomo and Fathom, each opening `/connect/analytics/new/<app>`, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
-| `/connect/analytics/new/<app>` | the steps in the app with links to its pages, then Name and its fields, "Connect <app>"; a refusal keeps what was typed but never the key. PostHog and Google Analytics, where the relay is set up, open on "Sign in with <app>" (Recommended, three numbered steps, the one main button) and fold the key under "Or connect with a key" |
-| `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title. A sign-in app adds "Sign in again" (at the top when the last check failed) and folds the key under "Or use a key" |
+| `/connect?show=data` | the data services the providers part lists (kind `data`), each opening its pop-up (the data part's steps, Name and fields, posted to `/data/connect/<id>`; "Continue with Supabase" or Airtable first where the relay is set up), or once connected its connection's page; "Any other database" a pop-up with the paste box, posted to `/data/connect`. A refused key answers with the data part's page for it, with what was typed |
+| `/connect?show=analytics` | PostHog, Plausible, Umami, Cloudflare Web Analytics, Google Analytics, Matomo and Fathom, each opening its pop-up, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
+| `/connect/analytics/new/<app>` | what the app's pop-up posts to, and still a page for a link to it: the steps in the app with links to its pages, then Name and its fields, "Connect <app>". The pop-up holds the same, each step's link a button on its step; PostHog and Google Analytics, where the relay is set up, start with "Continue with <app>" (three numbered steps, the one main button) and fold the key under "Or connect with a key". A key refused from the pop-up answers with the Apps page, which opens the pop-up again with what was typed and the notice, never the key; from the page, the page. A sign-in that brings nothing back returns to Apps, Analytics, said there |
+| `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title. A sign-in app adds "Reconnect" (at the top when the last check failed) and folds the key under "Or use a key" |
 | `/connect/back?confirm=1&p=<app>` | after signing in: "Signed in to <app>." and the projects or properties, each with Connect; Cancel ends the sealed cookie |
 | `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Links your team made" in the Calendar part of the page (and above the Calendar and Spreadsheets filters), no longer beside the title (2026-11-26) |
 | `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
