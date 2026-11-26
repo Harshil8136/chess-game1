@@ -100,5 +100,6 @@ The records since 16 November:
 | [Reports remade](2026-11-26-reports-remade.md) | one trend with the period before, six figures with their move, what stands out in words, who and when, every list with its trend and an audit log link, the website from connected apps; migration 0097; P900-P905 |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |
+| [Verification log, 24 November](2026-11-24-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Website analytics apps on the Apps page](2026-11-26-website-analytics-apps.md) | PostHog, Plausible, Umami and Cloudflare Web Analytics connected with a read-only key under Apps, Analytics; the last 7 days on the connection's page; one report for the Analytics page, kept ten minutes; P910-P916 |
 | [Google Analytics, Matomo and Fathom on the Apps page](2026-11-26-more-analytics-apps.md) | three more website analytics apps: a GA4 service account signed in the Worker, Matomo in one request, Fathom five calls at a time; P917-P919 |
