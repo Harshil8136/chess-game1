@@ -38,20 +38,28 @@ installed for you.
    nothing when a new change would touch one of them, or when this copy has commits of its own,
    and the page says so. It then installs what the new kit needs, builds the `oltrem` tool, and
    runs the template's checks (`oltrem doctor`, a few seconds).
-6. **The start page** opens in your browser: a dashboard of two cards.
+6. **The start page** opens in your browser, **Run the portal** first, then This computer.
+   - **Run the portal:** two big choices, **Local** (own data) and **Production** (live data), the
+     last you picked kept for next time. Local's **Who may open it** is a sideways row; Production
+     says first that every save is real. **Start** shows a panel with the address, how long it has
+     run, **Open the portal**, **Copy** and **Stop**. A portal that was running and stops by
+     itself starts again after 5, 10 and 20 seconds, with **Start it now** and **Do not start it**.
+     Every run writes each line with its time to `.oltrem/runs/` (the newest 20 are kept), named
+     on the page with **Copy**; the tool output has a filter and **Copy**. When the page loses the
+     start window (a browser putting the tab to sleep, a network blip), it looks for it again for
+     about a minute and reloads by itself; the window waits 20 minutes for it.
    - **This computer:** two lines: the kit (the newest, or how many changes it brought in just
      now, which open to show them) and the checks. A check that needs a look says what is wrong
      and how to fix it; a fix you type is one command with **Copy**. **Check again** does the
      whole start again without closing anything.
-   - **Try it here:** **Which data** is **Local**, a new portal with its own data at a local
+   - **Which data**, in full: **Local** is a new portal with its own data at a local
      address such as <http://localhost:8787> (no Cloudflare account), or **Production**
      (`npm run live`: a Cloudflare sign-in, then your real portal on this computer on its live
      database, files and cache, so every save is real; never a copy of its data). For Local,
      **Who may open it** picks Only this computer, This Wi-Fi or Anywhere: the last two are also
      open on other devices behind a code shown when it starts, on your network or at a temporary
      Cloudflare address (this needs `cloudflared` installed, and no account; see
-     [sharing it](./templates/client/README.md#sharing-it-with-other-devices)). While it runs, the
-     card shows its address with **Open** and **Stop**.
+     [sharing it](./templates/client/README.md#sharing-it-with-other-devices)).
 
    Putting a portal on Cloudflare is not on this page (since 2026-11-25): it is `npm run setup` or
    `npm run deploy`, and every push to the kit reaches the live portals by itself (the fleet).

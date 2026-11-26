@@ -413,17 +413,17 @@ port, a refused socket), the same deploy runs in the terminal instead.
 2026-10-29): `status` (`StartStatus`) is what the start made ready (the kit's commit, what an
 update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
 live), sent first to every page that connects, before the choices; a `status` event from a run
-(**Check again**, `run.mjs check`) replaces it. Its sections: **Overview** (what runs now, with a
-way to it; while nothing runs, a band with the one next move from what the start found: what to
-fix first on this computer, **Put it live** with **Try it here first**, or the live address with
-**Open the portal** and **Update it**; then a tile each, with its icon, for this computer, the
-portal here and Cloudflare), **This computer**
+(**Check again**, `run.mjs check`) replaces it. Its sections (since 2026-11-26,
+[record](../../docs/records/2026-11-26-start-page-remade.md)): **Run the portal** first (the
+checks' warning with **See what to fix**; **Local** or **Production** as two big choices, Local's
+**Who may open it** as a sideways row, Start; while it runs, one panel with the address, how long,
+what it says now, **Open the portal**, **Copy**, **Stop**, and **Answer it** when a question
+waits; a portal that served and then ended with an error, not by Stop, is started again through
+`/again` after `RETRY_SECONDS`, at most three times per press of Start), **This computer**
 (the kit: its state, commit, day, latest change, Node, what an update brought in; beside it the
 checks: each one that needs a look with its title, summary and fix, a fix that is a command, or a
-few joined by "or", a box with **Copy**; **Check again** in the section's corner), **Try it here**
-(the choices whose id starts with `dev`, as cards with their label and hint, and **Start**; while
-one runs, its address with **Open** and **Stop**; when the kit carries Oltrem Mail, a **With Oltrem
-Mail** tick, which Start sends only when it changes: the template's dev script then runs `oltrem
+few joined by "or", a box with **Copy**; **Check again** in the section's corner); in **Run the
+portal**, when the kit carries Oltrem Mail, a **With Oltrem Mail** tick, which Start sends only when it changes: the template's dev script then runs `oltrem
 mail add` or `oltrem mail remove --confirm remove` before the portal starts, and its `mail` event
 updates the page. While Mail is ticked in, an update that only Mail's files hold back takes Mail
 out, comes in, and puts Mail back: `MAIL_FILES` in `scripts/run.mjs`), **Put it on Cloudflare** (where the portal
@@ -453,6 +453,16 @@ version, Node), the `about` lines the caller gives (the kit's commit, the folder
 page showed with each task's last progress, and the last 80 lines of each of the run's logs, all
 passed through `redact`, which hides an age secret key, a sign-in address's query, a value named
 like a key and any long run of letters and digits that holds both.
+
+With `runsDir` (the start page and `oltrem deploy --page` give `.oltrem/runs/`), each run writes
+every event as it happens to a file of its own (`newRunLog`: its time and choice in the name, the
+newest `RUNS_KEPT`, 20, kept): a header with what ran, the computer and the Mail tick, then one
+line per event with its ISO time (`logLine`: every progress line, where the portal serves, each
+link, through `redact`). A `runlog` event names the file to the page and the terminal, and the
+details say where it is. The server answers `GET /ping` (with the key) so a page that lost its
+stream can tell the start window is still there and reload, and writes `{"t":"beat"}` on an open
+stream every 15 seconds so nothing on the way ends it for being quiet. The page skips an event it
+cannot draw (said in the browser's console) instead of ending its stream.
 
 ## `oltrem setup [dir]`
 
