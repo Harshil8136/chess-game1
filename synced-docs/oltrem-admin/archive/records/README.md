@@ -128,6 +128,9 @@ The records since 16 November:
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 24 November](2026-11-24-verification-log.md) | the log's rows of that day, moved when it reached its size |
+| [Verification log, 25 and 26 November](2026-11-25-to-26-verification-log.md) | the log's last rows, moved when it was retired |
+| [Where things stood, to 26 November](2026-11-26-status-history.md) | every phase's parts and every round since 27 October, each with its record |
+| [Living documents trimmed](2026-11-26-living-docs-trimmed.md) | proposals, the verification log and done work out of the living set; phone-test sources once; wrong names fixed |
 | [Website analytics apps on the Apps page](2026-11-26-website-analytics-apps.md) | PostHog, Plausible, Umami and Cloudflare Web Analytics connected with a read-only key under Apps, Analytics; the last 7 days on the connection's page; one report for the Analytics page, kept ten minutes; P910-P916 |
 | [Google Analytics, Matomo and Fathom on the Apps page](2026-11-26-more-analytics-apps.md) | three more website analytics apps: a GA4 service account signed in the Worker, Matomo in one request, Fathom five calls at a time; P917-P919 |
 | [Sign in with PostHog and Google Analytics](2026-11-26-analytics-sign-in.md) | PostHog and Google Analytics connected by signing in through the relay, the key the second way; tokens renewed before a read; a daily check and "sign in again" on Home; cards keep their own height; Everyone's links moved off the top; P933-P939 |

@@ -63,5 +63,5 @@ P425-P429 in [the data phone tests](../../docs/phone-tests-data.md).
 
 The data, providers, connect and core-config tests, the parts lists of the tool and the template,
 the template's screens test (Home's query pin 32 to 33, a replayed Supabase Connect), then
-`pnpm verify` for each batch; the summaries are in [the verification log](../../docs/verification-log.md).
+`pnpm verify` for each batch; the summaries are in [the verification log](2026-11-25-to-26-verification-log.md).
 Not run on a deployed portal or a phone.

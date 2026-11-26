@@ -72,4 +72,4 @@ tick, and finds each run's count recorded. The figure of 99 was measured by hand
 2026-10-27, with the budget lifted. Not checked: a deployed portal on the Free plan (the limit of
 50 is Cloudflare's published figure, read from its D1 limits page), and the cron's other work
 (starting Workflow instances), which is not counted. Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

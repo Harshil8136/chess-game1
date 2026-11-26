@@ -76,4 +76,4 @@ its reason, the emails with the answer and the note, the withdrawal, every refus
 log, and the search. The client template's screens journey asks as the Owner, finds no Approve on
 the Owner's own request and withdraws it. Not checked: a phone, a deployed portal, an answer
 given through the pages by a second person (covered by the module tests), and the email opened in
-a real mail app. Those are listed in the [verification log](../../docs/verification-log.md).
+a real mail app. Those are listed in the [verification log](2026-11-25-to-26-verification-log.md).

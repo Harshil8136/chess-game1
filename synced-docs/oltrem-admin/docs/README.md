@@ -2,7 +2,7 @@
 title: "Documentation index, and where things stand"
 status: living
 owner: vendor
-last_verified: 2026-11-03
+last_verified: 2026-11-26
 sources: [this repository]
 ---
 
@@ -16,12 +16,10 @@ sources: [this repository]
 ## Where things stand
 
 The kit is in **phase 6, release pipeline and upgrade**, with the first features for any business
-built beside it. Each phase's parts and their state are on [the status page](status.md); what
-comes next, and why it sells, is in [the roadmap](roadmap.md). A person or an agent new to the
-repository reads [the architecture guide](architecture.md) after ai.md. Every Oltrem product
-(the Portal, Mail, the shared Server, and later the Console and the Website), its modules and the
-five phases of work across them are in [the product plan](product-plan.md); what keeps the kit
-at "fine" rather than "best", and the order of fixes, is in [the kit review](reference/kit-review.md).
+built beside it. What still waits is on [the status page](status.md); what comes next, and why it
+sells, is in [the roadmap](roadmap.md). A person or an agent new to the repository reads
+[the architecture guide](architecture.md) after ai.md. Proposals and earlier plans, decided or
+built, are frozen in [archive/proposals](../archive/proposals/README.md).
 
 ## The plan
 
@@ -44,8 +42,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 
 | Document | Owns | Kind |
 |---|---|---|
-| [Where things stand](status.md) | each phase's parts, their state and the record of each | living |
-| [Product plan](product-plan.md) | the product line, the products, their modules, the five phases across them and the owner's open decisions | proposed |
+| [Where things stand](status.md) | the parts still waiting, and on whom | living |
 | [Roadmap](roadmap.md) | what buyers pay for, the editions, module states, what comes next | living |
 | [Architecture guide](architecture.md) | the parts, how a request and a job travel, what a module is, the numbers taken, where a change goes | living |
 | [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
@@ -53,7 +50,6 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
 | [Versions and release notes](release.md) | how packages are versioned and how a change's note is written | living |
 | [The fleet](reference/fleet.md) | every push to the kit updates every client's portal: how, the one-time setup, the key | living |
-| [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Phone tests owed](phone-tests.md) | every phone test still owed, by page, with what to see; passed and failed ones | living |
 | [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
 | [Phone tests owed: Users and access](phone-tests-users.md) | the phone tests owed on the Users and access pages, split from the list above | living |
@@ -66,12 +62,6 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
 | [How documents are written and sized](reference/doc-policy.md) | the size caps, the documents budget and its allowances, the shape of a document and of a record | living |
-| [Open-source ideas](reference/open-source-ideas.md) | 30 ranked open-source ideas | proposed |
-| [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
-| [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |
-| [Mail projects](reference/mail-projects.md) | 35 projects compared; a mail repo | proposed |
-| [Kit review](reference/kit-review.md) | what keeps the kit at fine rather than best: the findings of 2026-11-03, their evidence and the order of fixes | proposed |
-| [The shared server](reference/shared-server.md) | one vendor server, a key and limit per client | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
@@ -124,16 +114,8 @@ them for a task: [the records index](../archive/records/README.md).
 
 ## How this folder is checked
 
-`pnpm docs:check`, one of the gates of `pnpm verify`, refuses a document without front matter,
-a document missing from the tables above (a record: missing from [the records index](../archive/records/README.md)), a document over its size budget, a relative link that
-points nowhere, and a generated document that differs from its source. Records are frozen: a
-later change is a new record, not an edit.
+`pnpm docs:check` holds every document to [the doc policy](reference/doc-policy.md).
 
 ## How to read this on a phone
 
 Every document opens with a short summary in plain words. Tables are kept narrow.
-
-## Verification log
-
-What was checked before each push, and what was not, is one row per change in
-[the verification log](verification-log.md); a change adds its row there in the same commit.

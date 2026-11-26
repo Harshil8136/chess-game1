@@ -8,7 +8,7 @@ sources: [the commits of this repository from 2026-10-19 to 2026-10-20 and their
 
 # Verification log, 19 and 20 October 2026
 
-> **In plain words.** The first rows of the [verification log](../../docs/verification-log.md), moved here
+> **In plain words.** The first rows of the [verification log](2026-11-25-to-26-verification-log.md), moved here
 > unchanged on 2026-10-21 when the log reached its size budget. Each row says what was checked
 > before a push and what was not.
 

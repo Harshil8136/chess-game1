@@ -84,4 +84,4 @@ flowchart LR
   compiles (the build checks); it differs only in left-out comment lines and indents.
 - Found: the screens' stylesheet stood one byte under its 64 KiB test limit before this change.
   The bell is drawn with classes the stylesheet already had, so it adds nothing; the next screen
-  that needs a new rule needs a trim first ([kit review](../../docs/reference/kit-review.md)).
+  that needs a new rule needs a trim first ([kit review](../proposals/2026-11-03-kit-review.md)).

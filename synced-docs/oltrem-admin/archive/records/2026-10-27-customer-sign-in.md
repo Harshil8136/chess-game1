@@ -85,4 +85,4 @@ journey adds a customer on the Customers page, signs them in at `/account` with 
 the outbox, and shows their account; the deploy test names the new path. The pages were opened at
 360 px in light and dark. Not checked: a phone, a deployed portal behind a real Access Bypass, and
 a code arriving in a real mailbox. Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

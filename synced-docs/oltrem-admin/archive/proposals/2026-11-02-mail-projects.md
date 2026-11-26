@@ -114,7 +114,7 @@ copied: each is a design the kit can write fresh.
 1. **A private mail Worker** (cmail). The mail Worker has no route, `workers_dev = false` and
    `preview_urls = false`; the portal reaches it only through a service binding; it holds the
    `send_email` binding, so no sending token exists at all. This is design B of the
-   [private mail Worker page](private-mail-worker.md), now seen working in a real project.
+   [private mail Worker page](2026-11-02-private-mail-worker.md), now seen working in a real project.
 2. **Fail over only when the mail surely was not accepted** (0list). Every provider's errors are
    mapped onto one list: a recipient problem (mark it and continue), a throttle or a used-up
    day (wait and resume, or try the next provider), a fatal setup problem (stop and say so). An
@@ -211,6 +211,6 @@ not pushed) becomes this service's first sender.
 
 ## Related
 
-- [A private mail Worker](private-mail-worker.md): the first answer, with Cloudflare's facts and
+- [A private mail Worker](2026-11-02-private-mail-worker.md): the first answer, with Cloudflare's facts and
   the four designs.
-- [Open-source ideas](open-source-ideas.md): the earlier, wider list for the portal.
+- [Open-source ideas](2026-11-01-open-source-ideas.md): the earlier, wider list for the portal.

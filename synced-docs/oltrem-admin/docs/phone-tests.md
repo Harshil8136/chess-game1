@@ -30,21 +30,45 @@ Owed in [their own list](phone-tests-frame.md), P153 to P242.
 
 ### Lists, saved views and bulk actions
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P6 | Tasks, pick "Open", name it, Save view | a chip with the name above the list; tapping All and back to it works; Remove takes it away | [record](../archive/records/2026-11-03-saved-views.md) |
-| P7 | A records list, filter by a choice | the filters and the list fit; the save field sits under the chips | [record](../archive/records/2026-11-03-saved-views.md) |
-| P29 | Tasks, Open, with two tasks or more: tick two, press Mark done | the bar says "2 tasks chosen" and its buttons wake only once something is ticked; after the press, "Mark done: done for 2 rows" and both are on Done | [record](../archive/records/2026-11-03-bulk-actions.md) |
-| P30 | Tasks, Done: tick the box at the top on a computer, or each task on a phone, press Remove | a dialog asks first; Cancel leaves them; Remove takes them all away | [record](../archive/records/2026-11-03-bulk-actions.md) |
+From [record](../archive/records/2026-11-03-saved-views.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P6 | Tasks, pick "Open", name it, Save view | a chip with the name above the list; tapping All and back to it works; Remove takes it away |
+| P7 | A records list, filter by a choice | the filters and the list fit; the save field sits under the chips |
+
+From [record](../archive/records/2026-11-03-bulk-actions.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P29 | Tasks, Open, with two tasks or more: tick two, press Mark done | the bar says "2 tasks chosen" and its buttons wake only once something is ticked; after the press, "Mark done: done for 2 rows" and both are on Done |
+| P30 | Tasks, Done: tick the box at the top on a computer, or each task on a phone, press Remove | a dialog asks first; Cancel leaves them; Remove takes them all away |
 
 ### Settings
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P151 | Admin, Scheduled jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](../archive/records/2026-11-12-quiet-portal.md) |
-| P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](../archive/records/2026-11-03-optional-extras.md) |
-| P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](../archive/records/2026-11-03-get-started.md) |
-| P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot | [record](../archive/records/2026-10-31-access-settings-redesign.md) |
+From [record](../archive/records/2026-11-12-quiet-portal.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P151 | Admin, Scheduled jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute |
+
+From [record](../archive/records/2026-11-03-optional-extras.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile |
+
+From [record](../archive/records/2026-11-03-get-started.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P9 | Settings, switch Get started off and save | Home without the card; on again, it is back |
+
+From [record](../archive/records/2026-10-31-access-settings-redesign.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot |
 
 ### People and access
 
@@ -70,10 +94,17 @@ Owed in [their own list](phone-tests-apps.md), P376-P385, P468-P474, P512-P514, 
 
 ### Alerts, audit and errors
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P13 | Alerts | open alerts, the worst first; a server error listed with where, how often and its stack | [record](../archive/records/2026-11-03-error-log.md) |
-| P14 | Audit log, filter, Download | the list, the filters as chips; the file downloads on the phone | [record](../archive/records/2026-10-21-audit-seal-and-export.md) |
+From [record](../archive/records/2026-11-03-error-log.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P13 | Alerts | open alerts, the worst first; a server error listed with where, how often and its stack |
+
+From [record](../archive/records/2026-10-21-audit-seal-and-export.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P14 | Audit log, filter, Download | the list, the filters as chips; the file downloads on the phone |
 
 ### Email and Mail
 
@@ -82,22 +113,61 @@ each list stays small enough to read whole.
 
 ### Work modules
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P18 | Tasks: make one, mark it done | it shows on Home's Needs you, then leaves | [record](../archive/records/2026-10-27-tasks-module.md) |
-| P19 | Files: upload a photo, share a link | the upload from the camera roll, the link copied | [record](../archive/records/2026-10-27-files-module.md) |
-| P20 | Expenses: add one with a receipt photo | the camera opens; the claim goes to approval | [record](../archive/records/2026-10-27-expenses-module.md) |
-| P21 | Approvals, Announcements, Equipment | each list and form fits; a decision is two taps | [approvals](../archive/records/2026-10-27-approvals-module.md), [announcements](../archive/records/2026-10-27-announcements-module.md), [equipment](../archive/records/2026-10-27-assets-module.md) |
-| P22 | Bookings, Time off, Time clock, Shifts | the week or day views fit; clock in and out in one tap each | [bookings](../archive/records/2026-10-27-bookings-module.md), [time clock](../archive/records/2026-10-27-timeclock-module.md), [shifts](../archive/records/2026-10-27-shifts-module.md) |
-| P23 | Quotes and Invoices: make one, send it | the lines readable; the customer's page shows it | [quotes](../archive/records/2026-10-27-quotes-module.md), [invoices](../archive/records/2026-10-27-invoices-module.md) |
-| P24 | Privacy: search an address | the rows found, grouped by module | [record](../archive/records/2026-10-27-privacy-module.md) |
+From [record](../archive/records/2026-10-27-tasks-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P18 | Tasks: make one, mark it done | it shows on Home's Needs you, then leaves |
+
+From [record](../archive/records/2026-10-27-files-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P19 | Files: upload a photo, share a link | the upload from the camera roll, the link copied |
+
+From [record](../archive/records/2026-10-27-expenses-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P20 | Expenses: add one with a receipt photo | the camera opens; the claim goes to approval |
+
+From [approvals](../archive/records/2026-10-27-approvals-module.md), [announcements](../archive/records/2026-10-27-announcements-module.md), [equipment](../archive/records/2026-10-27-assets-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P21 | Approvals, Announcements, Equipment | each list and form fits; a decision is two taps |
+
+From [bookings](../archive/records/2026-10-27-bookings-module.md), [time clock](../archive/records/2026-10-27-timeclock-module.md), [shifts](../archive/records/2026-10-27-shifts-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P22 | Bookings, Time off, Time clock, Shifts | the week or day views fit; clock in and out in one tap each |
+
+From [quotes](../archive/records/2026-10-27-quotes-module.md), [invoices](../archive/records/2026-10-27-invoices-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P23 | Quotes and Invoices: make one, send it | the lines readable; the customer's page shows it |
+
+From [record](../archive/records/2026-10-27-privacy-module.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P24 | Privacy: search an address | the rows found, grouped by module |
 
 ### Customers
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P25 | The customer sign-in page, as a customer | the code arrives by email; the account page lists their sections | [sign-in](../archive/records/2026-10-27-customer-sign-in.md), [sections](../archive/records/2026-10-27-customer-account-sections.md) |
-| P26 | A customer's account, Files | the files shared with them open | [record](../archive/records/2026-10-27-files-shared-with-customers.md) |
+From [sign-in](../archive/records/2026-10-27-customer-sign-in.md), [sections](../archive/records/2026-10-27-customer-account-sections.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P25 | The customer sign-in page, as a customer | the code arrives by email; the account page lists their sections |
+
+From [record](../archive/records/2026-10-27-files-shared-with-customers.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P26 | A customer's account, Files | the files shared with them open |
 
 ## Passed
 

@@ -47,17 +47,17 @@ flowchart TD
 
 | Level | What it is | Where it is decided |
 |---|---|---|
-| 1. Product line | **Oltrem**: ready-made business portals any company can use, each running in the client's own Cloudflare account on the free plan, private while the owner tests it | the plan on the docs mirror, linked from [the index](README.md) |
+| 1. Product line | **Oltrem**: ready-made business portals any company can use, each running in the client's own Cloudflare account on the free plan, private while the owner tests it | the plan on the docs mirror, linked from [the index](../../docs/README.md) |
 | 2. Products | the things a client has or the vendor runs: Portal, Mail, Server, Console, Website | this page |
-| 3. Modules | the parts inside a product, each one package that is switched on or off per client | [the roadmap](roadmap.md) for the Portal, oltrem-mail's plan for Mail |
+| 3. Modules | the parts inside a product, each one package that is switched on or off per client | [the roadmap](../../docs/roadmap.md) for the Portal, oltrem-mail's plan for Mail |
 
 ## 2. Level 2: the products
 
 | Product | What a client gets | Repository | State on 2026-11-03 |
 |---|---|---|---|
-| **Portal** | the admin portal itself: people and access, audit, backups, health, and the everyday work modules, on a phone first | this repository (the kit), packed into one private repository per client | phases 0 to 6 built; every phase's acceptance waits on a sandbox client ([where things stand](status.md)) |
-| **Mail** | email that sets itself up: sending through Cloudflare or a provider, bulk mail with consent, an inbox, forwarding | oltrem-mail, packed into this repository's `vendor/mail/` | plan phases 1 to 5 built 2026-11-02, plus the inbox and forwarding bundles; phone tests owed ([the packed copy](../vendor/mail/README.md)) |
-| **Server** | an optional paid extra: the vendor's own server lends each portal a fixed allowance for heavy jobs (whole emails, search, PDFs, virus checks) | not started; designed in [the shared server](reference/shared-server.md) | design only; waits on the owner's six answers |
+| **Portal** | the admin portal itself: people and access, audit, backups, health, and the everyday work modules, on a phone first | this repository (the kit), packed into one private repository per client | phases 0 to 6 built; every phase's acceptance waits on a sandbox client ([where things stand](../records/2026-11-26-status-history.md)) |
+| **Mail** | email that sets itself up: sending through Cloudflare or a provider, bulk mail with consent, an inbox, forwarding | oltrem-mail, packed into this repository's `vendor/mail/` | plan phases 1 to 5 built 2026-11-02, plus the inbox and forwarding bundles; phone tests owed ([the packed copy](../../vendor/mail/README.md)) |
+| **Server** | an optional paid extra: the vendor's own server lends each portal a fixed allowance for heavy jobs (whole emails, search, PDFs, virus checks) | not started; designed in [the shared server](2026-11-02-shared-server.md) | design only; waits on the owner's six answers |
 | **Console** | for the vendor only: every client portal at a glance (version, health, last backup, last deploy) | none yet | not now: the owner will build it later (decided 2026-11-01); the Portal only keeps what it would read ready |
 | **Website** | the client's public site on the same account: pages, content, SEO, visitor counts | none yet | later, as the plan's section 4.4 lists it |
 
@@ -75,8 +75,8 @@ without it works exactly as it does on Cloudflare alone.
 | Work | `records`, `forms`, `files`, `tasks`, `approvals`, `announcements`, `bookings`, `timeoff`, `expenses`, `assets`, `timeclock`, `shifts`, `quotes`, `invoices`, `customers`, `automations`, `analytics` | built 2026-10-22 to 10-27 |
 | Messages | `providers`, then Mail's three modules | built |
 | Developer | `developer` (jobs page, webhooks, API reference) | built; API keys built 2026-11-24, under Users and access |
-| Everyday polish, across every module | saved views, bulk actions, a get-started checklist, undo, a notifications inbox (the top of [the open-source ideas](reference/open-source-ideas.md)) | proposed, waiting for the owner's pick |
-| Kit health, under every module | an error log, performance budgets, a phone and accessibility check (the top of [the kit review](reference/kit-review.md)) | proposed 2026-11-03; the error log done the same day |
+| Everyday polish, across every module | saved views, bulk actions, a get-started checklist, undo, a notifications inbox (the top of [the open-source ideas](2026-11-01-open-source-ideas.md)) | proposed, waiting for the owner's pick |
+| Kit health, under every module | an error log, performance budgets, a phone and accessibility check (the top of [the kit review](2026-11-03-kit-review.md)) | proposed 2026-11-03; the error log done the same day |
 
 ### Mail
 
@@ -109,7 +109,7 @@ written in a record; the next phase may start before, but nothing is called fini
 |---|---|---|---|
 | **A** | Trustworthy | what is built works, is watched and is proven: no error goes unseen, the free plan's limits are measured and kept, docs say what is true | every server error is kept and shown in the portal (done 2026-11-03); a client Worker's size and its CPU per page have a budget the verify chain enforces; a sandbox client deploys with one command and its doctor is green |
 | **B** | Tested by people | the owner, then friends, then a first client use a real portal for their real work | the owed phone tests pass; an upgrade from one kit version to the next is done twice without help; a restore drill passes on the live sandbox; Mail runs on a real domain for a month |
-| **C** | Pleasant every day | the small things people notice: saved views, doing many at once, undo, a first-day checklist, one place for notices | the owner's chosen items from [the open-source ideas](reference/open-source-ideas.md) are built and tested on a phone |
+| **C** | Pleasant every day | the small things people notice: saved views, doing many at once, undo, a first-day checklist, one place for notices | the owner's chosen items from [the open-source ideas](2026-11-01-open-source-ideas.md) are built and tested on a phone |
 | **D** | Ready to sell | what a buyer needs before paying | the licence has its legal name and a lawyer's read; the editions and prices are written; a demo portal with sample-free real setup exists; the Server's first version runs for one client, if the owner approves it |
 | **E** | Grown | the vendor side and the later products | the Console, the Website, more languages (Spanish first), SMS and WhatsApp, each when the owner starts it |
 
@@ -124,13 +124,13 @@ flowchart LR
 
 | Phase | Work | Who |
 |---|---|---|
-| A | **A1** error log: every server error kept in the database, grouped, listed on the Alerts page and emailed once ([kit review K1](reference/kit-review.md)) | **done** 2026-11-03 |
+| A | **A1** error log: every server error kept in the database, grouped, listed on the Alerts page and emailed once ([kit review K1](2026-11-03-kit-review.md)) | **done** 2026-11-03 |
 | A | **A2** performance budgets: the Worker's size held by the verify chain (**done** 2026-11-03), CPU per page measured in tests; then the cold start made cheaper (K2) | agent |
 | A | **A3** the sandbox: a fresh Cloudflare account and a private client repository, made with `oltrem new client` and `npm run deploy` (K3) | owner, about 15 minutes, then agent |
 | A | **A4** a phone and accessibility check on every page's HTML in the verify chain (K5) | **done** 2026-11-03 for names, labels and the viewport; sizes and widths wait on a browser in verify |
 | A | **A5** documents brought up to date: where things stand and the roadmap (K4) | agent |
 | A | **A6** extras a portal can do without (the daily audit seal, the reminders) switched off on the Modules page (the owner's ask) | **done** 2026-11-03 |
-| B | the owed phone tests, collected on [one list](phone-tests.md) (**done** 2026-11-03); the upgrade path twice; a live restore drill | owner on a phone, agent the rest |
+| B | the owed phone tests, collected on [one list](../../docs/phone-tests.md) (**done** 2026-11-03); the upgrade path twice; a live restore drill | owner on a phone, agent the rest |
 | C | the owner's pick of R1 to R15; first suggestion: R3 get-started checklist (**done** 2026-11-03), R1 saved views (**done** 2026-11-03), R2 bulk actions (**done** 2026-11-03), R6 notifications inbox (**done** 2026-11-03), R4 undo, on records first (**done** 2026-11-03) | agent |
 | D | editions turned on and off from the client file; a demo portal; the buyer's guide | agent, owner for prices |
 | E | Spanish, API keys, website forms in more languages, SMS and WhatsApp | later |
@@ -149,7 +149,7 @@ flowchart LR
 
 | Phase | Work | Who |
 |---|---|---|
-| A, B | nothing to build: the owner answers the six questions in [the design](reference/shared-server.md) when ready | owner |
+| A, B | nothing to build: the owner answers the six questions in [the design](2026-11-02-shared-server.md) when ready | owner |
 | D | version 1 for one client: a key, an allowance, Mail's heavy reads | agent, after the owner's yes |
 | E | other modules' heavy jobs (PDFs, search, virus checks) | agent |
 
@@ -172,7 +172,7 @@ flowchart LR
   with friends and with some clients, and calls it finished (decided 2026-11-01).
 - **For any business.** Every feature is one most companies use; nothing is aimed at one trade.
 - **The free plan.** Under 10 ms of CPU per request, no per-change KV writes (1,000 a day), the
-  database for counters and logs; [the budgets](../packages/core-health/README.md) are watched on
+  database for counters and logs; [the budgets](../../packages/core-health/README.md) are watched on
   System status.
 - **Least manual work.** One command or one press does the whole job; every failure says its fix
   in words and lands where the portal's logs and alerts see it.

@@ -77,4 +77,4 @@ removal, the automations' task made once per key, and the search. The automation
 task action's fields and its run. The client template's screens journey makes a task for today,
 sees it on Home, marks it done, opens it again, changes and removes it. Not checked: a phone, a
 deployed portal, and a task email opened in a real mail app. Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

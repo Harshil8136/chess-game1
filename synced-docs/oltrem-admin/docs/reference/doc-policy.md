@@ -25,8 +25,12 @@ A document still over 16 KB holds an allowance in `docs-budget.json`: its size, 
 1 KB. An allowance only comes down. After trimming, run `pnpm docs:lower`, which lowers every
 allowance and the total, and never raises one. Raising a number needs the owner's yes.
 
-Not living documents: `archive/` (the records), `vendor/mail/published/` (a copy of Oltrem
-Mail's documents) and `.changeset/`. Search tools skip `archive/` and that copy (`.ignore`).
+Not living documents: `archive/` (the records and old proposals), `vendor/mail/published/` (a
+copy of Oltrem Mail's documents), `.agents/` (generated copies of `.claude/`) and `.changeset/`.
+Search tools skip all but `.changeset/` (`.ignore`).
+
+The phone-test lists name each test's source once, as a "From" line over its rows, not in a
+column on every row.
 
 ## The shape
 
@@ -42,5 +46,6 @@ Mail's documents) and `.changeset/`. Search tools skip `archive/` and that copy 
 ## A record
 
 A record is history, written once and frozen: what changed, why, before and after, how it was
-checked. The template is at the top of [the records' index](../../archive/records/README.md).
+checked, and what was not. That **Checked.** line and the commit message are the only log of
+verification. The template is at the top of [the records' index](../../archive/records/README.md).
 Detail (routes, tables, numbers) goes in the living document that owns it.

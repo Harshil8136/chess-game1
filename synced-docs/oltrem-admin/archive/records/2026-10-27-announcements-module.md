@@ -72,4 +72,4 @@ shown only to whoever posts, a notice moving to Past after its day, removal with
 the title kept in the log, and the search. The client template's screens journey posts a notice
 that must be confirmed as the Owner, sees it confirmed by them and removes it. Not checked: a phone,
 a deployed portal, and a second person reading through the pages (covered by the module tests).
-Those are listed in the [verification log](../../docs/verification-log.md).
+Those are listed in the [verification log](2026-11-25-to-26-verification-log.md).

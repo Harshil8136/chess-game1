@@ -12,9 +12,7 @@ sources: [the plan sections 4.4 and 18; market research of 2026-10-27 listed at 
 > the client's own Cloudflare account at almost no hosting cost. This page says what buyers of
 > such portals pay for, how the kit's parts group into things a client can buy, which parts are
 > built, and the order of what comes next with the reason for each. It never aims the kit at one
-> kind of business: every feature here is one any company uses. The products built on the kit
-> (Portal, Mail, Server, Console, Website) and their phases are in
-> [the product plan](product-plan.md), the newest plan; this page keeps the modules.
+> kind of business: every feature here is one any company uses.
 
 ## What buyers pay for
 
@@ -96,32 +94,6 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `site`, `cms`, `seo`, visitor analytics | Website | later, as plan section 4.4 lists them |
 | `sms`, WhatsApp | Messages | later (the owner's card 15) |
 | `vps`, `postgres` | Developer | later, optional |
-
-## This round's foundation work
-
-The changes under every module, done before the new modules or beside them, so each one uses them:
-
-- **The audit writes itself.** The pipeline records every change made through the API (a POST,
-  PUT, PATCH or DELETE) with its outcome, the route, the status and how long it took, including
-  the refusals the permission check and the schema make, so no module can forget one. A module
-  that writes its own richer row keeps doing so, and the pipeline does not write a second.
-- **A module brings its own pages.** The manifest gains the pages and the sidebar entry of the
-  module, so a new module is one package mounted in one line, with no edit to the screens package.
-- **A new look.** A calmer palette, a glass frame, smooth page transitions in the browsers that
-  have them, and pages fetched before the click. A search over every section followed the same
-  day.
-- **What waits for you comes to you.** Home opens with Needs you: each module that has a
-  decision or a task for the person signed in says so (access requests, approvals and reviews
-  they may decide, their own access ending, alerts nobody took, new answers to the forms they
-  handle), each a row to the page that acts on it.
-
-## Rounds since 2026-10-27
-
-[Where things stand](status.md#since-2026-10-27) lists each round with its record: setup in one
-press, the free plan's CPU, one repository per client, Oltrem Mail as an add-on, the kit review's
-findings, the everyday features (Get started, saved views, bulk actions, notifications, optional
-extras) and look 2. What comes next for the kit itself is the order of work in
-[the kit review](reference/kit-review.md); for the products, [the product plan](product-plan.md).
 
 ## How a round is chosen
 

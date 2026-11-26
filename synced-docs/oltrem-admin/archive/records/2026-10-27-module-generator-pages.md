@@ -76,4 +76,4 @@ the list for the Owner and its refusal for a stranger. By hand, a module `pet-fo
 into the client template: both type-check programs, `oltrem check modules`, `oltrem docs --check`
 and its tests passed, and a portal test showed the Owner the empty page with "Add a note", added a
 note, saw it listed and found the page in the sidebar. The trial was then removed. Not checked on
-a phone or a deployed portal; listed in the [verification log](../../docs/verification-log.md).
+a phone or a deployed portal; listed in the [verification log](2026-11-25-to-26-verification-log.md).

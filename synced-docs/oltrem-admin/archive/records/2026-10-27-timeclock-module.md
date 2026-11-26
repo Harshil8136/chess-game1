@@ -85,4 +85,4 @@ screens journey clocks the Owner in and out through the page and is refused a se
 their own hours, and the query budget test holds the new page and Home within their shares. The page
 was opened at 360 px in light and dark. Not checked: a phone, a deployed portal, and a second person
 fixing hours through the pages (covered by the module tests). Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

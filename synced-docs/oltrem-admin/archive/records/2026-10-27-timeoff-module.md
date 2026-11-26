@@ -87,4 +87,4 @@ privacy answer. The day tests cover real dates only, working days from any weekd
 across New Year. The client template's screens journey asks for a week off as the Owner, is
 refused the same days again, finds no Approve on their own request, and withdraws it. Not checked:
 a phone, a deployed portal, and a second person answering through the pages (covered by the module
-tests). Those are listed in the [verification log](../../docs/verification-log.md).
+tests). Those are listed in the [verification log](2026-11-25-to-26-verification-log.md).

@@ -86,4 +86,4 @@ currency without decimals. The client template's screens journey claims an expen
 its receipt as the Owner through the page's form, is refused an amount with three decimals, finds no
 Approve, and withdraws it. Not checked: a phone's camera, a deployed portal, and a second person
 answering and paying through the pages (covered by the module tests). Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

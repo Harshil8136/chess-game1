@@ -86,13 +86,13 @@ before 2026-11-25, so no history is lost and nothing new is written to show it.
 
 The list is one read of the scheduler's table and the Features page's switches, the same as the
 Developer page made before; a job's page adds one indexed read of the audit log. A page open with
-its live rows refreshes once a minute, as the tick runs; History is one more indexed read. Nothing is written by looking.
+its live rows refreshes once a minute, as the tick runs; History is one more indexed read. Nothing is
+written by looking.
 
 ## Health
 
 In the `jobs` lane: `jobs.runs` **warns** naming the jobs whose last run failed and the ones paused
 by hand, passing by a job whose part or extra is switched off, which does not run anyway.
-`developer.jobs` until 2026-11-25.
 
 ## Errors
 

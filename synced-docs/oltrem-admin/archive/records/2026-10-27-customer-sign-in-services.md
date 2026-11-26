@@ -77,4 +77,4 @@ an address that is no customer; a service switched off gone from the door; a rem
 its secret gone; each step audited. The client template's screens test opens the new page. Supabase's
 OAuth 2.1 server guide was read for its discovery address, its client authentication and its
 `email_verified` claim. Not checked: a real Auth0, Supabase, Google, Okta or Keycloak application,
-or a phone. Those are listed in the [verification log](../../docs/verification-log.md).
+or a phone. Those are listed in the [verification log](2026-11-25-to-26-verification-log.md).

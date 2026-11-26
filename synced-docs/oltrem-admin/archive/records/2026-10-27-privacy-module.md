@@ -84,4 +84,4 @@ Needs you and the health check, and a closed request kept. Each kit module's `pe
 in its own package. The client template's screens journey answers a request for an address a
 campaign was sent to, end to end. Not checked: a phone, a deployed portal, the search's time on a
 large portal, and a lawyer's reading of the periods. Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

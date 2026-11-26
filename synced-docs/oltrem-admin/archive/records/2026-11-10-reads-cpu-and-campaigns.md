@@ -28,7 +28,7 @@ list of a few thousand people makes tens of thousands of rows per minute of clic
 
 | Idea | What it would do here |
 |---|---|
-| Keep data in the browser (`localStorage`, `sessionStorage`, an HTTP cache with a lifetime) | Saves a page view only when nothing changed, and a campaign page changes while it sends. The first view and every Save still read the rows. Personal data on a shared computer is a risk ([browser caching](../../docs/reference/browser-caching.md)). |
+| Keep data in the browser (`localStorage`, `sessionStorage`, an HTTP cache with a lifetime) | Saves a page view only when nothing changed, and a campaign page changes while it sends. The first view and every Save still read the rows. Personal data on a shared computer is a risk ([browser caching](../proposals/2026-11-01-browser-caching.md)). |
 | A signed token (JWT) in a cookie | Replaces the session read, which is one KV read and under 0.1 ms ([CPU record](2026-11-01-cpu-budget.md)). It reads no fewer database rows. |
 | A few KV keys | The free plan allows 1,000 KV writes a day, and counters change on every send. Settings and sessions are in KV and memory already. |
 | Cloudflare's cache (Cache API) | It does nothing on a `workers.dev` address, where the live portal runs. |

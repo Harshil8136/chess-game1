@@ -15,100 +15,167 @@ sources: [archive/records/2026-11-23-connected-data-edits.md; archive/records/20
 
 ## Owed
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P394 | As the Vendor: Settings, System, "Sign-in service for Slack, Discord, Google and Supabase" (now "…, Supabase and Airtable") set to the relay; then as an Owner: Work, Data, Connect a database, the Supabase card | "Sign in with Supabase" above the steps and the key form | [record](../archive/records/2026-11-22-supabase-one-click.md) |
-| P395 | Sign in with Supabase; on Supabase's page, Cancel | Back on Connect Supabase with "Nothing was connected" and "You cancelled on Supabase's page" | [record](../archive/records/2026-11-22-supabase-one-click.md) |
-| P396 | Sign in with Supabase with an account that has two or more projects; Authorize | "Pick a Supabase project", one row a project with its address; Connect on one goes to Supabase again and comes back to the next step | [record](../archive/records/2026-11-22-supabase-one-click.md) |
-| P397 | Sign in with Supabase and Authorize (one project, or after picking); then Cancel; then sign in again and press Connect | "Connect <project>?" with its address and no key shown; Cancel saves nothing (Data lists nothing new); Connect opens the database's page with "Connected" and its tables | [record](../archive/records/2026-11-22-supabase-one-click.md) |
-| P398 | As a person with View access only: open Connect Supabase | No "Sign in with Supabase", only the steps and "Ask an Owner" | [record](../archive/records/2026-11-22-supabase-one-click.md) |
-| P423 | Admin, Integrations, Apps, the Data chip | Each database card with its own logo (Airtable, Neon, Supabase, Turso, Upstash) and a line saying how it connects, such as "Paste the connection string of a read-only role"; with the sign-in service set, Supabase's says "Sign in with Supabase" and its button word is Sign in | [the data README](../modules/data/README.md) |
-| P424 | Work, Data, Connect a database | The same logos on the service cards, each with its line; a database under Data shows its service's logo | [the data README](../modules/data/README.md) |
-| P425 | Home, At a glance, with one database connected | A Databases line: "1 of 1" and OK; with nothing connected it says "None" and Off, at the bottom of the list | [the data README](../modules/data/README.md) |
-| P426 | Admin, Features, Data: switch Database checks on; an hour later open Status | Database checks is off until switched on; Status lists the database check with "Shop cache: answers" (your connection's name), or the service's words when it stopped answering | [the data README](../modules/data/README.md) |
-| P427 | Work, Data, a database, Rename: type a new name, Save name | "Renamed.", the new name at the top and on the Data list; its tables open as before | [the data README](../modules/data/README.md) |
-| P428 | Sign in with Supabase and Connect a project already on the Data page (or press Connect twice) | That database's page opens with "This database was already connected, so nothing new was added."; the Data list still shows it once | [the data README](../modules/data/README.md) |
-| P429 | A database with more than 500 tables (or an Airtable account with more than 10 bases): its page | Under "Only part of the list is shown", Open a table by its name; a name not in the list opens its rows | [the data README](../modules/data/README.md) |
-| P430 | After the Airtable integration is registered on the relay (its README, step 6): Work, Data, Connect a database, the Airtable card | The card says "Sign in with Airtable, then pick the bases to read."; its page has "Sign in with Airtable" above the steps and the token form | [record](../archive/records/2026-11-22-airtable-sign-in.md) |
-| P431 | Press Sign in with Airtable, pick a base on Airtable's page and allow it | "Connect Airtable?" with Connect and Cancel; Connect opens the new connection with the picked base's tables; the phone's Back then shows that connection again, "already connected", not a second one | [record](../archive/records/2026-11-22-airtable-sign-in.md) |
-| P432 | Sign in with Airtable again and press Cancel on Airtable's page | Back on Connect Airtable: "You cancelled on Airtable’s page, so nothing was connected." | [record](../archive/records/2026-11-22-airtable-sign-in.md) |
-| P433 | Two hours after P431, open that Airtable connection and a table | The tables and rows load as before: the portal renewed the sign-in by itself | [record](../archive/records/2026-11-22-airtable-sign-in.md) |
-| P434 | Sign in with Airtable again, allow it, then press Cancel on "Connect Airtable?" | Back on Connect Airtable: "You pressed Cancel, so nothing was connected."; no new connection on the Data page | [record](../archive/records/2026-11-22-airtable-sign-in.md) |
-| P435 | Work, Data, a Supabase, Neon or Turso database, as its manager: Editing (above the tables), Turn on editing | "Editing is on." at the top; the Editing section says On. Before that, Change key with a key that may write | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P436 | Open a table with a primary key and tap a row's first value | The row's own page with a box for each value; the key and any binary or JSON column show their value and why they cannot be changed; No value is ticked for an empty one | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P437 | Change one value and press Save changes; open the table again | "Saved. You can undo it under Recent changes…"; the table shows the new value | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P438 | Open the same row in two tabs; save a change in one, then another change in the other | The second says "The row changed after you opened it" and saves nothing; its box shows the value now, with what you typed under it | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P439 | The database's page, Recent changes: open the change, press Undo change | Before and after for each column, whole; then "Undone." and the row holds its old value; the change cannot be undone twice | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P440 | As the Owner, a row: Delete row, confirm; then open it under Recent changes and press Undo delete | "The row was deleted…"; after Undo the row is back with every value it had | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P441 | Change key back to a key that may only read, then Save changes on a row; then Turn off editing | "The key may only read this database", nothing changed; with editing off the row's page says Editing is off and shows no boxes | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P442 | An Airtable or Upstash database's page | No Editing switch; it says its rows can only be read here | [record](../archive/records/2026-11-23-connected-data-edits.md) |
-| P443 | As an Owner, a Neon or Turso database's page, Ask a question in SQL, `SELECT * FROM <a table>` | Its rows | [record](../archive/records/2026-11-23-connected-data-questions.md) |
-| P444 | Ask `DELETE FROM <a table>` | Refused in plain words; the table unchanged | [record](../archive/records/2026-11-23-connected-data-questions.md) |
-| P445 | Ask a question with more than 100 rows | 100 rows and a line saying there are more | [record](../archive/records/2026-11-23-connected-data-questions.md) |
-| P446 | Edit a task or invoice that has notes | The notes show in the box | [record](../archive/records/2026-11-23-connected-data-questions.md) |
-| P460 | As an Owner, a table's Hide or mask columns: mask one, hide one, Save columns | Saved; the key column not offered | [record](../archive/records/2026-11-23-connected-data-hidden-columns.md) |
-| P461 | As someone without hidden columns, open that table | The hidden one gone with a line saying so; the masked one shows its last 4 characters | [record](../archive/records/2026-11-23-connected-data-hidden-columns.md) |
-| P462 | As that person, search for a value of the masked column | No row found by it | [record](../archive/records/2026-11-23-connected-data-hidden-columns.md) |
-| P520 | A Neon or Turso database's Ask page, type a question, Download CSV | `answer.csv` downloads with the same rows Ask shows | [README](../modules/data/README.md#questions-in-sql) |
-| P521 | Open that file in a spreadsheet where a value starts with `=` | The value shows as typed with an apostrophe before it, nothing runs | [README](../modules/data/README.md#questions-in-sql) |
-| P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again | [README](../modules/data/README.md#editing) |
-| P570 | A Neon or Turso database's Ask page, type a question and a name, Save question | Saved as that name; a chip with the name above the box | [README](../modules/data/README.md#questions-in-sql) |
-| P571 | Press the chip | The box filled with that question, and Remove saved question | [README](../modules/data/README.md#questions-in-sql) |
-| P572 | Remove saved question | Removed; the chip gone | [README](../modules/data/README.md#questions-in-sql) |
-| P573 | Home and a signed-in Airtable database whose sign-in ended | Home says signed out, sign in again; the database says Signed out, with Sign in with Airtable again | [README](../modules/data/README.md#the-pages) |
-| P670 | On a computer, open a Supabase table with IDs, emails and times | Every row on one line; IDs as 8 characters with a copy button, times as 29 Apr 2026 16:49, Yes and No as dots; the first column stays put when scrolling sideways | [README](../modules/data/README.md#the-pages) |
-| P671 | Press an ID's copy button and paste it somewhere | The whole ID | [README](../modules/data/README.md#the-pages) |
-| P672 | As an Owner, open Hide or mask columns under a table's rows | A compact grid, each column's name and a Shown, Masked, Hidden switch on one line | [README](../modules/data/README.md#the-pages) |
-| P680 | As an Owner, open a Supabase database | Chips under the head: Tables, Users, Storage, Health; a person without the permission sees none | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P681 | Press Users | The project's sign-ups, one line each with email, how they sign in, joined, last sign-in, Confirmed and Blocked; Next page when there are more than 25 | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P682 | Press Storage, then a bucket, then a folder | Buckets marked Public or Private; inside, the path as links at the top, folders first, each file's size and type | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P683 | Press Health | Memory, disk and connections as percentages with a coloured dot, database size and load; any figure Supabase does not give is a dash, or the page says why the metrics could not be read | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P700 | As an Owner, a Supabase database, Change key: paste an access token made at supabase.com/dashboard/account/tokens, leave the key empty, Save and check | Checked; the Access token field was not required | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P701 | Press Health | Under the figures, a Requests chart (Data API, Auth, Storage, Realtime) with Last hour, Last day, Last 7 days, and Backups; without a token, one note saying how to add one | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P702 | Press Logs, then Database, then Last day, and search a word | The newest lines with their level, the chips kept while searching | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P703 | Press Functions, then Advisors | Each Edge Function with its state; the advisors' findings counted by Fix now, Look at, Note, each with a link to Supabase's guide | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P704 | On the database's page, Ask: SELECT count(*) FROM public.<a table> | One row with the count | [README](../modules/data/README.md#questions-in-sql) |
-| P755 | (Owner, once: redeploy the relay, and give the Supabase OAuth app Database, Edge Functions and Analytics Read where listed.) Remove a Supabase database, then on Data, Connect Supabase, press Sign in with Supabase and Connect | It connects with no access token pasted; its Logs, Functions, Advisors and Health's Requests and Backups open without "Add a Supabase access token" | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P756 | Come back to that database's Logs more than an hour later | The lines load (the token was renewed on the way); a sign-in Supabase ended instead says to paste a token or sign in again | [README](../modules/data/README.md#a-supabase-project-beyond-its-tables) |
-| P757 | On a Neon database's page, Change key: paste the connection string again and a project-scoped Neon API key, Save, then press Usage | Compute time, storage and data written for this period, the compute's state and size, and each branch with its size | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P758 | On a Turso database's page, Change key: paste a Turso API token (turso auth api-tokens mint) and leave the token empty, Save, then press Usage | Rows read and written this month, storage, the group and region | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P759 | Press Usage on a Neon or Turso database without an API key | One notice saying to add the key with Change key, nothing else broken | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P761 | Open a database on the phone | Under the tabs one row of buttons (Ask in SQL, Rename, Change key, Remove database), one line of figures, then the tables at once, each with a coloured tile (blue table, violet view); Editing and Recent changes below them | [README](../modules/data/README.md#the-pages) |
-| P762 | Open a Supabase database's Health on the phone and swipe sideways | The page does not move sideways; the request chart fits the screen | [README](../modules/data/README.md#the-pages) |
-| P817 | Open a Supabase database (with its access token) on a computer, then on the phone | The tables as cards filling the width, grouped by schema, each with coloured tags for rows, size, columns and RLS on or off; the figures give Healthy, the database size, row security and the Postgres version; with nine or more tables a Find a table box narrows them as you type | [README](../modules/data/README.md#the-pages) |
-| P818 | Open a Supabase database without an access token | The cards still show with their column counts, and one line says to add an access token with Change key | [README](../modules/data/README.md#the-pages) |
-| P819 | Open a Supabase database (with a personal access token) and press Usage, last in the row of tabs | The plan, compute and Takes changes in one line; a card each for Database, Disk, File storage, Monthly active users and Edge Functions with a coloured meter, percent used and what is left; the plan's limits in one line below; a link to Supabase's usage page for egress | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P820 | The same Usage tab on the phone, light and dark | The cards stack one under another, nothing runs off the screen sideways, the meters fill each card | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P830 | Open a table of a connected database | Its commands first (All tables in the database, and Hide or mask columns if you manage it), a search, then one line with the rows shown, the columns and the order before the rows; Next page carries an arrow | [README](../modules/data/README.md#the-pages) |
-| P831 | As a manager, press Hide or mask columns | A pop-up with each column and its Shown, Masked, Hidden choice; Save columns closes it and says it saved | [README](../modules/data/README.md#the-pages) |
-| P832 | Open a row of a database with editing on, on the phone, light and dark | Back and Delete row at the top, the counts in one line, then a card per column with a coloured tile; yes-or-no columns are two chips, locked ones show their value with a lock and why; Save changes and Discard changes stay at the bottom while you scroll | [README](../modules/data/README.md#the-pages) |
-| P833 | Open a Supabase database (with its access token) and press Storage | One line with the buckets, how many are public, the files and the space they take; a card per bucket, amber when public and green when private, with its files, size and limits as coloured tags | [README](../modules/data/README.md#the-pages) |
-| P834 | As a manager, press Use in Files on a bucket's card | Files opens its storage form with Supabase Storage picked and the project, region and bucket already filled in; only the keys are left to paste | [README](../modules/data/README.md#the-pages) |
-| P835 | Press Functions, then Advisors | Functions: a card per function with Running, its version and Sign-in needed or Open to anyone; a tap opens it on Supabase in a new tab. Advisors: Security cards first, then Speed, each tile coloured by how serious it is, with How to fix | [README](../modules/data/README.md#the-pages) |
-| P836 | Press Logs on the phone, light and dark | Under the search, the errors, warnings and information among the lines shown; errors are red only when there are some | [README](../modules/data/README.md#the-pages) |
-| P837 | Open a Supabase database (with its access token) and press Settings, last in the row of tabs | Services each Healthy in green (or not, in red); Sign-in with sign-ups, email, phone, the authenticator app, password length and who sends its emails, then the other ways in as tags; Security with SSL and who may connect; the extensions with versions | [README](../modules/data/README.md#the-pages) |
-| P838 | The same Settings tab with a sign-in made before Auth Read was given to the Supabase app | The parts it can read still show, and one line names the part it may not read | [README](../modules/data/README.md#the-pages) |
-| P839 | Open a Neon database with its API key and press Usage | The branches are cards, the main one green with a Main tag, each with its size and state as coloured tags | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P840 | Open a Turso database with its API token and press Usage | Under this month's figures, The account's allowance: a card each for rows read, rows written, storage and databases, with a meter and what is left where the plan gives a limit | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P886 | On an Upstash Redis database's page, Change key: fill in your Upstash account email and a read-only API key (Upstash Console, Account, Management API), leave the token empty, Save | Saved; the page shows a Usage tab beside Tables | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P887 | Press Usage on that Upstash database | Today's commands, reads, writes, keys, connections and hit rate; requests this month and storage as cards with a meter against the plan; the plan's limits; the plan, region and a link to the Upstash Console | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P888 | Press Usage on an Upstash database without the email or the key, on the phone, light and dark | One notice saying to add the account email and a read-only API key with Change key | [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash) |
-| P889 | With Database checks on and an Upstash, Turso or Supabase database given its API key or access token, open Status an hour later | Under Data, a line for the services check: the database's name and "nothing needs a look" | [README](../modules/data/README.md) |
-| P890 | The same, for a database past 80% of its plan (or a Supabase disk 90% full) | Status shows the check as to look at, naming the database and the figure, such as "requests this month at 85% of the plan"; Home's Status line counts it | [README](../modules/data/README.md) |
-| P891 | Open an Airtable database | Each base's heading ends with your access there (such as Editor); each table's card shows its description, its fields and its views as tags | [README](../modules/data/README.md#the-pages) |
-| P892 | Open an Airtable table, then press one of its views in the row of chips | The records that view shows, in its order ("As in the view"); search and Next page keep the view; All records goes back | [README](../modules/data/README.md#the-pages) |
-| P893 | With a Supabase database given its access token (or a Neon one its API key), open Backups | Under Runs, Your databases’ own backups: a card for it saying how many copies Supabase keeps and the newest, and whether point-in-time recovery is on (Neon: how far back it can restore); the card opens the database | [screens README](../packages/screens/README.md) |
-| P894 | The same page as someone who may not see a database's insights, on the phone, light and dark | No such section; the rest of Backups as before | [screens README](../packages/screens/README.md) |
-| P897 | Open a Supabase database, then the Overview tab | Five tabs (Overview, Database, Users, Storage, Functions); a verdict at the top; Needs you lists each problem with why and a link that opens where to fix it; figures with notes; Look closer cards for Health, Advice, Usage, Logs and Settings | [Data](../modules/data/README.md) |
-| P898 | From the Overview open Health, then Settings, on the phone, light and dark | Overview stays marked in the tabs; the page opens as before; no tab row scrolls off the screen | [Data](../modules/data/README.md) |
-| P899 | On a Supabase database's Storage tab with no bucket, press New bucket, make a private one, then Upload files and pick two files | The bucket opens saying Bucket made; after the upload it says Uploaded and lists both files; New folder makes a folder you can open | [Data](../modules/data/README.md) |
-| P906 | Open one of those files, then Open, Download, Share link, Rename or move, and Delete it; then Empty bucket and Delete bucket, on the phone | An image shows on its page; Open and Download open Supabase's signed link; Share link shows a link to copy; each change says it was done; Delete bucket after Empty bucket goes back to the buckets | [Data](../modules/data/README.md) |
-| P907 | On a Supabase database's Functions tab, open a function, then pick Last hour and 7 days | Its page shows Running, Calls, Failed, Typical time and Slowest, a chart of its calls (or No calls), and its details with the secrets' names only | [Data](../modules/data/README.md) |
-| P908 | On that page press Run, leave the body empty and press Run, on the phone | It comes back with Answered and the status and time at the top, and what the function said under it; a reader sees no Run | [Data](../modules/data/README.md) |
-| P909 | On a Supabase database's Overview open Advisors; on a card with Fix it, open The fix, in SQL, then press Fix it | The SQL shows on the card; the confirm says what the fix changes; after Fix it the page says Fixed, and the finding is gone within a few minutes | [Data](../modules/data/README.md) |
-| P917 | Open the same Advisors page as someone who only reads Data, on the phone | The SQL shows on each card that has a fix, but no Fix it | [Data](../modules/data/README.md) |
-| P918 | On a Supabase database's Users tab press Invite someone and send one to an address of yours | It says Invited; the invite email arrives from Supabase; the new user is in the list | [Data](../modules/data/README.md) |
-| P919 | Open that user, then Send password reset, Block, Let back in and Delete user, on the phone | Each asks first and comes back saying it was done; after Delete user the list opens without them | [Data](../modules/data/README.md) |
-| P920 | Open a Supabase database's page on the phone and at full width, light and dark | Ten tabs with an icon and a coloured dot each scroll sideways; Ask in SQL, Rename, Change key and Remove database sit on their own line under them; the facts are coloured cards; the tables follow | [Data](../modules/data/README.md) |
-| P921 | Open a Supabase database's Settings tab on the phone and at full width, light and dark | Each setting is a card with its name on top and its value under it; protections on are green, open or weak ones amber; tabs show one icon each; the summary line names the project once; Extensions has a count and plain tags; Change these on Supabase opens a new tab | [Data](../modules/data/README.md) |
-| P922 | Open a Supabase database's page, then Settings, on the phone and at full width, light and dark | Settings: panes with an icon, each saying how many to look at, each setting a row with its value as a coloured pill. The database's page: the tables first, then At a glance, Editing and Look closer as panes | [Data](../modules/data/README.md) |
+From [record](../archive/records/2026-11-22-supabase-one-click.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P394 | As the Vendor: Settings, System, "Sign-in service for Slack, Discord, Google and Supabase" (now "…, Supabase and Airtable") set to the relay; then as an Owner: Work, Data, Connect a database, the Supabase card | "Sign in with Supabase" above the steps and the key form |
+| P395 | Sign in with Supabase; on Supabase's page, Cancel | Back on Connect Supabase with "Nothing was connected" and "You cancelled on Supabase's page" |
+| P396 | Sign in with Supabase with an account that has two or more projects; Authorize | "Pick a Supabase project", one row a project with its address; Connect on one goes to Supabase again and comes back to the next step |
+| P397 | Sign in with Supabase and Authorize (one project, or after picking); then Cancel; then sign in again and press Connect | "Connect <project>?" with its address and no key shown; Cancel saves nothing (Data lists nothing new); Connect opens the database's page with "Connected" and its tables |
+| P398 | As a person with View access only: open Connect Supabase | No "Sign in with Supabase", only the steps and "Ask an Owner" |
+
+From [the data README](../modules/data/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P423 | Admin, Integrations, Apps, the Data chip | Each database card with its own logo (Airtable, Neon, Supabase, Turso, Upstash) and a line saying how it connects, such as "Paste the connection string of a read-only role"; with the sign-in service set, Supabase's says "Sign in with Supabase" and its button word is Sign in |
+| P424 | Work, Data, Connect a database | The same logos on the service cards, each with its line; a database under Data shows its service's logo |
+| P425 | Home, At a glance, with one database connected | A Databases line: "1 of 1" and OK; with nothing connected it says "None" and Off, at the bottom of the list |
+| P426 | Admin, Features, Data: switch Database checks on; an hour later open Status | Database checks is off until switched on; Status lists the database check with "Shop cache: answers" (your connection's name), or the service's words when it stopped answering |
+| P427 | Work, Data, a database, Rename: type a new name, Save name | "Renamed.", the new name at the top and on the Data list; its tables open as before |
+| P428 | Sign in with Supabase and Connect a project already on the Data page (or press Connect twice) | That database's page opens with "This database was already connected, so nothing new was added."; the Data list still shows it once |
+| P429 | A database with more than 500 tables (or an Airtable account with more than 10 bases): its page | Under "Only part of the list is shown", Open a table by its name; a name not in the list opens its rows |
+
+From [record](../archive/records/2026-11-22-airtable-sign-in.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P430 | After the Airtable integration is registered on the relay (its README, step 6): Work, Data, Connect a database, the Airtable card | The card says "Sign in with Airtable, then pick the bases to read."; its page has "Sign in with Airtable" above the steps and the token form |
+| P431 | Press Sign in with Airtable, pick a base on Airtable's page and allow it | "Connect Airtable?" with Connect and Cancel; Connect opens the new connection with the picked base's tables; the phone's Back then shows that connection again, "already connected", not a second one |
+| P432 | Sign in with Airtable again and press Cancel on Airtable's page | Back on Connect Airtable: "You cancelled on Airtable’s page, so nothing was connected." |
+| P433 | Two hours after P431, open that Airtable connection and a table | The tables and rows load as before: the portal renewed the sign-in by itself |
+| P434 | Sign in with Airtable again, allow it, then press Cancel on "Connect Airtable?" | Back on Connect Airtable: "You pressed Cancel, so nothing was connected."; no new connection on the Data page |
+
+From [record](../archive/records/2026-11-23-connected-data-edits.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P435 | Work, Data, a Supabase, Neon or Turso database, as its manager: Editing (above the tables), Turn on editing | "Editing is on." at the top; the Editing section says On. Before that, Change key with a key that may write |
+| P436 | Open a table with a primary key and tap a row's first value | The row's own page with a box for each value; the key and any binary or JSON column show their value and why they cannot be changed; No value is ticked for an empty one |
+| P437 | Change one value and press Save changes; open the table again | "Saved. You can undo it under Recent changes…"; the table shows the new value |
+| P438 | Open the same row in two tabs; save a change in one, then another change in the other | The second says "The row changed after you opened it" and saves nothing; its box shows the value now, with what you typed under it |
+| P439 | The database's page, Recent changes: open the change, press Undo change | Before and after for each column, whole; then "Undone." and the row holds its old value; the change cannot be undone twice |
+| P440 | As the Owner, a row: Delete row, confirm; then open it under Recent changes and press Undo delete | "The row was deleted…"; after Undo the row is back with every value it had |
+| P441 | Change key back to a key that may only read, then Save changes on a row; then Turn off editing | "The key may only read this database", nothing changed; with editing off the row's page says Editing is off and shows no boxes |
+| P442 | An Airtable or Upstash database's page | No Editing switch; it says its rows can only be read here |
+
+From [record](../archive/records/2026-11-23-connected-data-questions.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P443 | As an Owner, a Neon or Turso database's page, Ask a question in SQL, `SELECT * FROM <a table>` | Its rows |
+| P444 | Ask `DELETE FROM <a table>` | Refused in plain words; the table unchanged |
+| P445 | Ask a question with more than 100 rows | 100 rows and a line saying there are more |
+| P446 | Edit a task or invoice that has notes | The notes show in the box |
+
+From [record](../archive/records/2026-11-23-connected-data-hidden-columns.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P460 | As an Owner, a table's Hide or mask columns: mask one, hide one, Save columns | Saved; the key column not offered |
+| P461 | As someone without hidden columns, open that table | The hidden one gone with a line saying so; the masked one shows its last 4 characters |
+| P462 | As that person, search for a value of the masked column | No row found by it |
+
+From [README](../modules/data/README.md#questions-in-sql):
+
+| # | Open | You should see |
+|---|---|---|
+| P520 | A Neon or Turso database's Ask page, type a question, Download CSV | `answer.csv` downloads with the same rows Ask shows |
+| P521 | Open that file in a spreadsheet where a value starts with `=` | The value shows as typed with an apostrophe before it, nothing runs |
+| P570 | A Neon or Turso database's Ask page, type a question and a name, Save question | Saved as that name; a chip with the name above the box |
+| P571 | Press the chip | The box filled with that question, and Remove saved question |
+| P572 | Remove saved question | Removed; the chip gone |
+| P704 | On the database's page, Ask: SELECT count(*) FROM public.<a table> | One row with the count |
+
+From [README](../modules/data/README.md#editing):
+
+| # | Open | You should see |
+|---|---|---|
+| P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again |
+
+From [README](../modules/data/README.md#the-pages):
+
+| # | Open | You should see |
+|---|---|---|
+| P573 | Home and a signed-in Airtable database whose sign-in ended | Home says signed out, sign in again; the database says Signed out, with Sign in with Airtable again |
+| P670 | On a computer, open a Supabase table with IDs, emails and times | Every row on one line; IDs as 8 characters with a copy button, times as 29 Apr 2026 16:49, Yes and No as dots; the first column stays put when scrolling sideways |
+| P671 | Press an ID's copy button and paste it somewhere | The whole ID |
+| P672 | As an Owner, open Hide or mask columns under a table's rows | A compact grid, each column's name and a Shown, Masked, Hidden switch on one line |
+| P761 | Open a database on the phone | Under the tabs one row of buttons (Ask in SQL, Rename, Change key, Remove database), one line of figures, then the tables at once, each with a coloured tile (blue table, violet view); Editing and Recent changes below them |
+| P762 | Open a Supabase database's Health on the phone and swipe sideways | The page does not move sideways; the request chart fits the screen |
+| P817 | Open a Supabase database (with its access token) on a computer, then on the phone | The tables as cards filling the width, grouped by schema, each with coloured tags for rows, size, columns and RLS on or off; the figures give Healthy, the database size, row security and the Postgres version; with nine or more tables a Find a table box narrows them as you type |
+| P818 | Open a Supabase database without an access token | The cards still show with their column counts, and one line says to add an access token with Change key |
+| P830 | Open a table of a connected database | Its commands first (All tables in the database, and Hide or mask columns if you manage it), a search, then one line with the rows shown, the columns and the order before the rows; Next page carries an arrow |
+| P831 | As a manager, press Hide or mask columns | A pop-up with each column and its Shown, Masked, Hidden choice; Save columns closes it and says it saved |
+| P832 | Open a row of a database with editing on, on the phone, light and dark | Back and Delete row at the top, the counts in one line, then a card per column with a coloured tile; yes-or-no columns are two chips, locked ones show their value with a lock and why; Save changes and Discard changes stay at the bottom while you scroll |
+| P833 | Open a Supabase database (with its access token) and press Storage | One line with the buckets, how many are public, the files and the space they take; a card per bucket, amber when public and green when private, with its files, size and limits as coloured tags |
+| P834 | As a manager, press Use in Files on a bucket's card | Files opens its storage form with Supabase Storage picked and the project, region and bucket already filled in; only the keys are left to paste |
+| P835 | Press Functions, then Advisors | Functions: a card per function with Running, its version and Sign-in needed or Open to anyone; a tap opens it on Supabase in a new tab. Advisors: Security cards first, then Speed, each tile coloured by how serious it is, with How to fix |
+| P836 | Press Logs on the phone, light and dark | Under the search, the errors, warnings and information among the lines shown; errors are red only when there are some |
+| P837 | Open a Supabase database (with its access token) and press Settings, last in the row of tabs | Services each Healthy in green (or not, in red); Sign-in with sign-ups, email, phone, the authenticator app, password length and who sends its emails, then the other ways in as tags; Security with SSL and who may connect; the extensions with versions |
+| P838 | The same Settings tab with a sign-in made before Auth Read was given to the Supabase app | The parts it can read still show, and one line names the part it may not read |
+| P891 | Open an Airtable database | Each base's heading ends with your access there (such as Editor); each table's card shows its description, its fields and its views as tags |
+| P892 | Open an Airtable table, then press one of its views in the row of chips | The records that view shows, in its order ("As in the view"); search and Next page keep the view; All records goes back |
+
+From [README](../modules/data/README.md#a-supabase-project-beyond-its-tables):
+
+| # | Open | You should see |
+|---|---|---|
+| P680 | As an Owner, open a Supabase database | Chips under the head: Tables, Users, Storage, Health; a person without the permission sees none |
+| P681 | Press Users | The project's sign-ups, one line each with email, how they sign in, joined, last sign-in, Confirmed and Blocked; Next page when there are more than 25 |
+| P682 | Press Storage, then a bucket, then a folder | Buckets marked Public or Private; inside, the path as links at the top, folders first, each file's size and type |
+| P683 | Press Health | Memory, disk and connections as percentages with a coloured dot, database size and load; any figure Supabase does not give is a dash, or the page says why the metrics could not be read |
+| P700 | As an Owner, a Supabase database, Change key: paste an access token made at supabase.com/dashboard/account/tokens, leave the key empty, Save and check | Checked; the Access token field was not required |
+| P701 | Press Health | Under the figures, a Requests chart (Data API, Auth, Storage, Realtime) with Last hour, Last day, Last 7 days, and Backups; without a token, one note saying how to add one |
+| P702 | Press Logs, then Database, then Last day, and search a word | The newest lines with their level, the chips kept while searching |
+| P703 | Press Functions, then Advisors | Each Edge Function with its state; the advisors' findings counted by Fix now, Look at, Note, each with a link to Supabase's guide |
+| P755 | (Owner, once: redeploy the relay, and give the Supabase OAuth app Database, Edge Functions and Analytics Read where listed.) Remove a Supabase database, then on Data, Connect Supabase, press Sign in with Supabase and Connect | It connects with no access token pasted; its Logs, Functions, Advisors and Health's Requests and Backups open without "Add a Supabase access token" |
+| P756 | Come back to that database's Logs more than an hour later | The lines load (the token was renewed on the way); a sign-in Supabase ended instead says to paste a token or sign in again |
+
+From [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash):
+
+| # | Open | You should see |
+|---|---|---|
+| P757 | On a Neon database's page, Change key: paste the connection string again and a project-scoped Neon API key, Save, then press Usage | Compute time, storage and data written for this period, the compute's state and size, and each branch with its size |
+| P758 | On a Turso database's page, Change key: paste a Turso API token (turso auth api-tokens mint) and leave the token empty, Save, then press Usage | Rows read and written this month, storage, the group and region |
+| P759 | Press Usage on a Neon or Turso database without an API key | One notice saying to add the key with Change key, nothing else broken |
+| P819 | Open a Supabase database (with a personal access token) and press Usage, last in the row of tabs | The plan, compute and Takes changes in one line; a card each for Database, Disk, File storage, Monthly active users and Edge Functions with a coloured meter, percent used and what is left; the plan's limits in one line below; a link to Supabase's usage page for egress |
+| P820 | The same Usage tab on the phone, light and dark | The cards stack one under another, nothing runs off the screen sideways, the meters fill each card |
+| P839 | Open a Neon database with its API key and press Usage | The branches are cards, the main one green with a Main tag, each with its size and state as coloured tags |
+| P840 | Open a Turso database with its API token and press Usage | Under this month's figures, The account's allowance: a card each for rows read, rows written, storage and databases, with a meter and what is left where the plan gives a limit |
+| P886 | On an Upstash Redis database's page, Change key: fill in your Upstash account email and a read-only API key (Upstash Console, Account, Management API), leave the token empty, Save | Saved; the page shows a Usage tab beside Tables |
+| P887 | Press Usage on that Upstash database | Today's commands, reads, writes, keys, connections and hit rate; requests this month and storage as cards with a meter against the plan; the plan's limits; the plan, region and a link to the Upstash Console |
+| P888 | Press Usage on an Upstash database without the email or the key, on the phone, light and dark | One notice saying to add the account email and a read-only API key with Change key |
+
+From [README](../modules/data/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P889 | With Database checks on and an Upstash, Turso or Supabase database given its API key or access token, open Status an hour later | Under Data, a line for the services check: the database's name and "nothing needs a look" |
+| P890 | The same, for a database past 80% of its plan (or a Supabase disk 90% full) | Status shows the check as to look at, naming the database and the figure, such as "requests this month at 85% of the plan"; Home's Status line counts it |
+
+From [screens README](../packages/screens/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P893 | With a Supabase database given its access token (or a Neon one its API key), open Backups | Under Runs, Your databases’ own backups: a card for it saying how many copies Supabase keeps and the newest, and whether point-in-time recovery is on (Neon: how far back it can restore); the card opens the database |
+| P894 | The same page as someone who may not see a database's insights, on the phone, light and dark | No such section; the rest of Backups as before |
+
+From [Data](../modules/data/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P897 | Open a Supabase database, then the Overview tab | Five tabs (Overview, Database, Users, Storage, Functions); a verdict at the top; Needs you lists each problem with why and a link that opens where to fix it; figures with notes; Look closer cards for Health, Advice, Usage, Logs and Settings |
+| P898 | From the Overview open Health, then Settings, on the phone, light and dark | Overview stays marked in the tabs; the page opens as before; no tab row scrolls off the screen |
+| P899 | On a Supabase database's Storage tab with no bucket, press New bucket, make a private one, then Upload files and pick two files | The bucket opens saying Bucket made; after the upload it says Uploaded and lists both files; New folder makes a folder you can open |
+| P906 | Open one of those files, then Open, Download, Share link, Rename or move, and Delete it; then Empty bucket and Delete bucket, on the phone | An image shows on its page; Open and Download open Supabase's signed link; Share link shows a link to copy; each change says it was done; Delete bucket after Empty bucket goes back to the buckets |
+| P907 | On a Supabase database's Functions tab, open a function, then pick Last hour and 7 days | Its page shows Running, Calls, Failed, Typical time and Slowest, a chart of its calls (or No calls), and its details with the secrets' names only |
+| P908 | On that page press Run, leave the body empty and press Run, on the phone | It comes back with Answered and the status and time at the top, and what the function said under it; a reader sees no Run |
+| P909 | On a Supabase database's Overview open Advisors; on a card with Fix it, open The fix, in SQL, then press Fix it | The SQL shows on the card; the confirm says what the fix changes; after Fix it the page says Fixed, and the finding is gone within a few minutes |
+| P917 | Open the same Advisors page as someone who only reads Data, on the phone | The SQL shows on each card that has a fix, but no Fix it |
+| P918 | On a Supabase database's Users tab press Invite someone and send one to an address of yours | It says Invited; the invite email arrives from Supabase; the new user is in the list |
+| P919 | Open that user, then Send password reset, Block, Let back in and Delete user, on the phone | Each asks first and comes back saying it was done; after Delete user the list opens without them |
+| P920 | Open a Supabase database's page on the phone and at full width, light and dark | Ten tabs with an icon and a coloured dot each scroll sideways; Ask in SQL, Rename, Change key and Remove database sit on their own line under them; the facts are coloured cards; the tables follow |
+| P921 | Open a Supabase database's Settings tab on the phone and at full width, light and dark | Each setting is a card with its name on top and its value under it; protections on are green, open or weak ones amber; tabs show one icon each; the summary line names the project once; Extensions has a count and plain tags; Change these on Supabase opens a new tab |
+| P922 | Open a Supabase database's page, then Settings, on the phone and at full width, light and dark | Settings: panes with an icon, each saying how many to look at, each setting a row with its value as a coloured pill. The database's page: the tables first, then At a glance, Editing and Look closer as panes |

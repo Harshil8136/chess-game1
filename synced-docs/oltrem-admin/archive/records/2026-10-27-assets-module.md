@@ -84,4 +84,4 @@ Needs you only where the reader manages; the privacy answer. The client template
 adds an item as the Owner through the page's form, is refused an unknown address, hands it to
 themselves, finds it under Yours, is refused retiring it while held, takes it back and retires it.
 Not checked: a phone, a deployed portal, and the email opened in a real mail app. Those are listed
-in the [verification log](../../docs/verification-log.md).
+in the [verification log](2026-11-25-to-26-verification-log.md).

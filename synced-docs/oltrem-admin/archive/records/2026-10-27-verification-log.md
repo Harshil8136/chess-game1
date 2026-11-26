@@ -9,7 +9,7 @@ sources: [the commits of this repository on 2026-10-27 and their verify runs]
 # Verification log, 27 October 2026, first part
 
 > **In plain words.** The first twenty-six rows of 27 October from the
-> [verification log](../../docs/verification-log.md), moved here unchanged on 2026-10-27 when the log
+> [verification log](2026-11-25-to-26-verification-log.md), moved here unchanged on 2026-10-27 when the log
 > passed its size budget, so the log stays small enough to load whole.
 
 | Date | What was checked | What was not |

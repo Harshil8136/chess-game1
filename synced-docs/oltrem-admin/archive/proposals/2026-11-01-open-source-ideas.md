@@ -20,7 +20,7 @@ sources: [the projects and pages listed under Sources]
 palette), Needs you on Home, "see it as", the audit log viewer and its daily seal, nightly
 backups with restore drills, the free-plan budgets on System status, webhooks with retries and a
 delivery log, the Modules page (on and off per client), brand colours, a privacy request with
-one-file export, and comments on tasks. See the [roadmap](../roadmap.md) and the
+one-file export, and comments on tasks. See the [roadmap](../../docs/roadmap.md) and the
 [screens README](../../packages/screens/README.md).
 
 **How to read the costs.** "CPU" is per request (limit 10 ms). "D1" counts rows read and written

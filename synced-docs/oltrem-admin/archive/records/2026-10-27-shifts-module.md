@@ -67,4 +67,4 @@ shift on the page, is refused a second at the same time, publishes the week and 
 and its email in the outbox; that journey caught a message key longer than email accepts, now
 shorter. The pages were opened at 360 px in light and dark. Not checked: a phone, a deployed
 portal, and an email in a real mailbox. Those are listed in the
-[verification log](../../docs/verification-log.md).
+[verification log](2026-11-25-to-26-verification-log.md).

@@ -15,121 +15,250 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; arch
 
 ## Owed
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P658 | Users and access, API keys, Make a key: a name, a role, Read only, 15 calls a minute, More limits: one part, an end in 7 days | The key is shown once with Copy; the list shows okey_ and its id, the role, Works until the date; Users does not list it | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P659 | Tap the key | Details: state, role, Read only, 15, the part, Any address, Never used; Rotate, Change limits, Change access, Revoke in one row | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P660 | On a computer, run the curl line from How to use with the key | A JSON answer; a minute later Calls shows a column and the call with its status and your address | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P661 | Run a POST with the read-only key, then add an address in Change limits that is not yours and call again | 403 saying the key only reads, then 403 naming your address; both refused calls show in Calls | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P662 | Rotate, keep the old secret 1 hour | The new key shown once; calls work with both until the hour is up; Details shows until when the old one works | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P663 | Change access to another role | The role in Details changes; History lists every step in plain words | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P664 | Revoke, then Delete | After Revoke only Delete is offered; after Delete the key leaves the list and the Audit log keeps both | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P665 | Open the old key account link you had in Users | It says it belongs to an API key and links to the key's page | [record](../archive/records/2026-11-25-api-keys-management.md) |
-| P667 | Users and access, API keys, How to use | Chips Quick start, Endpoints, Errors, How access works; coloured cards; cURL, JavaScript and Python each with Copy; an endpoint opens to its cURL line | [record](../archive/records/2026-11-25-api-key-pages-made-over.md) |
-| P668 | The keys list, then a key | Figures above coloured key rows with a state tag; the key's page titled with its name, figures and two cards, Access and Key | [record](../archive/records/2026-11-25-api-key-pages-made-over.md) |
-| P669 | The key's Calls, then History | A 7-day chart and the latest calls with method and status tags; History steps with coloured tags | [record](../archive/records/2026-11-25-api-key-pages-made-over.md) |
-| P678 | The key's How to use, a read-only key with one part | Only GET routes of that part, each opening to a ready call; the errors list with colours and fixes | [record](../archive/records/2026-11-25-api-key-pages-made-over.md) |
-| P679 | Integrations, Developer: the chips, then API reference; then API keys, How to use, the end of How access works | An API keys chip opens the keys; API reference starts with a note linking to How to use and API keys; How to use links to webhooks in Developer | [record](../archive/records/2026-11-25-api-key-pages-made-over.md) |
-| P794 | API keys, How to use: tap another part's chip, then open a POST route | One part's routes at a time; the route lists its Body fields (kind, required, limits) and a cURL call with a body of its required fields | [record](../archive/records/2026-11-25-api-reference-and-openapi.md) |
-| P795 | How to use, OpenAPI file; then a key's How to use, OpenAPI file | A JSON file downloads (portal-openapi.json, then key-…-openapi.json with only that key's routes); Postman or Insomnia imports it | [record](../archive/records/2026-11-25-api-reference-and-openapi.md) |
-| P796 | Home, as an Owner, with a key that ends within 7 days or one not used for 90 days | Needs you says 1 API key ends this week, or 1 API key unused for 90 days, and opens the key | [record](../archive/records/2026-11-25-api-reference-and-openapi.md) |
-| P646 | Signed in on two browsers: My access, Your sign-ins, Sign out on the other one | It asks first; that browser is signed out, this one stays | [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md) |
-| P647 | After P644: My access, Your sign-ins; as the Owner, the person's Sessions | The sign-in reads "Also used from …" in the attention colour | [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md) |
-| P644 | Signed in on the phone: switch a VPN on to another country, then open any page | An email "Your sign-in to … was used from another country", with both places and your local time; as the Owner, Alerts shows a warning with Mark resolved | [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md) |
-| P645 | Sign in from a new browser, then open the email | The subject names the browser and country; the time reads in your own time zone first, with UTC beside it | [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md) |
-| P643 | Settings, Modules, Access (a portal where nobody switched Sign-in alerts off) | Sign-in alerts on; signing in from another browser brings the email | [record](../archive/records/2026-11-24-sign-in-alerts-on.md) |
-| P640 | My access, Your sign-ins | Report a sign-in, then Sign out everywhere, in one row; Report a sign-in asks first and says whoever looks after access is told | [record](../archive/records/2026-11-24-report-a-sign-in.md) |
-| P641 | Signed in on two browsers: press Report a sign-in on one, then Report and sign out | Signed out on both; the alert recipients get a Critical email naming you and the other browser | [record](../archive/records/2026-11-24-report-a-sign-in.md) |
-| P642 | As the Owner, Alerts | The report is open, with Mark resolved; pressing it moves it to resolved | [record](../archive/records/2026-11-24-report-a-sign-in.md) |
-| P400 | Notifications, scroll past How you are told | Keep portal emails in your main inbox: Gmail filter, Add to contacts and Send me a test in one row (it slides sideways if narrow), four steps, and who portal emails come from | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P401 | Press Send me a test | A notice that a test is on its way; within a minute an email "Is this email in your main inbox?", plain text, from the portal's address | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P402 | On a computer: Gmail filter, then in Gmail Settings, See all settings, Filters and Blocked Addresses, Import filters, the file, Create filters | One filter, from the portal's domain, Categorize as Primary, Never send it to Spam; press Send me a test again and it lands in Primary | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P403 | On the phone: Add to contacts | The phone offers to save one contact, named after the portal's mail, with its email addresses | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P404 | Sign in from a new browser (Sign-in alerts on), then open the email | It starts with Hello, and its last line points to the one-minute step; tapping the address opens Notifications at that section | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P405 | Users and access, invite one of your own other addresses, then open the email | It starts with Hello, and ends with Once you are in, and the same line | [record](../archive/records/2026-11-22-main-inbox-step.md) |
-| P299 | As someone whose role was given at one location only, open Settings or Integrations | Refused, saying it is needed for the whole company; as the Owner, the same page works | [record](../archive/records/2026-11-20-security-and-access.md) |
-| P300 | An invitation link, opened in two tabs: press Accept in both | One account and one role; the other tab says the invitation was used or withdrawn | [record](../archive/records/2026-11-20-security-and-access.md) |
-| P301 | Developer, make a webhook whose address has a path; then Activity log | The log names only the host of the address | [record](../archive/records/2026-11-20-security-and-access.md) |
-| P249 | A new portal, as the Vendor, before the company is named: open Tasks, Invoices, Campaigns, Analytics from the sidebar | Each shows First, name the company with the form; never Invalid input or You do not have access | [record](../archive/records/2026-11-15-review-team-cpu-and-first-run.md) |
-| P219 | As the Vendor: anyone's Overrides | Vendor-level permissions listed, marked Vendor level; ticking one and Save gives it; an Owner never sees them | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P218 | As the Vendor or another Owner: an Owner's Overrides; untick one, Save | It reads Denied for them; that Owner loses it from their next request; Reset gives it back | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P217 | Then Unblock them | They can sign in again; the browser the block signed out must sign in again | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P216 | A user (not an Owner), Sessions: Block sign-in, 1 day, a reason | Signed out at once; Users lists them under Blocked; their Sessions page says until when, with Unblock | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P215 | A user, Sessions: Set end time on an active session, In 1 hour, Save | The row says ends with the time; past it, that browser must sign in again | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P214 | A user's page | Their name is the heading; one line of facts; no big card; Overview, Permissions, Overrides, Sessions, Activity | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P213 | Users | A small Invite beside the heading; each row two lines, name then roles and last sign-in; a pill only for Blocked or Deactivated | [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
-| P137 | As an Owner (not the Vendor): change a role or give a permission override | It is done at once; no "sign in again" page | [record](../archive/records/2026-11-11-users-pages.md) |
-| P136 | Users: type part of a name in the search box; tap a role chip, then Deactivated | The list narrows as you type; each chip shows its count; the page never scrolls sideways | [record](../archive/records/2026-11-11-users-pages.md) |
-| P135 | A user, Sessions: End one sign-in, then Sign out everywhere | Each asks first; the browser is signed out; Sign-in history lists their sign-ins with the browser in words | [record](../archive/records/2026-11-11-users-pages.md) |
-| P134 | A user's page: give another role with Access ends 1 day; then Change it to another role | The row says "until" tomorrow; the change dialog offers Keep first; the grid of modules shows their level in colour | [record](../archive/records/2026-11-11-users-pages.md) |
-| P133 | Users, Invite people: pick a role card, leave No end date, send | Each card says what the role does and how many have it; the invitation is made; its row says the role | [record](../archive/records/2026-11-11-users-pages.md) |
-| P11 | Users, Invite people | the form, the invitation made, its link copyable | [record](../archive/records/2026-10-27-access-screens.md) |
-| P12 | A person, View what they can do | the person's access by place, in words | [record](../archive/records/2026-10-21-see-it-as.md) |
-| P126 | As the Vendor, invite an Owner | Invited; no second person asked | [iam](../modules/iam/README.md) |
+From [record](../archive/records/2026-11-25-api-keys-management.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P658 | Users and access, API keys, Make a key: a name, a role, Read only, 15 calls a minute, More limits: one part, an end in 7 days | The key is shown once with Copy; the list shows okey_ and its id, the role, Works until the date; Users does not list it |
+| P659 | Tap the key | Details: state, role, Read only, 15, the part, Any address, Never used; Rotate, Change limits, Change access, Revoke in one row |
+| P660 | On a computer, run the curl line from How to use with the key | A JSON answer; a minute later Calls shows a column and the call with its status and your address |
+| P661 | Run a POST with the read-only key, then add an address in Change limits that is not yours and call again | 403 saying the key only reads, then 403 naming your address; both refused calls show in Calls |
+| P662 | Rotate, keep the old secret 1 hour | The new key shown once; calls work with both until the hour is up; Details shows until when the old one works |
+| P663 | Change access to another role | The role in Details changes; History lists every step in plain words |
+| P664 | Revoke, then Delete | After Revoke only Delete is offered; after Delete the key leaves the list and the Audit log keeps both |
+| P665 | Open the old key account link you had in Users | It says it belongs to an API key and links to the key's page |
+
+From [record](../archive/records/2026-11-25-api-key-pages-made-over.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P667 | Users and access, API keys, How to use | Chips Quick start, Endpoints, Errors, How access works; coloured cards; cURL, JavaScript and Python each with Copy; an endpoint opens to its cURL line |
+| P668 | The keys list, then a key | Figures above coloured key rows with a state tag; the key's page titled with its name, figures and two cards, Access and Key |
+| P669 | The key's Calls, then History | A 7-day chart and the latest calls with method and status tags; History steps with coloured tags |
+| P678 | The key's How to use, a read-only key with one part | Only GET routes of that part, each opening to a ready call; the errors list with colours and fixes |
+| P679 | Integrations, Developer: the chips, then API reference; then API keys, How to use, the end of How access works | An API keys chip opens the keys; API reference starts with a note linking to How to use and API keys; How to use links to webhooks in Developer |
+
+From [record](../archive/records/2026-11-25-api-reference-and-openapi.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P794 | API keys, How to use: tap another part's chip, then open a POST route | One part's routes at a time; the route lists its Body fields (kind, required, limits) and a cURL call with a body of its required fields |
+| P795 | How to use, OpenAPI file; then a key's How to use, OpenAPI file | A JSON file downloads (portal-openapi.json, then key-…-openapi.json with only that key's routes); Postman or Insomnia imports it |
+| P796 | Home, as an Owner, with a key that ends within 7 days or one not used for 90 days | Needs you says 1 API key ends this week, or 1 API key unused for 90 days, and opens the key |
+
+From [record](../archive/records/2026-11-25-sign-in-used-elsewhere.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P646 | Signed in on two browsers: My access, Your sign-ins, Sign out on the other one | It asks first; that browser is signed out, this one stays |
+| P647 | After P644: My access, Your sign-ins; as the Owner, the person's Sessions | The sign-in reads "Also used from …" in the attention colour |
+| P644 | Signed in on the phone: switch a VPN on to another country, then open any page | An email "Your sign-in to … was used from another country", with both places and your local time; as the Owner, Alerts shows a warning with Mark resolved |
+| P645 | Sign in from a new browser, then open the email | The subject names the browser and country; the time reads in your own time zone first, with UTC beside it |
+
+From [record](../archive/records/2026-11-24-sign-in-alerts-on.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P643 | Settings, Modules, Access (a portal where nobody switched Sign-in alerts off) | Sign-in alerts on; signing in from another browser brings the email |
+
+From [record](../archive/records/2026-11-24-report-a-sign-in.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P640 | My access, Your sign-ins | Report a sign-in, then Sign out everywhere, in one row; Report a sign-in asks first and says whoever looks after access is told |
+| P641 | Signed in on two browsers: press Report a sign-in on one, then Report and sign out | Signed out on both; the alert recipients get a Critical email naming you and the other browser |
+| P642 | As the Owner, Alerts | The report is open, with Mark resolved; pressing it moves it to resolved |
+
+From [record](../archive/records/2026-11-22-main-inbox-step.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P400 | Notifications, scroll past How you are told | Keep portal emails in your main inbox: Gmail filter, Add to contacts and Send me a test in one row (it slides sideways if narrow), four steps, and who portal emails come from |
+| P401 | Press Send me a test | A notice that a test is on its way; within a minute an email "Is this email in your main inbox?", plain text, from the portal's address |
+| P402 | On a computer: Gmail filter, then in Gmail Settings, See all settings, Filters and Blocked Addresses, Import filters, the file, Create filters | One filter, from the portal's domain, Categorize as Primary, Never send it to Spam; press Send me a test again and it lands in Primary |
+| P403 | On the phone: Add to contacts | The phone offers to save one contact, named after the portal's mail, with its email addresses |
+| P404 | Sign in from a new browser (Sign-in alerts on), then open the email | It starts with Hello, and its last line points to the one-minute step; tapping the address opens Notifications at that section |
+| P405 | Users and access, invite one of your own other addresses, then open the email | It starts with Hello, and ends with Once you are in, and the same line |
+
+From [record](../archive/records/2026-11-20-security-and-access.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P299 | As someone whose role was given at one location only, open Settings or Integrations | Refused, saying it is needed for the whole company; as the Owner, the same page works |
+| P300 | An invitation link, opened in two tabs: press Accept in both | One account and one role; the other tab says the invitation was used or withdrawn |
+| P301 | Developer, make a webhook whose address has a path; then Activity log | The log names only the host of the address |
+
+From [record](../archive/records/2026-11-15-review-team-cpu-and-first-run.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P249 | A new portal, as the Vendor, before the company is named: open Tasks, Invoices, Campaigns, Analytics from the sidebar | Each shows First, name the company with the form; never Invalid input or You do not have access |
+
+From [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overrides.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P219 | As the Vendor: anyone's Overrides | Vendor-level permissions listed, marked Vendor level; ticking one and Save gives it; an Owner never sees them |
+| P218 | As the Vendor or another Owner: an Owner's Overrides; untick one, Save | It reads Denied for them; that Owner loses it from their next request; Reset gives it back |
+| P217 | Then Unblock them | They can sign in again; the browser the block signed out must sign in again |
+| P216 | A user (not an Owner), Sessions: Block sign-in, 1 day, a reason | Signed out at once; Users lists them under Blocked; their Sessions page says until when, with Unblock |
+| P215 | A user, Sessions: Set end time on an active session, In 1 hour, Save | The row says ends with the time; past it, that browser must sign in again |
+| P214 | A user's page | Their name is the heading; one line of facts; no big card; Overview, Permissions, Overrides, Sessions, Activity |
+| P213 | Users | A small Invite beside the heading; each row two lines, name then roles and last sign-in; a pill only for Blocked or Deactivated |
+
+From [record](../archive/records/2026-11-11-users-pages.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P137 | As an Owner (not the Vendor): change a role or give a permission override | It is done at once; no "sign in again" page |
+| P136 | Users: type part of a name in the search box; tap a role chip, then Deactivated | The list narrows as you type; each chip shows its count; the page never scrolls sideways |
+| P135 | A user, Sessions: End one sign-in, then Sign out everywhere | Each asks first; the browser is signed out; Sign-in history lists their sign-ins with the browser in words |
+| P134 | A user's page: give another role with Access ends 1 day; then Change it to another role | The row says "until" tomorrow; the change dialog offers Keep first; the grid of modules shows their level in colour |
+| P133 | Users, Invite people: pick a role card, leave No end date, send | Each card says what the role does and how many have it; the invitation is made; its row says the role |
+
+From [record](../archive/records/2026-10-27-access-screens.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P11 | Users, Invite people | the form, the invitation made, its link copyable |
+
+From [record](../archive/records/2026-10-21-see-it-as.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P12 | A person, View what they can do | the person's access by place, in words |
+
+From [iam](../modules/iam/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P126 | As the Vendor, invite an Owner | Invited; no second person asked |
 
 ### Email settings, Compose and the role editor, 22 November
 
-| # | Open | You should see | From |
-|---|---|---|---|
-| P416 | Email, any folder | A gear in the top bar, beside Search (on a computer, at the head's right beside the bell); press it: Email settings. Back in Email, a Settings row at the foot of the sidebar (on a phone, in the menu) opens the same page | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P417 | Email, Compose | A plain head with New email and Close; at the foot one row: Send with an arrow beside it, Attach, Template, Preview, a green check mark when it is ready, and More | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P418 | The arrow beside Send; then More | Schedule send with a day and a time; then More opens Save draft and Save as template. The bold, italic and list buttons sit under the message | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P419 | Users, a user, Permissions, open a module | Each permission with Inherit, Allow and Deny as one even control, nothing cut off or faded, and its name such as `access.users.read` in small code type with a Copy button; Copy puts the name on the clipboard | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P420 | The same user: the Policy JSON tab at the top | Their access as Policy JSON with Copy, one tap from Permissions | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P421 | Users, Roles, a role | Three tabs: Permissions, Assigned to, Policy JSON. Permissions is one list of modules with None, View, Edit and Manage; a level a module has not shows a dash. Assigned to shows the users and groups, Move up and Move down, and Remove when the role was never given | [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md) |
-| P455 | Users, a user (Overview) | Under their name one line with their avatar, status and role, then Overview, Permissions, Sessions, Activity; no Signed in today or Access requests chips. Cards numbered 1 Roles (Add role at the top right), 2 Their own Allow and Deny (Change at the top right), 3 What they can do; Account beside them on a computer, under them on a phone | [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md) |
-| P456 | The same user, 3 What they can do | One even list: each area with a coloured dot and Manage, Edit, View or Limited, and "2 of 8"; the areas with no access as one line at the end; tap an area: its permissions open | [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md) |
-| P457 | The same user, Permissions, then Policy JSON at the right end of the row | Their own policy in a box with Format, Copy and Download at the top right; From roles beside it (under it on a phone) with each role's Policy JSON link | [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md) |
-| P458 | Policy JSON: delete a comma | The line under the box says Not valid JSON at line N, column N; press Format: back in order once fixed. Press Check with a valid edit: what Save would add and end; Save: Their permissions were saved | [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md) |
-| P459 | Settings, Name and icon | A preview of the sidebar, the phone bar and the browser tab; type a name and a Line under the name (Front desk): all three change as you type; Save: the sidebar shows Front desk under the name | [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md) |
-| P505 | Users, Roles, a role, Assigned to | The role's name as the page title; a card Assigned to (Pick a user when no one holds it), and beside it (under it on a phone) Rank with Move up and Move down, and Remove | [record](../archive/records/2026-11-24-access-pages-review.md) |
-| P506 | Users, Groups with no groups | One empty state, No groups yet, saying what a group is for | [record](../archive/records/2026-11-24-access-pages-review.md) |
-| P507 | As the Vendor: an Owner, Permissions, on a phone | One line, "N of M permissions at ... As an Owner they have all but the Vendor's", then the search, then the modules near the top; no blue box | [record](../archive/records/2026-11-24-access-pages-review.md) |
-| P508 | The same page, open Users and access, then a module with the Owner's own | Each row shows only what can be saved: the Owner's own as Inherit and Deny; nothing that would be refused on Save | [record](../archive/records/2026-11-24-access-pages-review.md) |
-| P509 | As an Owner (not the Vendor): another Owner, Permissions, Users and access | Its rows offer Inherit and Allow only; the line says only the Vendor or another Owner can deny one | [record](../archive/records/2026-11-24-access-pages-review.md) |
-| P549 | Users and access, Settings (then System, Settings) | Options in a card, then the settings in a card headed Settings (on System one card per part: Alerts, Status, Backups), Set up under them; nothing loose on the page | [screens](../packages/screens/README.md) |
-| P561 | Users, on a phone | Invite, Signed in today and Access requests, then the search with Filters beside it, then the users; Filters opens Active (green dot), Deactivated (grey), Invited (blue) and the roles, each with its own colour; pick one: Filters shows 1 | [record](../archive/records/2026-11-24-one-line-toolbar-and-colour.md) |
-| P562 | System, Audit log, on a phone: press Filters; then on a computer | The search and Filters on one line, the list right under it; Filters opens When, Who, Result (Refused with an amber dot, Failed red) and Section (each in its sidebar colour). On a computer the search, Export, Filters, When and Who share one line | [record](../archive/records/2026-11-24-one-line-toolbar-and-colour.md) |
-| P574 | System, Audit log: pick Refused, on a phone and on a computer | No Name these filters field above the list; Filters shows 1; open it: Save view among the filters, which asks the name in a dialog | [screens](../packages/screens/README.md) |
-| P654 | Files, then Starred, Recent and Shared with me | "Files" at the same size and place on every one; no Starred title on a line of its own, the chip shows which is open | [record](../archive/records/2026-11-25-one-title-no-wrap-lighter-dark.md) |
-| P655 | Dark theme: Files, then Users and access, then a user | Lighter, blue-tinted greys, not near-black; each section's coloured tile beside its name on a phone; no button or chip with its words on two lines | [record](../archive/records/2026-11-25-one-title-no-wrap-lighter-dark.md) |
-| P656 | Files, + New; then a row's ⋯ menu; then New folder, light and dark | Each menu opens right at its button, a lightly coloured card with coloured icons; the New folder dialog is tinted and the page behind is only dimmed | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P657 | Files, + New on a phone and a computer; then a file row's ⋯ menu near the foot of the list | Every item shows in full, nothing cut by the box around it; the menu stays on screen and moves with the page when you scroll | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P666 | Settings, pick another colour, Save changes; then any form's main button on a slow connection | The orb shows over the button's words; the button keeps its size and nothing beside it moves | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P750 | Customers, Add a customer; on a computer, then a phone, light and dark | A head with a rose icon tile, the title, one line and a close button; email and name side by side on a computer, one under the other on a phone; Cancel and Add the customer in a foot that stays | [record](../archive/records/2026-11-25-dialogs-remade.md) |
-| P751 | Expenses, Claim an expense, scroll the form on a phone | Only the fields scroll; the head and the foot with Claim it stay; Category is one track, the picked one raised in amber | [record](../archive/records/2026-11-25-dialogs-remade.md) |
-| P752 | As an Owner: Users and access, API keys, Make a key | Two parts under small headings, Who it acts as and The key and its limits; Name and Access type side by side; Calls a minute and Access ends as tracks; Make the key in the foot | [record](../archive/records/2026-11-25-dialogs-remade.md) |
-| P753 | A user's page, Block sign-in; then any list's bulk Remove | The icon tile and the main button red | [record](../archive/records/2026-11-25-dialogs-remade.md) |
-| P754 | Any dialog: press the close button, then open it again and tap outside it | It closes both ways; the page stays where it was | [record](../archive/records/2026-11-25-dialogs-remade.md) |
-| P790 | Any dialog with a form (Customers, then Add a customer): type a name, then tap outside the dialog | It stays open and its foot asks "Discard what you typed?" with Keep editing and Discard; nothing typed is lost | the dialogs skill |
-| P791 | In that question press Keep editing, then tap outside again and press Discard | Keep editing goes back to the field; Discard closes the dialog, and opening it again shows it empty | the dialogs skill |
-| P792 | Open the same dialog, type nothing, tap outside; then type and press Cancel | Both close at once: only a tap outside or Escape after typing asks | the dialogs skill |
-| P793 | Tasks, New task: type a few words in Notes | Under the box a count such as "12 / 4000" follows each letter (with a keyboard, Ctrl+Enter saves like the main button) | the dialogs skill |
-| P650 | As an Owner: Users and access, Settings, API keys, Make a key: a name, a role (no Owner offered), Make the key | The key shown once with Copy; the list shows it with No end date, never used | [record](../archive/records/2026-11-24-api-keys.md) |
-| P651 | The same key's row, Revoke, Revoke it | The key was revoked; its row says Revoked with today's date and no Revoke button | [record](../archive/records/2026-11-24-api-keys.md) |
-| P653 | Sign in as someone who may give access but whose role lacks a permission that a lower role carries; Users, Invite | That lower role is not offered; roles whose every permission they hold are | [record](../archive/records/2026-11-20-codebase-review.md) |
-| P684 | Users and access | Four tabs: Users, Roles, Groups, Locations; API keys is a tab of Integrations (P676) | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P685 | The search box, type token, then history, then the name of a setting or a person | API keys, then Audit log, under Pages; settings, people and other finds listed under them as you type; a tap opens one | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P673 | System, Alerts; Users and access, Settings | Each section's card has a coloured top edge and its table head a matching tint; the counts carry the colour | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P674 | Any page, light and dark; then close the sidebar | The sidebar one solid colour (white, or deep navy), each icon bare in its group's colour, the page on screen tinted with a bar at its edge; closed, the icons stay in place | [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md) |
-| P675 | Email, then Drafts, then More | Nothing under Email in the sidebar; under the title Compose, the folders as chips with counts, More opening a list over the page, Settings | [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md) |
-| P676 | Integrations | Apps, Email services, API keys and Developer as tabs; API keys opens the keys | [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md) |
-| P677 | Home, System and a list with coloured sections, light and dark | The group colours bright and even, easy to tell apart on both themes | [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md) |
-| P760 | On a phone, Email, then Compose, then open an email | The folder row shows on the lists; Compose and an open email fill the screen under their own head, the formatting bar above Send in full | [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md) |
-| P975 | Tap the search box, then type new, then pick Make an API key | Before typing, Actions lists Write an email, Invite a user, New role and more; new lists them by name; Make an API key opens its form at once | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P990 | Users and access, Users, on a computer then a phone | Each user one row: name, roles, last sign-in with a clock and any state but Active in lined-up columns; on a phone the roles and sign-in under the name | the 2026-11-26 row in the [verification log](verification-log.md) |
-| P991 | Open a user | Under the name: the facts as pills with icons (state, role, last sign-in, member since); Overview, Permissions, Sessions and Activity in one track with icons, Permissions or Policy JSON at its right | the 2026-11-26 row in the [verification log](verification-log.md) |
-| P992 | Their Permissions, light and dark | A ring and "N of M permissions" beside Find a permission; the modules as tiles side by side, each with a coloured bar and a coloured level pill; no full-width row per module | the 2026-11-26 row in the [verification log](verification-log.md) |
-| P993 | Open Alerts on it, then pick Deny on one row | Alerts takes the whole row, its permissions compact, two side by side on a computer, each with a green tick or a dash; Deny turns red | the 2026-11-26 row in the [verification log](verification-log.md) |
-| P994 | Their Overview, then Sessions | Roles with a shield tile; What they can do with each area's tile, a short bar and its level; each session with a computer or phone tile | the 2026-11-26 row in the [verification log](verification-log.md) |
-| P690 | As an Owner: Users and access, Users | A Signed in today chip with a count opens Signed in today; Not used lately shows only when an account went 45 days without a sign-in, and lists those | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P691 | Signed in today, then New browser or country, then Unusual | Each chip narrows the list and keeps its count; an empty one says None in the last 24 hours | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P692 | Users, search a user's full email address | Their page opens straight away; part of an address still lists the matches | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P693 | As a member, ask for a role on My access; then as the Owner open Users | "1 access request waits for you" at the top, Review opens Access requests | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P694 | As an Owner: Users, Signed in today, History | Every sign-in kept, newest first; Signed in and Refused narrow it; Older shows the next fifty and Newest comes back | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P695 | Sign-in history, Download CSV; then Users, Download CSV | Each saves a spreadsheet file (the last 90 days of sign-ins; every user with state and last sign-in); the Audit log names each download | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P696 | As a member with no access to manage people: Users | No Download CSV button | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P770 | As an Owner, open a user with a role; Roles, Change | Each role card says what it gains in green and loses in red; the one they hold says Their role now | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P771 | On the same user, Add role | Each card says what it would add; none says Loses | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P772 | On a user, Roles, Copy access | Every other user with a role you may give that this one lacks, each line saying exactly what Copy adds | the 2026-11-25 row in the [verification log](verification-log.md) |
-| P773 | Press Copy on one of them | Back on the user: "The access was copied", their new roles in the Roles list, the old ones still there; Copy access now lists nobody for that user | the 2026-11-25 row in the [verification log](verification-log.md) |
+From [record](../archive/records/2026-11-22-email-settings-compose-role-editor.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P416 | Email, any folder | A gear in the top bar, beside Search (on a computer, at the head's right beside the bell); press it: Email settings. Back in Email, a Settings row at the foot of the sidebar (on a phone, in the menu) opens the same page |
+| P417 | Email, Compose | A plain head with New email and Close; at the foot one row: Send with an arrow beside it, Attach, Template, Preview, a green check mark when it is ready, and More |
+| P418 | The arrow beside Send; then More | Schedule send with a day and a time; then More opens Save draft and Save as template. The bold, italic and list buttons sit under the message |
+| P419 | Users, a user, Permissions, open a module | Each permission with Inherit, Allow and Deny as one even control, nothing cut off or faded, and its name such as `access.users.read` in small code type with a Copy button; Copy puts the name on the clipboard |
+| P420 | The same user: the Policy JSON tab at the top | Their access as Policy JSON with Copy, one tap from Permissions |
+| P421 | Users, Roles, a role | Three tabs: Permissions, Assigned to, Policy JSON. Permissions is one list of modules with None, View, Edit and Manage; a level a module has not shows a dash. Assigned to shows the users and groups, Move up and Move down, and Remove when the role was never given |
+
+From [record](../archive/records/2026-11-23-locked-layout-user-page-policy-editor.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P455 | Users, a user (Overview) | Under their name one line with their avatar, status and role, then Overview, Permissions, Sessions, Activity; no Signed in today or Access requests chips. Cards numbered 1 Roles (Add role at the top right), 2 Their own Allow and Deny (Change at the top right), 3 What they can do; Account beside them on a computer, under them on a phone |
+| P456 | The same user, 3 What they can do | One even list: each area with a coloured dot and Manage, Edit, View or Limited, and "2 of 8"; the areas with no access as one line at the end; tap an area: its permissions open |
+| P457 | The same user, Permissions, then Policy JSON at the right end of the row | Their own policy in a box with Format, Copy and Download at the top right; From roles beside it (under it on a phone) with each role's Policy JSON link |
+| P458 | Policy JSON: delete a comma | The line under the box says Not valid JSON at line N, column N; press Format: back in order once fixed. Press Check with a valid edit: what Save would add and end; Save: Their permissions were saved |
+| P459 | Settings, Name and icon | A preview of the sidebar, the phone bar and the browser tab; type a name and a Line under the name (Front desk): all three change as you type; Save: the sidebar shows Front desk under the name |
+
+From [record](../archive/records/2026-11-24-access-pages-review.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P505 | Users, Roles, a role, Assigned to | The role's name as the page title; a card Assigned to (Pick a user when no one holds it), and beside it (under it on a phone) Rank with Move up and Move down, and Remove |
+| P506 | Users, Groups with no groups | One empty state, No groups yet, saying what a group is for |
+| P507 | As the Vendor: an Owner, Permissions, on a phone | One line, "N of M permissions at ... As an Owner they have all but the Vendor's", then the search, then the modules near the top; no blue box |
+| P508 | The same page, open Users and access, then a module with the Owner's own | Each row shows only what can be saved: the Owner's own as Inherit and Deny; nothing that would be refused on Save |
+| P509 | As an Owner (not the Vendor): another Owner, Permissions, Users and access | Its rows offer Inherit and Allow only; the line says only the Vendor or another Owner can deny one |
+
+From [screens](../packages/screens/README.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P549 | Users and access, Settings (then System, Settings) | Options in a card, then the settings in a card headed Settings (on System one card per part: Alerts, Status, Backups), Set up under them; nothing loose on the page |
+| P574 | System, Audit log: pick Refused, on a phone and on a computer | No Name these filters field above the list; Filters shows 1; open it: Save view among the filters, which asks the name in a dialog |
+
+From [record](../archive/records/2026-11-24-one-line-toolbar-and-colour.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P561 | Users, on a phone | Invite, Signed in today and Access requests, then the search with Filters beside it, then the users; Filters opens Active (green dot), Deactivated (grey), Invited (blue) and the roles, each with its own colour; pick one: Filters shows 1 |
+| P562 | System, Audit log, on a phone: press Filters; then on a computer | The search and Filters on one line, the list right under it; Filters opens When, Who, Result (Refused with an amber dot, Failed red) and Section (each in its sidebar colour). On a computer the search, Export, Filters, When and Who share one line |
+
+From [record](../archive/records/2026-11-25-one-title-no-wrap-lighter-dark.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P654 | Files, then Starred, Recent and Shared with me | "Files" at the same size and place on every one; no Starred title on a line of its own, the chip shows which is open |
+| P655 | Dark theme: Files, then Users and access, then a user | Lighter, blue-tinted greys, not near-black; each section's coloured tile beside its name on a phone; no button or chip with its words on two lines |
+
+From the 2026-11-25 row in the [verification log](../archive/records/2026-11-25-to-26-verification-log.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P656 | Files, + New; then a row's ⋯ menu; then New folder, light and dark | Each menu opens right at its button, a lightly coloured card with coloured icons; the New folder dialog is tinted and the page behind is only dimmed |
+| P657 | Files, + New on a phone and a computer; then a file row's ⋯ menu near the foot of the list | Every item shows in full, nothing cut by the box around it; the menu stays on screen and moves with the page when you scroll |
+| P666 | Settings, pick another colour, Save changes; then any form's main button on a slow connection | The orb shows over the button's words; the button keeps its size and nothing beside it moves |
+| P684 | Users and access | Four tabs: Users, Roles, Groups, Locations; API keys is a tab of Integrations (P676) |
+| P685 | The search box, type token, then history, then the name of a setting or a person | API keys, then Audit log, under Pages; settings, people and other finds listed under them as you type; a tap opens one |
+| P673 | System, Alerts; Users and access, Settings | Each section's card has a coloured top edge and its table head a matching tint; the counts carry the colour |
+| P975 | Tap the search box, then type new, then pick Make an API key | Before typing, Actions lists Write an email, Invite a user, New role and more; new lists them by name; Make an API key opens its form at once |
+| P690 | As an Owner: Users and access, Users | A Signed in today chip with a count opens Signed in today; Not used lately shows only when an account went 45 days without a sign-in, and lists those |
+| P691 | Signed in today, then New browser or country, then Unusual | Each chip narrows the list and keeps its count; an empty one says None in the last 24 hours |
+| P692 | Users, search a user's full email address | Their page opens straight away; part of an address still lists the matches |
+| P693 | As a member, ask for a role on My access; then as the Owner open Users | "1 access request waits for you" at the top, Review opens Access requests |
+| P694 | As an Owner: Users, Signed in today, History | Every sign-in kept, newest first; Signed in and Refused narrow it; Older shows the next fifty and Newest comes back |
+| P695 | Sign-in history, Download CSV; then Users, Download CSV | Each saves a spreadsheet file (the last 90 days of sign-ins; every user with state and last sign-in); the Audit log names each download |
+| P696 | As a member with no access to manage people: Users | No Download CSV button |
+| P770 | As an Owner, open a user with a role; Roles, Change | Each role card says what it gains in green and loses in red; the one they hold says Their role now |
+| P771 | On the same user, Add role | Each card says what it would add; none says Loses |
+| P772 | On a user, Roles, Copy access | Every other user with a role you may give that this one lacks, each line saying exactly what Copy adds |
+| P773 | Press Copy on one of them | Back on the user: "The access was copied", their new roles in the Roles list, the old ones still there; Copy access now lists nobody for that user |
+
+From [record](../archive/records/2026-11-25-dialogs-remade.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P750 | Customers, Add a customer; on a computer, then a phone, light and dark | A head with a rose icon tile, the title, one line and a close button; email and name side by side on a computer, one under the other on a phone; Cancel and Add the customer in a foot that stays |
+| P751 | Expenses, Claim an expense, scroll the form on a phone | Only the fields scroll; the head and the foot with Claim it stay; Category is one track, the picked one raised in amber |
+| P752 | As an Owner: Users and access, API keys, Make a key | Two parts under small headings, Who it acts as and The key and its limits; Name and Access type side by side; Calls a minute and Access ends as tracks; Make the key in the foot |
+| P753 | A user's page, Block sign-in; then any list's bulk Remove | The icon tile and the main button red |
+| P754 | Any dialog: press the close button, then open it again and tap outside it | It closes both ways; the page stays where it was |
+
+From the dialogs skill:
+
+| # | Open | You should see |
+|---|---|---|
+| P790 | Any dialog with a form (Customers, then Add a customer): type a name, then tap outside the dialog | It stays open and its foot asks "Discard what you typed?" with Keep editing and Discard; nothing typed is lost |
+| P791 | In that question press Keep editing, then tap outside again and press Discard | Keep editing goes back to the field; Discard closes the dialog, and opening it again shows it empty |
+| P792 | Open the same dialog, type nothing, tap outside; then type and press Cancel | Both close at once: only a tap outside or Escape after typing asks |
+| P793 | Tasks, New task: type a few words in Notes | Under the box a count such as "12 / 4000" follows each letter (with a keyboard, Ctrl+Enter saves like the main button) |
+
+From [record](../archive/records/2026-11-24-api-keys.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P650 | As an Owner: Users and access, Settings, API keys, Make a key: a name, a role (no Owner offered), Make the key | The key shown once with Copy; the list shows it with No end date, never used |
+| P651 | The same key's row, Revoke, Revoke it | The key was revoked; its row says Revoked with today's date and no Revoke button |
+
+From [record](../archive/records/2026-11-20-codebase-review.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P653 | Sign in as someone who may give access but whose role lacks a permission that a lower role carries; Users, Invite | That lower role is not offered; roles whose every permission they hold are |
+
+From [record](../archive/records/2026-11-25-solid-sidebar-and-page-menus.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P674 | Any page, light and dark; then close the sidebar | The sidebar one solid colour (white, or deep navy), each icon bare in its group's colour, the page on screen tinted with a bar at its edge; closed, the icons stay in place |
+| P675 | Email, then Drafts, then More | Nothing under Email in the sidebar; under the title Compose, the folders as chips with counts, More opening a list over the page, Settings |
+| P676 | Integrations | Apps, Email services, API keys and Developer as tabs; API keys opens the keys |
+| P677 | Home, System and a list with coloured sections, light and dark | The group colours bright and even, easy to tell apart on both themes |
+| P760 | On a phone, Email, then Compose, then open an email | The folder row shows on the lists; Compose and an open email fill the screen under their own head, the formatting bar above Send in full |
+
+From the 2026-11-26 row in the [verification log](../archive/records/2026-11-25-to-26-verification-log.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P990 | Users and access, Users, on a computer then a phone | Each user one row: name, roles, last sign-in with a clock and any state but Active in lined-up columns; on a phone the roles and sign-in under the name |
+| P991 | Open a user | Under the name: the facts as pills with icons (state, role, last sign-in, member since); Overview, Permissions, Sessions and Activity in one track with icons, Permissions or Policy JSON at its right |
+| P992 | Their Permissions, light and dark | A ring and "N of M permissions" beside Find a permission; the modules as tiles side by side, each with a coloured bar and a coloured level pill; no full-width row per module |
+| P993 | Open Alerts on it, then pick Deny on one row | Alerts takes the whole row, its permissions compact, two side by side on a computer, each with a green tick or a dash; Deny turns red |
+| P994 | Their Overview, then Sessions | Roles with a shield tile; What they can do with each area's tile, a short bar and its level; each session with a computer or phone tile |

@@ -89,6 +89,6 @@ taking the access back in Airtable; it was checked in the data module's tests on
 
 The relay, connect, data, providers and core-config tests (a new `airtable-sign-in` test file
 for the renewals), the client template's screens test (the whole Airtable journey with a scripted
-relay), then `pnpm verify`; the summary is in [the verification log](../../docs/verification-log.md). The
+relay), then `pnpm verify`; the summary is in [the verification log](2026-11-25-to-26-verification-log.md). The
 OAuth details were read from Airtable's own reference on 22 November. Not run against a real
 Airtable account, a deployed relay or a phone.

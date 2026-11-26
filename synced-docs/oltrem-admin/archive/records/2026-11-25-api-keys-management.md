@@ -90,6 +90,6 @@ part.
 - `packages/screens/test/api-keys.test.ts` and `first-run.test.ts`: the list, Make with limits,
   a key's four views, its routes filtered, every action's API call, Delete back to the list, and
   Users asking for people only.
-- `pnpm verify`, quoted in the [verification log](../../docs/verification-log.md).
+- `pnpm verify`, quoted in the [verification log](2026-11-25-to-26-verification-log.md).
 
 Not checked: a live key on the client portal, which the phone tests P658 to P665 cover.

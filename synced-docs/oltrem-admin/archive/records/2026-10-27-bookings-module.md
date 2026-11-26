@@ -77,4 +77,4 @@ something is booked from now on, refusals audited, and the search. The clock tes
 the clock moves forward and one it moves back. The client template's screens journey adds a
 room, books it tomorrow at 10:00, is refused at 10:30, is refused removal, cancels and removes it.
 Not checked: a phone, a deployed portal, and a time zone other than UTC through the pages
-(covered by the module tests). Those are listed in the [verification log](../../docs/verification-log.md).
+(covered by the module tests). Those are listed in the [verification log](2026-11-25-to-26-verification-log.md).

@@ -14,7 +14,7 @@ sources: [packages/core-module/src/module.ts; packages/screens/src/pages.tsx; pa
 > tables and settings; nothing is ticked by a click), and the card goes away once every step is
 > done. Someone who cannot do a step does not see it. The card can be switched off on the Modules
 > page like the other extras. It is the first of the everyday ideas (R3 of
-> [the open-source ideas](../../docs/reference/open-source-ideas.md)).
+> [the open-source ideas](../proposals/2026-11-01-open-source-ideas.md)).
 
 ## What changed
 
