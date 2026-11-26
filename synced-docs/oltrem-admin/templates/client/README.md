@@ -1,91 +1,60 @@
 # A client portal, from the Oltrem kit
 
-This repository is one client's admin portal: one Cloudflare Worker with one database, one
-key-value namespace, one bucket and one queue, built from the kit's core packages and this
-client's own configuration. Everything an agent or a person needs to know is in
-[ai.md](./ai.md).
+One client's admin portal: one Cloudflare Worker with one database, one key-value namespace, one
+bucket and one queue, built from the kit and this client's configuration. Everything an agent or a
+person needs is in [ai.md](./ai.md).
 
 | | |
 |---|---|
 | Who this client is | `oltrem.config.ts` |
 | What the Worker may have | `oltrem.manifest.json`, checked against `wrangler.jsonc` and the code on every verify |
-| Who may sign in | the IAM module: the Vendor, then the people the company invites; anyone else who passes the door reads "No account here". `ACCESS_AUD` names the client's Access application |
-| Who its messages come from | `email.from_address` and `email.from_name` in the `settings` of `oltrem.config.ts`, set at onboarding, or by an Owner on the Settings page; the email providers are connected, checked and switched on the Integrations page |
-| Oltrem Mail | the add-on that also sends through Cloudflare, with a Mail setup page; without it the portal sends through its providers. It is in when `src/mail.ts` wires it in, which only `pnpm exec oltrem mail add` (from `kit/`, no download) and `pnpm exec oltrem mail remove --confirm remove` write; the first deploy asks, and `pnpm exec oltrem mail status` says where it stands. With it, the portal also keeps mail sent to its mailboxes (the Inbox page): the Worker's `email` handler hands each message to Mail, which keeps it whole in the bucket under `mail/inbox/`; without it every address is refused. `npm run dev` shows the Mail setup page, the Inbox and Forwarding, what it would send through Cloudflare is logged by wrangler, never sent, and **Send a test** on Forwarding or Mailboxes (or `pnpm exec oltrem mail try`) mails the portal on this computer. `npm run dev -- --mail` (or `--no-mail`) puts Mail in (or takes it out) before the portal starts: the kit's start page sends it from its **With Oltrem Mail** tick |
-| What runs on its own | the tick, every minute, at most three jobs a run (jobs and Status, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, which the tick starts for the nightly backup |
-| Who hears of a problem | a Status problem that lasts is an alert, emailed to the people `alerts.recipients` names, held in `alerts.quiet_hours`; an Owner sets both on the Settings page |
-| This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts; `oltrem check modules` keeps each within its walls and its migrations adding only |
-| The kit's own files | the two workflows, `src/index.ts`, the kit's tests and configuration, `ai.md`: never edited here, which `oltrem check files` checks on every verify and deploy |
-| The kit itself | `kit/`: the kit's packages, one packed file each, which `package.json` names (`file:./kit/...`), so `pnpm install` needs no token or registry; never edited, replaced only by `oltrem upgrade --from`, and `oltrem check files` refuses a file no dependency names. A new client repository is made from this template with `oltrem new client` ([the tool's README](../../packages/cli/README.md)) |
-| What else every verify and deploy checks | only the kit's packages (`oltrem check packages`), no key or id written down (`oltrem check secrets`); verify also measures the Worker's size and startup (`oltrem check budgets`), and the kit's screens test opens every page an Owner can reach (about a hundred) and fails on a button or link without a name, a field without a label, an image without alt, an id used twice or a viewport that stops zooming (`test/a11y.ts`); the Worker is built minified (`minify` in `wrangler.jsonc`), its class and function names kept, so an error still names itself in the logs |
-| How it deploys | a push to `main` runs the checks and `pnpm verify`, then `oltrem release`: a restore point, the migrations, the deploy, a health check, and a step back to the version before if the new one does not answer (`.github/workflows/deploy.yml`) |
-| A job on the live portal | the operations menu (GitHub, Actions, operations, Run workflow, from `main`): check the setup, apply waiting migrations, replace a Worker secret (its new value first added as a repository secret of the same name, deleted after), step back the code, restore the database; the last two replace what runs, so they ask for their name typed again (`.github/workflows/operations.yml`) |
-| Trying it on your computer | `npm run dev`, with no Cloudflare account: [below](#on-your-own-computer) |
-| Setting it up | `npm run deploy` from this computer (`npm run deploy -- --page` for the same steps in a page in the browser): it signs in to Cloudflare in the browser, asks which account when the sign-in reaches several, asks the client's name on the first deploy (the Worker, its resources and `oltrem.config.ts` are named after it; a portal already live keeps its name), asks the portal's address (the account's domains offered to pick from, or the free workers.dev one), makes the KEK and the backup key (kept in `oltrem-keys.txt` for the Vendor to move offline), asks for the ops token with a link to a filled-in Cloudflare form and checks it on paste, creates the database, applies the migrations, deploys, checks the new version answers `/healthz` and steps back to the one before when it does not, sets the door (Cloudflare Access: a code by email, which anyone may ask for, while the portal lets in only its own people) with Cloudflare's own cf and its sign-in in the browser, no key, then writes the Vendor's address, sends alerts to the Vendor (and a real Owner address) while nobody gets them, writes the backup's settings, and asks for a yes that a copy of the keys file is kept safe; run it again any time, it only adds what is missing. `pnpm run setup` and `pnpm run doctor` check the repository (with `run`: plain `pnpm setup` and `pnpm doctor` are pnpm's own commands) |
-| Taking a new kit version | `pnpm exec oltrem upgrade --from <folder>` with the kit's new packed files (`pnpm kit:pack` in the kit), then `pnpm install`, then `pnpm exec oltrem upgrade`: it checks first, then copies the kit's new migrations and prints the release notes; then `pnpm verify` and push |
-| The reference, never written by hand | `docs/_generated/`, written by `oltrem docs` from the files above and checked on every verify |
+| Who may sign in | The IAM module: the Vendor, then the people the company invites; anyone else past the door reads "No account here". `ACCESS_AUD` names the Access application |
+| Who messages come from | `email.from_address` and `email.from_name` (in `oltrem.config.ts` settings, or an Owner's Settings page); providers are connected on Integrations |
+| Oltrem Mail | Also sends through Cloudflare and keeps mail sent to the portal's mailboxes (the Worker's `email` handler hands each to Mail, kept in the bucket under `mail/inbox/`); without it the portal sends through its providers and refuses every address. In when `src/mail.ts` wires it, written only by `pnpm exec oltrem mail add` or `mail remove --confirm remove`; `mail status` says where it stands |
+| What runs on its own | The tick every minute, at most three jobs a run, and the one Workflow, `KitJobs` on `JOBS`, which the tick starts for the nightly backup |
+| Who hears of a problem | A lasting Status problem is an alert to `alerts.recipients`, held in `alerts.quiet_hours` |
+| This client's own modules | `modules/`, made by `oltrem new module`, listed in `src/modules.ts`; `oltrem check modules` keeps each within its walls and its migrations adding only |
+| The kit's files | The two workflows, `src/index.ts`, the kit's tests and configuration, `ai.md`: never edited here (`oltrem check files`) |
+| The kit itself | `kit/`: one packed file per package, named in `package.json` (`file:./kit/...`), so `pnpm install` needs no token; replaced only by `oltrem upgrade --from`. A new client repository comes from `oltrem new client` ([the tool's README](../../packages/cli/README.md)) |
+| Every verify and deploy also checks | Only the kit's packages (`oltrem check packages`), no key or id written down (`check secrets`), the Worker's size and startup (`check budgets`), and every page an Owner can reach for names, labels, alt text, unique ids and zoom (`test/a11y.ts`). The Worker is minified with names kept, so errors still name themselves |
+| How it deploys | The kit's fleet updates the portal on every kit push ([the fleet](../../docs/reference/fleet.md)). From this repository, a push to `main` runs `pnpm verify` and `oltrem release`: restore point, migrations, deploy, health check, step back on failure (`.github/workflows/deploy.yml`) |
+| A job on the live portal | Actions, operations, Run workflow: check the setup, apply waiting migrations, replace a Worker secret, step back the code, restore the database (the last two ask for their name again; `.github/workflows/operations.yml`) |
+| Setting it up | `npm run deploy` (`-- --page` for the same in the browser): signs in to Cloudflare, picks the account, asks the client's name (first deploy) and address (a domain of the account or workers.dev), makes the KEK and backup key (kept in `oltrem-keys.txt` for the Vendor to move offline), asks for the ops token through a filled-in form, creates the database, migrates, deploys, health-checks, sets the door (Access by an emailed code), writes the Vendor's address, alert recipients and backup settings, and asks for a yes that the keys file is kept safe. Run again any time; it only adds what is missing. `pnpm run setup` and `pnpm run doctor` check the repository |
+| A new kit version | `pnpm exec oltrem upgrade --from <folder>` (the kit's `pnpm kit:pack`), `pnpm install`, `pnpm exec oltrem upgrade` (checks, copies new migrations, prints the notes), then `pnpm verify` and push |
+| The reference | `docs/_generated/`, written by `oltrem docs` and checked on every verify |
 
 ## On your own computer
 
-`npm run dev` (`scripts/dev.mjs`) starts this Worker on your computer with local stand-ins for
-the database, the key-value namespace and the bucket, and no Cloudflare account. It applies the
-migrations to the local database and gives the Vendor the address `vendor@example.com` there,
-both without asking anything, then serves the portal at <http://localhost:8787> (the next free
-port, said out loud, when another program already holds 8787). The migrations
-run in one database session (a few seconds for all of them, where wrangler's own command takes
-one session each), and wrangler's own commands run instead should that fail. It shows a line per
-step in [the kit's look](../../packages/cli/docs/look-in-a-terminal.md#the-look-in-a-terminal), keeps wrangler's
-output in `.oltrem/dev.log` until the portal answers, then shows only wrangler's errors; Ctrl+C
-stops it. While the portal starts, the line under the spinner is wrangler's own latest line (its
-routine notices left out); the portal is found at the address wrangler says it is ready on, on
-either loopback address. wrangler gets no keyboard, so a question it would ask stops it instead
-of waiting unseen. When it stops, the start names the cause it recognises (the port taken, a
-sign-in asked for, the Visual C++ runtime missing on Windows, packages missing, an old Node, a
-full disk, a file held by another program) and tries once more on the next port when a second
-try can get past it; after two minutes without an answer it stops and shows wrangler's last
-lines. A provider's key pasted there is sealed with a key of this computer's own, which the
-first `npm run dev` makes into `.dev.vars` (git ignores it; delete it and the keys pasted before
-no longer open). In the kit's own repository, run `npm install` once, then `npm run dev` from its
-root; `npm run update` there gets the newest kit, installs what changed and says what is new.
+`npm run dev` (`scripts/dev.mjs`) runs the Worker with local stand-ins and no Cloudflare account:
+it applies the migrations in one database session, gives the Vendor `vendor@example.com`, and serves
+<http://localhost:8787> (or the next free port, said out loud). It shows a line per step in
+[the kit's look](../../packages/cli/docs/look-in-a-terminal.md#the-look-in-a-terminal), keeps
+wrangler's output in `.oltrem/dev.log` until the portal answers, then only its errors. wrangler gets
+no keyboard, so a question stops it; the start names a cause it knows (port taken, a sign-in asked
+for, the Visual C++ runtime on Windows, missing packages, old Node, full disk, a held file), tries
+once more on the next port when that can help, and gives up after two minutes with wrangler's last
+lines. A key pasted there is sealed by `.dev.vars`, made on the first run (git ignores it). The
+tick runs every minute through wrangler's test route (`LOCAL_TICK_MS`), so sends and jobs go on
+here too. `npm run dev -- --mail` or `--no-mail` puts Mail in or out first; what Mail would send
+through Cloudflare is logged, never sent, and **Send a test** (or `oltrem mail try`) mails this
+portal. In the kit's repository: `npm install`, then `npm run dev` from its root; `npm run update`
+gets the newest kit.
 
-`ACCESS_AUD` is not set on your computer, so the portal shows its own sign-in page instead of
-Cloudflare Access, and only on `localhost`: type an address and you are signed in as that
-person. Once deployed, `ACCESS_AUD` is set, that page does not exist, and Access is the only door.
+Without `ACCESS_AUD` the portal shows its own sign-in page, on `localhost` only: type an address to be
+that person. Deployed, that page does not exist and Access is the only door.
 
-### Sharing it with other devices
+**Sharing.** `npm run dev -- --share network` opens it to the same Wi-Fi, `--share tunnel` to
+anywhere through a Cloudflare [quick tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
+(a `trycloudflare.com` address; needs
+[`cloudflared`](https://developers.cloudflare.com/tunnel/downloads/), which it offers to download
+from Cloudflare's GitHub releases into `.oltrem/bin/`, kept only when it matches the stated SHA-256).
+The start page offers both. A gate (`scripts/share.mjs`) on the next port asks once for a code made
+at each start (any name, the code as password), refuses an address after ten wrong codes in ten
+minutes, and passes requests on as from this computer, so whoever has the code can sign in as anyone
+here: share it only with people you trust. On the network the code travels as plain http; on
+Windows allow private networks only. Stopping the portal ends the sharing.
 
-`npm run dev -- --share network` also opens the portal to the phones and computers on the same
-Wi-Fi, and `npm run dev -- --share tunnel` to anywhere, through a Cloudflare
-[quick tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/): a temporary
-`trycloudflare.com` address, with no Cloudflare account, which needs
-[`cloudflared`](https://developers.cloudflare.com/tunnel/downloads/) installed. The start page
-offers both as **Share it on this Wi-Fi** and **Share it anywhere**.
-
-wrangler stays on this computer's own address either way; what is shared is a gate in front of it
-(`scripts/share.mjs`), on the next free port after the portal's. Each start makes a new code, shown
-where it was started. The browser asks for it once: any name, and the code as the password. The
-gate counts wrong codes and refuses an address after ten in ten minutes, takes the code out of the
-request and passes it on as if it came from this computer, so the sign-in page above works there
-and the forms' checks hold. Whoever has the code can sign in as anyone in this copy of the portal,
-as you can here, so share it only with people you trust. Stopping the portal ends the sharing,
-the tunnel too. On the network the code travels unencrypted (plain http), and on Windows the first
-start asks whether Node.js may use the network: allow private networks only. When `cloudflared` is not on the computer, the tunnel choice asks first, on the start page or in
-the terminal, whether to download it: on a yes it fetches the file for this computer from
-Cloudflare's own releases on GitHub into `.oltrem/bin/` (git ignores it), keeps it only when it
-matches the SHA-256 the release states for it, and uses it from then on. On a no, or when the
-download fails, it says where to install it by hand and the portal keeps running here.
-
-The first run:
-
-1. Sign in as `vendor@example.com` and create the company: its name, and the first Owner's
-   address (the Owner named at setup when there is one, else `owner@example.com`, from
-   `oltrem.config.ts`).
-2. Copy the invitation link the page shows, then sign out (top right).
-3. Sign in as the Owner's address, open the link and accept.
-4. Home shows a card per module; the row at the top opens each page.
-
-The local data is kept in `.wrangler/` in this folder: stop the server and delete that folder to
-start again. wrangler never runs the tick by itself, so `npm run dev` runs it every
-minute, as Cloudflare does, through wrangler's test route (`--test-scheduled`, `/__scheduled`; since 2026-10-30): email
-held until a provider sends, Send later, campaigns and the other jobs go on this computer too, each
-at its own pace.
+**The first run**: sign in as `vendor@example.com` and create the company (its name and the first
+Owner's address from `oltrem.config.ts`, else `owner@example.com`); copy the invitation link, sign
+out, sign in as the Owner, open the link and accept. Local data is in `.wrangler/`: delete it to
+start again.
