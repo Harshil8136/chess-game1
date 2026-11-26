@@ -1,28 +1,23 @@
 # @oltrem/expenses
 
-Expenses: people claim back what they spent for the company, with a photo of the receipt. "Printer
-ink, 42.80"; "Taxi to the airport"; "Lunch with a supplier". A claim belongs to a place, so the roles
-held there decide who may claim and who answers. Nobody approves or pays their own claim while
-someone else decides at its place; an answer is final, and a no says why. Once the money is sent, whoever decides marks the claim paid. The person
-who claimed is told each step by email, sees what the company still owes them, and every step is in
-the audit log. Each month, the people who decide download the approved and paid claims as a
-spreadsheet for the accountant.
+People claim back what they spent for the company, with a photo of the receipt ("Printer ink,
+42.80"). A claim belongs to a place, whose roles decide who claims and who answers. Nobody approves
+or pays their own claim while someone else decides there; an answer is final and a no says why.
+Whoever decides marks it paid once the money is sent. The claimant is emailed each step and sees
+what is still owed; each month the deciders download the approved and paid claims for the
+accountant.
 
 ## Using it
 
 ```ts
-import { createExpenses } from '@oltrem/expenses';
-import { pages as expensesPages } from '@oltrem/expenses/pages';
-import { withPages } from '@oltrem/core-module';
-
 const expenses = createExpenses<Env>({
-  bindings: (env) => ({ db: env.DB, bucket: env.FILES }), // the bucket keeps the receipts
-  config: settingsFor, // reads expenses.currency
-  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // which day today is: spent on; UTC when left out
+  bindings: (env) => ({ db: env.DB, bucket: env.FILES }), // receipts under `expenses/`
+  config: settingsFor, // expenses.currency
+  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // UTC when left out
   send: async (env, m) => {
     await email.send(env, {
       tenantId: m.tenantId,
-      template: EXPENSE_MESSAGE.id, // a template with a subject and a text
+      template: EXPENSE_MESSAGE.id,
       to: [{ email: m.to }],
       data: { subject: m.subject, text: m.text },
       messageKey: m.key,
@@ -32,124 +27,81 @@ const expenses = createExpenses<Env>({
 const modules = [iam.module, /* ... */ withPages(expenses.module, expensesPages)];
 ```
 
-`createExpenses` returns the `store` and the module manifest. It stands on the IAM module
-(sessions, the authorizer), the audit log and the settings. The bucket is optional: without one,
-claims are made without receipts. In the client template it is the files' bucket, the one R2
-bucket a client has; receipts sit under their own prefix, `expenses/`, apart from the drive. `send`
-is optional: without it nobody is emailed. It adds no binding, secret or variable.
+It returns `store` and the manifest and stands on IAM, the audit log and settings. Without the
+bucket (the client's one R2 bucket, apart from the drive) claims have no receipts; without `send`
+nobody is emailed. No binding, secret or variable.
 
-## Who may do what
+Two capabilities on bit plane 23, read at the claim's place: `expenses.claim` and `expenses.decide`
+(see claims and receipts, approve, decline, mark paid, download a month). The claimant always sees
+their own, and adds or replaces the receipt or withdraws while it waits (`expenses.self`, every
+account); anyone else cannot open a claim or its receipt.
 
-Two capabilities on bit plane `23`, both read at the claim's place, so a role at a place (or at a
-place above it) decides:
-
-| Capability | Lets them |
-|---|---|
-| `expenses.claim` | claim back what they spent at the place |
-| `expenses.decide` | see what is claimed at the place with its receipt, approve or decline it, mark it paid, their own only as below; download a month |
-
-The person who claimed always sees their own claims, may add or replace the receipt and withdraw one
-while it waits, whatever they hold later (`expenses.self`, which every account holds). Someone who
-neither claimed nor decides at the place cannot open a claim or its receipt.
-
-An Owner or the Vendor answers and pays their own claim when no other person who is on may decide
-at its place, so a company of one is never stuck waiting for a second person. At most ten people who
-could decide are checked; with more, someone is taken to decide, and it waits for them. The audit row records
-it by the person who claimed, with `self: true`, and nobody is emailed about a step they took on
-their own claim. As soon as someone else decides at that place, their own claim waits for that
-person (`KIT-E-3301`). Who else decides is worked out from each person's compiled access, so a deny
-or an override counts as the check counts it.
+**One's own claim.** An Owner or the Vendor answers and pays their own when no other person who is
+on may decide at its place, so a company of one is never stuck; at most ten possible deciders are
+checked (with more, it waits). The audit row says `self: true` and nobody is emailed. Once someone
+else decides there, it waits for them (`KIT-E-3301`). Who decides is read from compiled access, so
+a deny or override counts.
 
 ## A claim
 
+Limits are `LIMITS` in `src/expenses.ts`.
+
 | Part | What it is |
 |---|---|
-| Place | where it is claimed; the people who decide there answer and pay it |
-| Amount | typed as 12.50 or 12,50, never with a thousands separator, so neither reading is possible; kept in the currency's smallest unit (cents) |
-| Currency | the company's, from the setting when the claim is made; a claim keeps its own |
-| Category | travel, meals, supplies, equipment, services or other |
-| What it was for, where | 1000 and 200 characters at most |
-| Day spent | today or before |
-| Receipt | a photo (PNG, JPEG, WebP, HEIC) or a PDF, 10 MB at most, added with the claim or later while it waits |
-| State | waiting, then approved or declined once, then paid; withdrawn by the person who claimed while it waits |
-| The answer | who gave it, when, and a reason; a no always has one; who marked it paid and when |
+| Amount | 12.50 or 12,50, never a thousands separator; kept in the smallest unit |
+| Currency | `expenses.currency` (default `USD`, an Owner's setting) at the claim; kept; sums by currency |
+| Category | `CATEGORIES`: travel, meals, supplies, equipment, services, other |
+| What for, where | `description` (1,000), `merchant` (200); the day spent is today or before |
+| Receipt | `RECEIPT_TYPES` (PNG, JPEG, WebP, HEIC, HEIF, PDF), `receipt` (10 MB), with the claim or later while it waits (`KIT-E-3303`) |
+| State | `STATES`: waiting, approved or declined once, paid; withdrawn while waiting. Only a claim in the right state changes, so two answers give one (`KIT-E-3302`) |
+| The answer | Who, when, a reason (always for a no, `reason` 1,000); who marked it paid and when |
 
-Two people answering at once give one answer, and two marking it paid at once mark it once: only a
-claim in the right state changes (`KIT-E-3302`).
+A receipt goes only to the claimant and the deciders, as a download or a photo in place, under a
+sandboxing policy, its type never sniffed.
 
-A receipt is served only to the person who claimed and the people who decide, as a download, a photo
-shown in place when asked; it never runs as a page of the portal (a sandboxing policy, its type never
-sniffed).
-
-## The setting
-
-| Key | Default | What it does |
-|---|---|---|
-| `expenses.currency` | `USD` | the three-letter code of the currency people claim in, as `MXN`. Claims already made keep theirs, and sums are kept by currency |
-
-## The pages
+## Pages and routes
 
 | Path | Shows |
 |---|---|
-| `/expenses` | a row of For you (what waits for the person's answer; to whoever decides somewhere), To pay (approved, not paid yet) and Yours (with how many still wait); "Claim an expense" in a dialog (the place and the category as rows of choices, the amount, what for, where, the day, the receipt, which a phone can take with its camera) and "Download a month" in another; what is approved and still to be paid to the person; the claims. A claim whose receipt is refused (a type that is not a photo or a PDF, or too big) is still kept: the page opens the claim and says both, so the receipt is added there |
-| `/expenses/:id` | the claim, its amount, category, day and where; a row with "Approve" and "Decline" (with the reason, in a dialog) to whoever may answer it, "Mark paid" (after a confirmation) once approved, "Add the receipt" or "Replace the receipt" and "Withdraw it" (after a confirmation) to the person who claimed while it waits, and "All expenses"; what it was for, the receipt (a photo shown in place), the history |
+| `/expenses` | Chips For you (waiting on the person's answer), To pay, Yours (with how many wait); **Claim an expense** (place and category as chips, amount, what for, where, day, receipt by camera) and **Download a month** in dialogs; what is owed to the person; the claims. A refused receipt keeps the claim and opens it saying both |
+| `/expenses/:id` | Amount, category, day, where; **Approve**, **Decline** (with reason), **Mark paid** (confirmed), **Add** or **Replace the receipt**, **Withdraw it** (confirmed); what for, the receipt, the history |
 
-## The routes
-
-| Route | Capability | What it does |
+| Route | Needs | What it does |
 |---|---|---|
-| `GET /claims` (`view` mine, waiting or approved) | `expenses.self` | the list, at most 100, with the places, the counts, what is owed to the person and the company's currency; left out, waiting for whoever decides somewhere, else their own |
-| `POST /claims` | `expenses.claim` at the place | claims |
-| `GET /claims/:id` | `expenses.self`, and claimed it or decides at its place | one claim, with what the reader may do |
-| `PUT /claims/:id/receipt?name=` | `expenses.self`, and claimed it while it waits | keeps the receipt, its content as the body with its own type; one sent without its length is read up to the limit |
-| `GET /claims/:id/receipt` (`inline=1`) | `expenses.self`, and claimed it or decides at its place | the receipt, as a download or a photo in place |
-| `POST /claims/:id/answer` | `expenses.decide` at its place, one's own only as an Owner or the Vendor with nobody else deciding there | approves or declines it, a no with its reason; the person who claimed is emailed, unless it is their own |
-| `POST /claims/:id/paid` | `expenses.decide` at its place, one's own as for an answer | marks an approved claim paid; the person who claimed is emailed, unless it is their own |
-| `POST /claims/:id/withdraw` | `expenses.self`, and claimed it | withdraws it while it waits |
-| `GET /export?month=2026-10` | `expenses.decide` | the month's approved and paid claims at the places the person decides, by the day spent, as a CSV file (amounts as plain digits, text a spreadsheet would run as a formula defused); 5000 rows at most, the file's name ending `-first-5000` past it |
-| `GET /todo` | `expenses.decide` | Needs you: how many claims wait for the person's answer, and how many approved ones wait to be paid, with their sum |
-| `GET /report?days=&to=` | `expenses.decide` | the section on Reports, under Money: claims made, claimed and paid back, those waiting for an answer, a line of what was claimed each day and the claims by category, at the places the person decides |
+| `GET /claims` (`view` `VIEWS`: mine, waiting, approved) | `expenses.self` | `listed` (100) from `scanned` (500) rows, with places, counts, what is owed and currency; by default waiting for a decider, else their own |
+| `POST /claims` | `expenses.claim` at the place | Claims |
+| `GET /claims/:id` | `expenses.self`, claimant or decider | One, with what the reader may do |
+| `PUT /claims/:id/receipt?name=` | `expenses.self`, claimant while waiting | The body is the file with its type; one without a length is read up to the limit |
+| `GET /claims/:id/receipt` (`inline=1`) | `expenses.self`, claimant or decider | A download or a photo in place (`KIT-E-3304` with none) |
+| `POST /claims/:id/answer`, `/paid` | `expenses.decide` at its place (one's own as above) | Approve or decline (a no with its reason), or mark an approved one paid; the claimant emailed unless their own |
+| `POST /claims/:id/withdraw` | `expenses.self`, claimant | Withdraws while waiting |
+| `GET /export?month=2026-10` | `expenses.decide` | The month's approved and paid claims where the person decides, by day, as CSV (plain digits, formulas defused), `exported` (5,000), named `-first-5000` past it |
 
-Every step is audited: `expenses.claim`, `expenses.receipt`, `expenses.approve`,
-`expenses.decline`, `expenses.pay`, `expenses.withdraw` and `expenses.export` (with the month and
-its rows), refusals included. One that went through can set off an automation: an automation on
-`expenses.claim` emails the people who decide, one on `expenses.approve` makes the task to pay it.
+Module parts: Needs you (waiting answers, approved ones to pay with their sum), Reports under Money
+(made, claimed, paid back, waiting, per day and by category), and the privacy answer (every claim a
+person made). Audited, refusals too: `expenses.claim`, `.receipt`, `.approve`, `.decline`, `.pay`,
+`.withdraw`, `.export` (month and rows); an automation can follow `expenses.claim` or `.approve`.
 
-A privacy request (`@oltrem/privacy`) finds every claim a person made: the place, day, amount,
-category, where, what for, the receipt's name, the state and the answer.
+## Table and errors
 
-## Table
+Migration `0033`: `expenses_claims` (place, claimant, day, amount and currency, category, where, what
+for, the receipt's name, type and size, state, the answer, who paid and when).
 
-Migration `0033_expenses.sql`, additive and idempotent: `expenses_claims` (the place, who claimed,
-the day, the amount and currency, the category, where and what for, the receipt's name, type and
-size, its state, who answered, when and why, who marked it paid and when).
+Block `33xx`: `KIT-E-3301` not one's own while someone else decides, `3302` it can no longer change
+that way, `3303` that receipt cannot be kept, `3304` no receipt. Bad input or a no without a reason
+is `KIT-E-0422`, no capability `KIT-E-0403`.
 
-## Errors
-
-The `33xx` block: `KIT-E-3301` nobody answers or pays their own claim while someone else decides there, `KIT-E-3302` the claim can no
-longer change that way, `KIT-E-3303` that receipt cannot be kept, `KIT-E-3304` the claim has no
-receipt. An amount, a day, a category or a text out of bounds, and a no without its reason, are the
-core's `KIT-E-0422`; a person without the capability at the place is `KIT-E-0403`.
-
-## Not here yet
-
-- Mileage by distance, and per-diem amounts.
-- Limits by category or role, and two answers above an amount.
-- Reading the amount from the receipt's photo.
-- Paying from the portal: "Mark paid" records a payment made elsewhere.
-- Receipts count towards the bucket's 10 GB, but the files' storage check counts only the drive.
+Not built: mileage and per-diem; limits by category or role and two answers above an amount;
+reading the amount from the photo; paying from the portal; the files' storage check counting
+receipts (they count towards the bucket's 10 GB).
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module, with a bucket: the
-manifest; a claim made only where the person may claim, its amount, day, category and text checked,
-every refusal audited; a receipt kept by the person who claimed only, a type that is not a photo or a
-PDF refused, one sent without its length read, served in place to the people who decide and refused
-to anyone else; what waits for each person who decides, never their own, and Needs you with the sum
-to pay; approved or declined once and paid once, never one's own, the four emails; withdrawn only by
-the person who claimed while it waits; the month's CSV at the places the person decides, a formula
-defused, refused without the capability, audited; the privacy answer; an Owner approves and pays
-their own where nobody else decides, recorded with `self: true` and not emailed. The amounts are tested on
-their own: a point or a comma, never a thousands separator, a currency without decimals. The client
-template's screens journey claims an expense with a photo of its receipt as the Owner, is refused an
-amount with three decimals, and withdraws it.
+`test/expenses.test.ts`, with a bucket: the manifest; claims only where allowed, every field checked,
+refusals audited; receipts by the claimant only, a wrong type refused, one without a length read,
+served to deciders and refused to others; what waits for each decider, never their own, Needs you
+with the sum; answered and paid once, the four emails; withdrawn only by the claimant while waiting;
+the month's CSV by place, defused, refused without the capability, audited; privacy; an Owner's own
+claim with nobody else deciding, `self: true`, no email; amounts with a point or comma, no thousands
+separator, a currency without decimals. The client template's screens journey claims with a receipt
+photo, is refused three decimals, and withdraws.
