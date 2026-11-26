@@ -1,188 +1,108 @@
 # @oltrem/forms
 
-Forms for the company's website, and the inbox where what arrives is taken, answered and tracked .
-Contact, quote requests, feedback, sign-ups, or any other form: the company designs it with no code,
-pastes the code it gets onto its website, and every answer lands in the portal. Nothing in the
-module knows one kind of business from another.
+Forms for the company's website (contact, quote requests, feedback, sign-ups, any other), designed
+with no code, pasted onto the website, and an inbox where answers are taken, answered and tracked.
+Nothing in it knows one kind of business from another.
 
 ## Using it
 
 ```ts
-import { createApp } from '@oltrem/core-http';
-import { createForms } from '@oltrem/forms';
-import { createIam } from '@oltrem/iam';
-
-const bindings = (env: Env) => ({ kv: env.CACHE, db: env.DB });
-const iam = createIam<Env>({ bindings, audience: (env) => env.ACCESS_AUD });
 const forms = createForms<Env>({ bindings, send: (env, message) => sendEmail(env, message) });
-const app = createApp<Env>({
-  modules: [iam.module, forms.module],
-  startup: iam.startup,
-  session: iam.sessions.hook,
-  authorize: iam.sessions.authorize,
-});
+const modules = [iam.module, forms.module /* , ... */];
 ```
 
-`createForms` returns the `store` functions and the module manifest. It stands on the IAM module:
-the same sessions and authorizer, the same audit wrapper. `send` is how the portal sends an
-email; the client template hands in the email module's, with one plain template
-(`forms.message`). Without `send`, no reply goes by email and nobody is told of new answers.
+It returns `store` and the manifest and stands on IAM (sessions, authorizer, audit). `send` is the
+email module's, with the plain `forms.message` template; without it no reply goes by email and
+nobody is told of new answers.
 
-## Who may do what: the place of a form
-
-Four capabilities, on bit plane `11`: `forms.read` sees a form and its answers;
-`forms.handle` takes an answer, marks it new, open or done, and adds notes and email replies;
-`forms.remove` removes answers; `forms.design` makes forms, changes their fields and settings,
-gives one a new address, and removes it with its answers. They join every Owner role when the
-Worker starts, like every capability.
-
-A form sits at one place (an IAM scope). A role held at that place, or above it, decides what a
-person may do with its answers, exactly as for a list of `@oltrem/records`. A form the person
-may not see answers as one that is not there (`KIT-E-0404`). A form whose place was removed
-belongs to the company.
+Four capabilities on bit plane 11, read at the form's place (an IAM scope; a role there or above
+decides, as for `@oltrem/records`): `forms.read` (a form and its answers), `forms.handle` (take,
+mark, note, reply), `forms.remove` (answers) and `forms.design` (make, change, new address, remove
+with answers). A form the person may not see is `KIT-E-0404`; one whose place was removed belongs
+to the company.
 
 ## The public address
 
-A website posts to `POST /hooks/forms/<key>`, the module's one hook, which answers before the
-sign-in. The key is sixteen random letters and digits, made with the form and replaced on demand
-(the old address then stops taking answers). The portal's door must let the `hooks` path through
-for a visitor's website to reach it; `npm run deploy` prints that step.
+A website posts to `POST /hooks/forms/<key>`, the one hook, before sign-in. The key is 16 random
+letters and digits, replaced on demand (the old one then stops). The portal's door must let `hooks`
+through; `npm run deploy` prints that step. Limits are `LIMITS` in `src/forms.ts`.
 
-The address checks everything itself:
+| Check | What happens |
+|---|---|
+| The key | Names a form taking answers, else `404` |
+| The body | Form encoding (either kind) or JSON, 512 KB; fields the form does not ask are ignored |
+| Each value | Needed ones present (a needed box ticked); number, date, email, phone, one of the choices, text within its length (`KIT-E-2301`) |
+| The trap | `TRAP` (`_hp`), never filled by a person: a robot is thanked and nothing kept |
+| The pace | `burst` (5) from one sender in `burstMinutes` (10), `daily` (500) for the form, then `429` (`KIT-E-2305`). The sender is a one-way digest of address and form; the address is not kept |
+| The answer | A browser gets a small page (thanks, or what to fix, with a link back) or the form's own page after sending; a script asking for JSON gets `{ "ok": true }` or the problem, from any website |
 
-- the key names a form that is taking answers, or the answer is `404`;
-- a form's own encoding (either kind) or a JSON object, at most 512 KB; anything the form does not
-  ask (a button's name, say) is ignored;
-- each value against its field: needed ones present, a needed tick box ticked, a number, a date,
-  an email address, a phone number, one of a choice's choices, text within its length;
-- a hidden field, `_hp`, that a person never fills: when a robot fills it, it is thanked and
-  nothing is kept;
-- five answers from one sender in ten minutes, and 500 a day for the form, then `429`. The sender
-  is a one-way digest of their network address and the form; the address itself is not kept.
-
-A browser gets a small page: thanks, or what to correct, with a link back to the page it came
-from; a form may send people to a page of the website instead after sending. A script that asks
-for JSON gets `{ "ok": true }` or the problem, readable from any website.
+The people a form names (`notify`, 5 addresses) are emailed a link to the inbox, never what was
+sent, once per form in `notifyMinutes` (15).
 
 ## Fields
 
-Eight kinds: short text (200 characters), long text (4000), email, phone, number, date
-(year-month-day), choice (two to twenty choices), and tick box. A field's id is made from its
-name (`Your name` is sent as `your_name`), so the website's code reads plainly. A form has at most
-20 fields and a company at most 50 forms. Removing a field stops the form asking it; answers
-already in keep every value the sender gave, with the field's name as they saw it.
+`FIELD_KINDS`: short text (`text` 200), long text (`longText` 4,000), email, phone, number, date
+(year-month-day), choice (2 to `options` 20), tick box. A field's id comes from its name (`Your
+name` is `your_name`). `fields` (20) a form, `forms` (50) a company (`KIT-E-2302`); names unique
+(`KIT-E-2303`). A removed field stops being asked; old answers keep every value with the name the
+sender saw.
 
 ## The inbox
 
-Answers are newest first, narrowed by status (to do, which is new and open together; new; open;
-done; all), by the ones the person took, and by a search across their text, a page at a time. An
-answer's name in the inbox is its first short text, email or phone. Taking an answer, or noting or
-replying to a new one, opens it. A reply goes by email to the first email address the sender gave,
-from the company's sending address, with the person replying as the address a reply comes back to;
-it is kept beside the notes. The download (`GET /forms/:id/export`) is a CSV file of up to 5000
-answers (past it, the file's name ends `-first-5000`, so a cut file never passes for a whole one),
-oldest first, with formulas defused as in `@oltrem/records`.
-
-**Read and unread**. An answer nobody has opened yet is unread for the whole team: the inbox shows
-it in bold, and its Unread view (`view=unread`) and count (`unread`, beside the count per status,
-from the same grouped read) find it. It turns read the first time someone opens it: the answer's
-page asks the browser to mark it once the page is shown (`data-seen`, the frame script's), so a page
-fetched ahead of a tap marks nothing. Mark unread puts it back. Neither is audited, as nothing about
-the answer changes; a later opening keeps the first time. The unread have an index of their own
-(migration `0071`), so the count and the view read them alone.
-
-The people a form names (up to five addresses) are told by email when an answer arrives: a link to
-the inbox, never what was sent, and at most one email per form in 15 minutes.
-
-## Search
-
-The portal's search (`GET /api/forms/search?q=`, `forms.read`) finds the forms the person may see by
-name or line, then their answers by any text in them, newest first, each titled by the sender's
-address.
-
-## Personal data
-
-For a privacy request (`personal`, read by the privacy module) the module answers every answer
-sent from the address or naming it in any field, newest first, with its form, its fields, its
-state and the notes on it. The Forms page is linked; an answer is removed from its own page.
-
-## A customer's account
-
-When the portal has customers (`@oltrem/customers`), a signed-in customer's account page shows
-"Your messages": each answer sent with the address they proved, the newest 20, with the form's
-name, when it came, its state in plain words (Received, Being handled, Done) and the replies staff
-sent them by email. It never shows what the answer said nor the notes staff keep: the address in
-an answer is only what the sender typed, so anyone could have used it, and the page shows only
-what the company wrote.
-
-## Needs you
-
-Home's Needs you (`GET /api/forms/todo`, `forms.read`) lists each form with answers nobody has
-taken yet, where the person holds `forms.handle` at the form's place: "8 new answers to Contact
-us", oldest waiting first, opening the form's inbox on its new answers.
+| Part | What it does |
+|---|---|
+| Views | `VIEWS`: todo (new and open), new, open, done, all, unread; the ones the person took; a search; a page at a time, newest first. An answer is named by its first short text, email or phone |
+| Taking | Taking, noting or replying to a new answer opens it |
+| Replies | By email to the sender's first address, from the company's sending address, replies coming back to the person; kept beside the notes (`KIT-E-2304` with no address or no email) |
+| Read and unread | Unread for the whole team until first opened: bold, its view and `unread` count from the same grouped read. The page marks it once shown (`data-seen`), so a prefetch marks nothing; **Mark unread** puts it back. Not audited |
+| Download | `GET /forms/:id/export`: CSV of up to `export` (5,000), oldest first, formulas defused; a cut file is named `-first-5000` |
 
 ## The routes
 
-| Routes | Capability | What they do |
+| Route | Needs | What it does |
 |---|---|---|
-| `GET /forms` | `forms.read` | the forms the person may see, with their new and total answers, and the places where they may make one |
-| `POST /forms`, `PATCH /forms/:id`, `DELETE /forms/:id`, `POST /forms/:id/key` | `forms.design` | make a form with its starting fields; change its name, line, place, whether it takes answers, the page after sending and who is told; remove it with its answers; give it a new address |
-| `POST /forms/:id/fields`, `DELETE /forms/:id/fields/:field`, `POST /forms/:id/fields/:field/move` | `forms.design` | add a field at the end; remove one; move one up or down |
-| `GET /forms/:id`, `GET /forms/:id/entries`, `GET /forms/:id/entries/:entry`, `GET /forms/:id/export` | `forms.read` | a form with its fields, address and what the person may do; its answers (`view`, `mine`, `q`, `limit`, `offset`) with the count per status; one answer with its notes; the CSV file |
-| `POST /forms/:id/entries/:entry/read` | `forms.read` | mark an answer read for the team (`{ read: true }`, or no body), or unread again (`{ read: false }`); answers 204 |
-| `PATCH /forms/:id/entries/:entry`, `POST /forms/:id/entries/:entry/notes` | `forms.handle` | mark an answer, take it or let it go; add a note, or a reply by email |
-| `DELETE /forms/:id/entries/:entry` | `forms.remove` | remove an answer with its notes |
-| `GET /report?days=&to=` | `forms.read` | the section on Reports, under Customers: answers, forms answered and answers not taken yet, a line of answers each day and the answers by form, for the forms the person may see; the answers are also the funnel's enquiries on Money |
+| `GET /forms` | `forms.read` | The visible forms with new and total answers, and the places where one may be made |
+| `POST /forms`, `PATCH /forms/:id`, `DELETE /forms/:id`, `POST /forms/:id/key` | `forms.design` | Make (with starting fields); change name, line, place, open, page after sending, who is told; remove with answers; new address |
+| `POST /forms/:id/fields`, `DELETE /forms/:id/fields/:field`, `POST …/:field/move` | `forms.design` | Add at the end, remove, move up or down |
+| `GET /forms/:id`, `/entries` (`view`, `mine`, `q`, `limit`, `offset`), `/entries/:entry`, `/export` | `forms.read` | The form, its answers with counts, one with its notes, the CSV |
+| `POST /forms/:id/entries/:entry/read` | `forms.read` | `{ read: true }` (or no body) or `false`; 204 |
+| `PATCH /forms/:id/entries/:entry`, `POST …/notes` | `forms.handle` | Mark, take or let go; a note, or an email reply |
+| `DELETE /forms/:id/entries/:entry` | `forms.remove` | Removes it with its notes |
 
-Every change people make is audited (`forms.form-create`, `-update`, `-remove`;
-`forms.key-renew`; `forms.field-add`, `-remove`, `-move`; `forms.entry-update`, `-note`,
-`-remove`), the refusals as much as the successes, with ids only: never what an answer or a note
-says. An answer arriving through the public address is the system's `forms.answer`, naming the
-answer, the form and its place and nothing the person wrote, so webhooks and automations hear of
-it; the answer itself keeps when it came.
+Module parts: search (forms by name or line, then answers by text, titled by sender), Needs you
+(forms with untaken answers where the person holds `forms.handle`, oldest first), Reports under
+Customers (answers, forms answered, not taken, per day and per form; the funnel's enquiries), the
+privacy answer (every answer from or naming the address, with fields, state and notes), and a
+customer's "Your messages" on `/account`: the newest 20 sent with their proved address, form, time,
+state (Received, Being handled, Done) and staff's email replies, never the answer or the notes. No
+Home card: it would count forms a person's places do not show.
 
-The module has no card on Home: Home reads a card without the person, and a count of every form's
-answers would tell someone about forms their places do not show them.
+Audited with ids only, refusals too: `forms.form-create`, `-update`, `-remove`, `forms.key-renew`,
+`forms.field-add`, `-remove`, `-move`, `forms.entry-update`, `-note`, `-remove`. An arriving
+answer is the system's `forms.answer` (answer, form, place, nothing written), so webhooks and
+automations hear of it.
 
-## Tables
+## Tables and errors
 
-Migration `0018_forms.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
-`forms_forms` (the form, its tenant, place, name, line, fields as JSON, public key, whether it takes
-answers, the page after sending, who is told and when they last were), `forms_entries` (each answer
-as the sender saw it, the address to reply to, its status, who took it, the sender's digest, its
-search text, when it came and changed) and `forms_notes` (each note or reply, who wrote it, when).
-Migration `0039_forms_reply_to.sql` adds an index on the address to reply to, in lower case, which a
-customer's account page reads by. Migration `0071_forms_read.sql` adds `forms_entries.read_at`, when
-the answer was first opened, and marks every answer already in as read, so an inbox looks as it did
-until a new answer arrives (one write for each answer, once), then indexes the unread ones
-(`forms_entries_unread`).
+| Migration | Adds |
+|---|---|
+| `0018` | `forms_forms` (place, name, line, fields as JSON, key, open, page after, who is told and when), `forms_entries` (values as seen, reply address, status, taker, sender digest, search text) and `forms_notes` |
+| `0039` | An index on the reply address in lower case, for the account page |
+| `0071` | `forms_entries.read_at`, every answer already in marked read, and the index `forms_entries_unread` |
 
-## Errors
-
-The module owns the `2300` to `2399` block: `KIT-E-2301` a value does not fit its field,
-`KIT-E-2302` the limit of forms or fields is reached, `KIT-E-2303` another form has that name,
-`KIT-E-2304` there is no email to answer (no address in the answer, or no email in the portal),
-`KIT-E-2305` too many answers from one sender or in one day. A form that is not there or not
-visible is the core's `KIT-E-0404`; a change the person may not make at the form's place is the
-core's `KIT-E-0403`.
+Block `2300`–`2399`: `KIT-E-2301` a value does not fit, `2302` the limit of forms or fields, `2303`
+the name is taken, `2304` no email to answer, `2305` too many answers. Not visible is `KIT-E-0404`,
+not allowed at the place `KIT-E-0403`.
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module, on a company with two
-places under it, four roles and five people: the manifest; a form made with field ids from their
-names, a name taken in another case, a one-choice field, a wrong address to tell and a page after
-sending that is not a web address refused; forms seen only where a role reaches their place; the
-public address taking an answer with no sign-in, refusing a missing value and an unticked box,
-thanking a robot and keeping nothing, refusing an unknown key and a closed form, answering a
-script in JSON, slowing a sixth answer from one sender while another sender passes, sending
-people to the website's own page; the people named told once, with a link and none of the
-answer; the inbox's views, counts, search, taking, a note, an email reply to the sender with the
-person's address to answer to, a reply refused when the answer has no email, removal by role;
-read and unread for the team, its view and count, refused to someone who cannot see the form, and
-migration `0071` counting the answers already in as read;
-fields added, moved and removed while an old answer keeps its field; the CSV with a formula
-defused; a new address stopping the old one; a form removed with its answers and notes; every
-change and every website answer audited without what was sent; a customer's messages with their
-states and the replies, never the notes, and nothing from another company.
-
-The search test finds forms and answers only where a person's roles reach.
+`test/forms.test.ts`, in the Workers runtime on a company with two places, four roles and five
+people: the manifest; ids from names, a name taken in another case, a one-choice field, a bad
+address to tell or page after refused; forms seen by place; the public address taking an answer,
+refusing a missing value or unticked box, thanking a robot, refusing an unknown key or closed form,
+JSON for a script, the sixth answer from one sender slowed while another passes, the page after;
+the people told once with a link only; views, counts, search, taking, notes, replies (refused with
+no address), removal by role; read and unread, refused to someone who cannot see the form,
+migration `0071`; fields added, moved and removed while old answers keep theirs; the CSV defused;
+a new address; a form removed with everything; audit without content; a customer's messages; search
+by place.

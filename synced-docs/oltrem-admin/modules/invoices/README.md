@@ -1,37 +1,24 @@
 # @oltrem/invoices
 
-Invoices: what the company bills its customers, line by line. Staff make an invoice at a place as a
-draft, from scratch or from a quote the customer accepted (`@oltrem/quotes`), change it until it is
-right, and send it to an address that is a customer; the customer is emailed and sees it on the
-portal's account page
-(`@oltrem/customers`) with its lines, its total, the day it is due and how to pay. When the money
-arrives, staff mark it paid with a word on how, and the customer is thanked. An invoice past its day
-shows as overdue, to the customer and in Needs you for whoever makes invoices at its place. Every
-step is in the audit log, so an automation can follow `invoices.pay`.
-
-The portal takes no payment itself: the note on an invoice says how to pay (bank details, a payment
-link from the company's own provider), and staff mark it paid. Each invoice also opens as one plain
-page, with the company's name and legal details at the top, to print or to save as a PDF from the
-phone's Share or Print.
+What the company bills its customers, line by line. Staff make a draft at a place (blank or from an
+accepted quote), send it to a customer, who is emailed and sees it on `/account` with its total, due
+day and how to pay, and mark it paid. Past its day it shows as overdue, to the customer and in Needs
+you. The portal takes no payment: the note says how to pay. Each invoice opens as one plain page to
+print or save as a PDF.
 
 ## Using it
 
 ```ts
-import { createInvoices } from '@oltrem/invoices';
-import { pages as invoicesPages } from '@oltrem/invoices/pages';
-import { withPages } from '@oltrem/core-module';
-
 const invoices = createInvoices<Env>({
   bindings: (env) => ({ db: env.DB }),
-  config: settingsFor, // reads the invoices.currency setting
-  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // which day today is: due, overdue, reminders; UTC when left out
-  // Whether the address is a customer of the company who is switched on.
+  config: settingsFor, // invoices.currency
+  timeZone: async (env) => (await settingsFor(env)).get<string>('bookings.time_zone'), // UTC when left out
   isCustomer: async (env, tenantId, address) =>
     (await customers.store.customerByEmail(env, address))?.tenantId === tenantId,
   send: async (env, m) =>
     email.send(env, {
       tenantId: m.tenantId,
-      template: INVOICE_MESSAGE.id, // a template with a subject and a text
+      template: INVOICE_MESSAGE.id,
       to: [{ email: m.to }],
       data: { subject: m.subject, text: m.text },
       messageKey: m.key,
@@ -40,157 +27,104 @@ const invoices = createInvoices<Env>({
 const modules = [iam.module, customers.module, /* ... */ withPages(invoices.module, invoicesPages)];
 ```
 
-`createInvoices` returns the `store` and the module manifest. It stands on the IAM module (sessions,
-the authorizer), the audit log, and the customers module, whose account page shows the customer's
-invoices. `send` is optional: without it nobody is emailed, and a sent invoice waits on the account
-page all the same. What `send` answers is read for its `status`: `waiting` when the email service
-holds the message until one is set up, which the page says with a link to Email settings; anything
-else counts as queued. `isCustomer` is optional: with it a draft is sent, and a sent invoice emailed
-again, only to an address that is a customer who is on (`KIT-E-3902`), and the page of a draft says
-so before the press; without it any address is taken. With the quotes module mounted, the page that
-makes an invoice offers the accepted quotes the person sees, read through the quotes API, and fills
-the form from the one picked; without it, the form starts blank. An accepted quote that an invoice
-not void already bills, matched by the customer and the title (invoices keep no link to their quote),
-is offered no more, and opening it by its address says which invoice bills it instead of filling the
-form. It adds no binding, secret or variable; it adds three
-settings and one daily job.
+It returns `store` and the manifest, stands on IAM, the audit log and customers, and adds three
+settings and one daily job, no binding, secret or variable.
 
-## Who may do what
-
-Two capabilities on bit plane `29`, both read at the invoice's place, so a role at a place (or at a
-place above it) decides:
-
-| Capability | Lets them |
+| Option | Without it |
 |---|---|
-| `invoices.view` | see the invoices sent from the place, their lines and their history |
-| `invoices.make` | make, change and send drafts at the place, email a sent invoice again, mark it paid, and void a draft or a sent invoice |
+| `send` | Nobody is emailed; a sent invoice still waits on the account page. A `waiting` status (no email service yet) is said on the page with a link to Email settings |
+| `isCustomer` | Any address is taken; with it a send or resend goes only to a customer who is on (`KIT-E-3902`), and a draft's page says so first |
+| The quotes module | The new form starts blank; with it the form offers accepted quotes, and one already billed by an invoice not void (same customer and title) is left out or named |
 
-The customer holds no capability: they see only the invoices sent to their own address, signed in
-at `/account`.
+Two capabilities on bit plane 29, read at the invoice's place: `invoices.view` (the invoices, lines
+and history) and `invoices.make` (make, change, send, email again, mark paid, void). The customer
+holds none and sees only invoices sent to their own address.
 
 ## An invoice
 
+Limits are `LIMITS` in `src/invoices.ts`.
+
 | Part | What it is |
 |---|---|
-| Number | 1, 2, 3 within the company, given when the draft is made; a series of its own, apart from the quotes |
-| Place | where it is made; the people who make invoices there send it and mark it paid |
-| Customer | the address it is sent to, which they sign in with |
-| Title | what it is for, 200 characters at most |
-| Lines | 1 to 30: what (200 characters), how many (a whole number from 1) and the price of one, typed as 1200 or 1200.50; the total is their sum |
-| Currency | the `invoices.currency` setting when the draft is made; an invoice keeps its own |
-| Due by | from today to a year ahead; after it a sent invoice shows as Overdue |
-| How to pay | a note the customer reads under the lines until it is paid; 2000 characters at most |
-| State | Draft, then To be paid once sent, then Paid; Void when staff cancel it |
-| Paid | when it was marked paid and how, 200 characters at most |
+| Number | 1, 2, 3 within the company, given at the draft; apart from quotes |
+| Customer, title | The address they sign in with; `title` (200) |
+| Lines | 1 to `lines` (30): what (`line`, 200), how many (whole, from 1), the price of one (1200 or 1200.50); the total is their sum, kept in the smallest unit |
+| Currency | `invoices.currency` at the draft; kept |
+| Due by | Today to `dueDays` (365) ahead |
+| How to pay | `note` (2,000), shown until paid |
+| State | `STATES`: draft, sent (To be paid), paid (with how, `paidNote` 200), void |
 
-Only a draft is changed or sent, and a draft whose day has passed is changed before it is sent. Only
-a sent invoice is marked paid, once. A draft or a sent invoice is voided; a paid one stays as it was
-paid (`KIT-E-3901`). A voided draft never reaches the customer; a voided sent invoice shows on their
-page as cancelled.
+Only a draft changes or is sent (one past its day is changed first); only a sent one is paid, once;
+a paid one is never voided (`KIT-E-3901`). A voided draft never reaches the customer; a voided sent
+one shows as cancelled.
 
-## The setting
-
-| Key | Default | What it is |
+| Setting | Default | What it is |
 |---|---|---|
-| `invoices.currency` | `USD` | the three-letter code of the currency new invoices are written in, set by the Owner |
-| `invoices.reminders` | off | emails the customer three days before a sent invoice is due, and the day after if it is not marked paid; set by the Owner |
-| `invoices.issuer` | empty | who issues the invoices, printed under the company name at the top of each: the legal name, the address and the tax number, 500 characters at most, set by the Owner |
+| `invoices.currency` | `USD` | The currency of new invoices |
+| `invoices.reminders` | off | The reminder emails below |
+| `invoices.issuer` | empty | Legal name, address and tax number under the company name on each page, 500 characters |
 
-## Reminders
-
-The daily job `invoices.reminders` does nothing until the Owner turns `invoices.reminders` on. Then
-each run emails the customer of every sent invoice due in three days ("Invoice 3 is due on …") and
-of every one that was due yesterday and is not marked paid ("Invoice 3 is overdue"), with the total
-and how to pay, at most twenty of each a run. Each message is keyed by the invoice and its kind, so
-a customer gets each one once; an invoice paid before its day gets none. A day the tick misses is
-not made up: the reminders look at exact days.
+**Reminders.** The daily job `invoices.reminders`, while the setting is on, emails each sent
+invoice due in `remindBefore` (3) days and each due yesterday and unpaid, with the total and how to
+pay, `reminders` (20) of each a run, keyed by invoice and kind so each goes once. A missed day is
+not made up.
 
 ## The pages
 
 | Path | Shows |
 |---|---|
-| `/invoices` | three tiles in the company's currency at the places the person sees: "Owed to you" (sent, not paid), "Overdue" (sent, past its day) and "Paid this month" (since the first, UTC), each opening its view; a row of All, Overdue, Drafts, Sent, Paid and Void with their counts; "Make an invoice" to whoever makes them somewhere; the invoices, the newest first, with their number, customer, total and state. With `?email=` (from a customer's page or a privacy request) only that customer's, without the tiles, with "Make an invoice for them" and a link back to every customer's |
-| `/invoices/new` | a row "From an accepted quote" (Blank and the newest twelve accepted quotes not billed yet) when there are any; with `?quote=` of a quote billed already, a notice linking the invoice that bills it; the place as a row of choices, the customer's address (filled from `?email=`), the title, six rows of lines, the day it is due (30 days ahead to start) and how to pay |
-| `/invoices/:id` | the invoice with its state; a row with "Send to the customer", "Change", "Mark it paid" (how, in a dialog), "Email it again" while it is owed, and "Void it" (after a confirmation) to whoever makes invoices there, "Print or save as PDF" and "All invoices"; the lines with the total and the day it is due; how to pay; when it was made, sent and paid. A draft for an address that is not a customer says so, with a link to the Customers page. After a send or a payment the notice says the email is queued, or that it waits for an email service or none went, with a link to Email settings |
-| `/invoices/:id/change` | the same form as a new invoice, for a draft |
+| `/invoices` | Tiles in the company's currency: Owed to you, Overdue, Paid this month (UTC), each opening its view; chips `VIEWS` with counts; **Make an invoice**; the list newest first. `?email=` shows one customer's, with **Make an invoice for them** |
+| `/invoices/new` | **From an accepted quote** chips (Blank and the newest twelve unbilled); `?quote=` of a billed one links its invoice; place as chips, customer (from `?email=`), title, six line rows, due day (30 days ahead), how to pay |
+| `/invoices/:id` | State; Send, Change, Mark it paid (a dialog asks how), Email it again while owed, Void it (confirmed), Print or save as PDF; lines, total, due day, how to pay, dates. A non-customer draft links Customers; after a send or payment, queued, waiting or none, with a link to Email settings |
+| `/invoices/:id/change` | The new form, for a draft |
 
-On the customer's account page, under "Your invoices": each invoice sent to them with its number,
-title and state (To pay, Overdue, Paid, Cancelled), its lines and total, the day it is due or the day
-it was paid, and how to pay while it is owed. Its title opens the invoice as a page to print or
-save as a PDF, through `/account/open/invoices/<id>`, only while it is theirs and was sent.
+The account page lists "Your invoices": number, title, state (To pay, Overdue, Paid, Cancelled),
+lines, total, due or paid day, how to pay while owed; the title opens the printable page through
+`/account/open/invoices/<id>` while it is theirs and sent.
 
 ## The routes
 
-| Route | Capability | What it does |
+| Route | Needs | What it answers |
 |---|---|---|
-| `GET /invoices` (`view` all, overdue or a state, `email` one customer's) | `invoices.view` | the invoices at the places the person sees, at most 100, with the places, the counts, the company's currency and the sums owed, overdue and paid this month (over every invoice at those places, in that currency) |
-| `POST /invoices` | `invoices.make` at the place | makes a draft |
-| `GET /invoices/billed` | `invoices.view` | the invoices that are not void at the places the person sees, with their customer and title, so the pages tell a quote billed already; the newest 500 |
-| `GET /invoices/:id` | `invoices.view` at its place | one invoice, with whether the reader makes invoices there |
-| `GET /invoices/:id/paper` | `invoices.view` at its place | the invoice as one page to print or save as a PDF: HTML with no script or image, every text escaped, its own `default-src 'none'` policy, not cached; a draft is marked "Draft: not sent" |
-| `POST /invoices/:id` | `invoices.make` at its place | changes a draft |
-| `POST /invoices/:id/send` | `invoices.make` at its place | sends a draft to a customer; the customer is emailed, `told` says whether the email was queued and `waiting` whether it waits for an email service |
-| `POST /invoices/:id/resend` | `invoices.make` at its place | emails a sent invoice again while it is owed, under a message key of its own each time; answers `told` and `waiting` |
-| `POST /invoices/:id/pay` | `invoices.make` at its place | marks a sent invoice paid, with how; the customer is thanked, with `told` and `waiting` as for a send |
-| `POST /invoices/:id/void` | `invoices.make` at its place | voids a draft or a sent invoice |
-| `GET /search?q=` | `invoices.view` | invoices by title or address where the person sees |
-| `GET /todo` | `invoices.make` | Needs you: how many sent invoices are past their day at the places the person makes them |
-| `GET /report?days=&to=` | `invoices.view` | the section on Reports, under Money: invoices sent, invoiced and paid (in the currency most of them use), overdue, the days from sent to paid on average, a line of what was paid each day, the overdue ones, oldest first, and, once a second currency is used, each currency apart with what was invoiced and paid in it, at the places the person sees; the invoices paid are the funnel's last step |
+| `GET /invoices` (`view`, `email`) | `invoices.view` | `listed` (100) from `scanned` (500) rows, with places, counts, currency and the sums owed, overdue and paid this month |
+| `POST /invoices` | `invoices.make` at the place | Makes a draft |
+| `GET /invoices/billed` | `invoices.view` | Invoices not void with customer and title, the newest 500, so pages tell a billed quote |
+| `GET /invoices/:id` | `invoices.view` at its place | One, with whether the reader makes invoices there |
+| `GET /invoices/:id/paper` | `invoices.view` at its place | The printable page: no script or image, every text escaped, `default-src 'none'`, not cached; a draft marked "Draft: not sent" |
+| `POST /invoices/:id` | `invoices.make` at its place | Changes a draft |
+| `POST /invoices/:id/send`, `/resend`, `/pay` | `invoices.make` at its place | Sends a draft, emails a sent one again (a new message key each time), marks it paid with how; each answers `told` and `waiting` |
+| `POST /invoices/:id/void` | `invoices.make` at its place | Voids a draft or a sent one |
 
-Every step is audited: `invoices.create`, `invoices.change`, `invoices.send`, `invoices.resend`, `invoices.pay` and
-`invoices.void`, refusals included.
+Module parts: search (title or address), Needs you (overdue at places the person makes invoices),
+Reports under Money (sent, invoiced, paid, overdue, days to paid, paid per day, each currency once
+a second is used; paid is the funnel's last step), and the privacy answer (each invoice to a person,
+linking `/invoices?email=`). `store.csv(env, session)` gives the viewable invoices, newest 500, for
+the spreadsheet link of `@oltrem/connect` (it holds customers' addresses).
 
-A privacy request (`@oltrem/privacy`) finds every invoice sent to a person: its number, title, total,
-state, dates and how it was paid, and links the list of that person's invoices (`/invoices?email=`).
+Audited, refusals too: `invoices.create`, `.change`, `.send`, `.resend`, `.pay`, `.void`.
 
-## Tables
+## Tables and errors
 
-Migration `0042_invoices.sql`, additive and idempotent: `invoices_invoices`, one row an invoice,
-with its lines as JSON (an invoice is read and written whole), its total in the currency's smallest
-unit, the day it is due, and when it was made, sent and paid and how. The number is unique in the
-company; an index on the state and the day serves Needs you. Migration `0062_invoices_recent.sql`
-indexes them newest first, the order the page lists them in, so a page of them stops at its last row
-instead of sorting every invoice.
+| Migration | Adds |
+|---|---|
+| `0042` | `invoices_invoices`: one row an invoice, lines as JSON, total, due day, made, sent, paid and how; the number unique in the company; an index on state and day for Needs you |
+| `0062` | An index newest first, so a page stops at its last row |
 
-## Errors
+Block `39xx`: `KIT-E-3901` the invoice can no longer change that way, `KIT-E-3902` the address is
+not a customer who is on. Bad input is `KIT-E-0422`, no capability `KIT-E-0403`, not there
+`KIT-E-0404`.
 
-The `39xx` block: `KIT-E-3901` the invoice can no longer change that way; `KIT-E-3902` the address
-is not a customer who is on, so they could not sign in to see it. An address, a title, a
-line, a quantity, a price or a day out of bounds is the core's `KIT-E-0422`; a person without the
-capability at the place is `KIT-E-0403`; an invoice that is not there is `KIT-E-0404`.
-
-## Not here yet
-
-- Taking the payment online: a payment link per invoice needs a payment provider's secret, the
-  owner's yes first (R-09).
-- Taxes and discounts per line, part payments and credit notes.
-- A PDF file made by the portal: today the browser makes it from the printable page, and an
-  electronic invoice in a country's format (CFDI in Mexico, for one) needs that country's provider.
-- A stored link from an invoice to its quote: today a quote billed already is told by the same
-  customer and title, so a second invoice with another title for the same quote is not caught. A
-  link needs a column, so a migration.
-- More reminders: today one goes before the day and one the day after; after that the invoice waits
-  in Needs you.
-
-## For Apps
-
-`store.csv(env, session)` gives the invoices at the places the person may view, newest first, the newest 500, as CSV: number, customer, title, location, state (overdue when sent and past its day), total, currency, due, made, sent and paid. The spreadsheet link of `@oltrem/connect` reads it, so it holds the customers' addresses.
+Not built: online payment (a provider's secret needs the owner's yes, R-09); taxes, discounts, part
+payments, credit notes; a PDF made by the portal or a country's e-invoice (CFDI); a stored link to
+the quote (a second invoice with another title for one quote is not caught); more than two
+reminders.
 
 ## Tests
 
-Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; a draft made
-only where the person makes invoices, numbered within the company, with its total; the refusals for
-a bad address, line or day; what each person sees, with the counts; a draft changed, unseen by the
-customer until sent, then emailed and shown on their account page for their address only; marked
-paid once with how, the customer thanked, never voided after; overdue past its day, in its view and
-in Needs you, and settled when paid late; voided, a sent one shown as cancelled and a draft never
-shown; the printable page with the company's details, for whoever sees the place and its customer
-once sent, every text escaped; the reminders, none while off, then three days before and the day
-after, each once; the search and the privacy answer with its link; every step audited; a sent
-invoice emailed again under a new key and refused once paid; the billed list for the places the
-person sees; a draft for an address that is no customer refused and audited; one customer's
-invoices. The page tests (`test/pages.test.ts`) render the pages: Email it again, the
-not-a-customer notice, the queued, waiting and no-email words, and an accepted quote billed already
-left out of the new invoice's choices and named when opened. The client template's screens journey
-makes an invoice from the quote the customer accepted, sends it, finds it on their account page
-and opens it to print, and marks it paid. The CSV: the places the person may view only, in plain amounts, and none once their role is taken away.
+| File | Covers |
+|---|---|
+| `test/invoices.test.ts` | The manifest; drafts only where allowed, numbered, totalled; bad input; what each person sees with counts; a draft unseen until sent, then emailed and on that customer's page only; paid once and thanked, never voided after; overdue in its view and Needs you, settled when paid late; void; the printable page escaped; reminders off, then each once; search and privacy; every step audited; resend with a new key, refused once paid; the billed list; a non-customer refused; the CSV by place and gone with the role |
+| `test/pages.test.ts` | Email it again, the non-customer notice, the queued, waiting and no-email words, a billed quote left out and named |
+
+The client template's screens journey makes an invoice from an accepted quote, sends it, finds it
+on the account page, prints it and marks it paid.
