@@ -227,6 +227,18 @@ trips before a page's own first read; now a page waits for its slowest read.
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
+- **A record beside its list** (2026-11-26, the frame script; the owner: a job opens in a panel
+  from the right, not a page of its own): a link inside `[data-peek="<dialog id>"]` whose path
+  starts with that dialog's `data-peek-panel` opens in the dialog instead. The script fetches the
+  linked page, shows its `[data-peek-body]` in the dialog's `[data-peek-slot]`, names it from its
+  `[data-peek-title]` in `[data-peek-name]` and points `[data-peek-full]` (Open as a page) at it.
+  Links under the same path (the record's tabs) stay in the panel, a form posted in it is sent
+  from it and its answer shown there (a confirm dialog over the panel closes first), any other
+  link closes the panel and opens as usual, and once the panel closes after a change the list's
+  live block is fetched again. The panel is `ui-drawer ui-peek` (42 rem wide, the whole screen on
+  a phone, its body a container so its panes lay out by its own width); a page wraps its body in
+  `<div data-peek-body class="contents">`, which the page lays out as before. Without the script
+  every link opens the record's page. Used by Scheduled jobs.
 - **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
   (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
   the unread figure (to "99+") and, since 2026-11-26, a tooltip naming it ("Notifications: 3
