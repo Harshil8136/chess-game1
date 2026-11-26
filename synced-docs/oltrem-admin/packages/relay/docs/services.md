@@ -1,117 +1,74 @@
 ---
-title: "@oltrem/relay: The services; Its secrets; The seal key; Setting it up (once, by the Vendor)"
+title: "@oltrem/relay: the services, its secrets, the seal key, setting it up, tests"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [packages/relay/src; split from packages/relay/README.md]
+sources: [packages/relay/src/index.ts, providers.ts, wrangler.jsonc, scripts]
 ---
 
-# @oltrem/relay: The services; Its secrets; The seal key; Setting it up (once, by the Vendor)
+# @oltrem/relay: the services, its secrets, the seal key, setting it up, tests
 
 > Part of [the @oltrem/relay README](../README.md).
 
 ## The services
 
-Each is one entry in `src/providers.ts`, data rather than code: the sign-in page and the token
-endpoint, the smallest scopes, the names of the two secrets (one for an app without a secret),
-PKCE where the service has it, what must be true of the answer and the fields that go back, each
-with the start it must have.
+Each is one data entry in `src/providers.ts`: sign-in page, token endpoint, smallest scopes, the
+names of its secrets, PKCE where the service has it, what the answer must hold, and the fields that
+go back, each with the start it must have.
 
-| Service | Scope | What goes back to the portal |
+| Service | Scope and client | What goes back to the portal |
 |---|---|---|
-| Slack | `incoming-webhook` | the webhook address of the channel the person picked, its name, the workspace's name (Slack's access token is dropped) |
-| Discord | `webhook.incoming` | the webhook address of the channel the person picked (no bot joins the server; the webhook's own name is not the channel's, so it is not sent) |
-| Google | `https://www.googleapis.com/auth/drive.file`, online access, PKCE | only the new sheet's address: the relay creates the Google Sheet itself, with the access token used once and never sent on; no refresh token is asked for |
-| Supabase | none sent (the OAuth app is registered with Projects read and Secrets read), PKCE, the app's id and secret as HTTP Basic | the picked project's address, name and secret key (`sb_secret_…`), read by the relay with the Management API token; beside them that token (an hour), its refresh token and how many seconds it lasts, so the portal can read the project's logs, requests, advisors, backups and functions. With several projects and none picked, the list of projects (ref and name) instead, and no token |
-| Airtable | `data.records:read schema.bases:read`, PKCE, the integration's id alone (it has no secret) | the access token (an hour), the refresh token (60 days, replaced on each use), how many seconds the access token lasts, and the integration's public id: Airtable has no lasting key an app can make, so the portal keeps these and renews them itself (the data part's README, "Sign in with Airtable"). The one service whose refresh token goes back |
+| Slack | `incoming-webhook` | The picked channel's webhook address, its name, the workspace's name (the token dropped) |
+| Discord | `webhook.incoming` | The picked channel's webhook address (no bot joins) |
+| Google | `…/auth/drive.file`, online, PKCE | Only the new sheet's address: the relay creates it with the token, used once |
+| Supabase | None sent (the app has Projects and Secrets read), PKCE, id and secret as HTTP Basic | The project's address, name and `sb_secret_…` key, plus the Management API token (an hour), refresh token and lifetime; with several projects and none picked, the list (ref, name) and no token |
+| Airtable | `data.records:read schema.bases:read`, PKCE, id alone (no secret) | Access token (an hour), refresh token (60 days, replaced on use), lifetime, the integration's id; the portal renews itself |
+| PostHog | `project:read query:read`, PKCE, client id `https://<relay>/client/posthog` | Tokens, lifetime, the projects allowed (`scoped_teams`) and the client id; the portal renews itself |
+| Google Analytics | `…/auth/analytics.readonly`, offline, consent each time, PKCE, the Google app | Tokens and lifetime; renewed through `/renew/google-analytics` |
 
-| PostHog | `project:read query:read`, PKCE, no app registered: the client id is the relay's own document at `https://<relay>/client/posthog` (below) | the access token (an hour), the refresh token, how many seconds the access token lasts, the projects the person allowed (`scoped_teams`, as `12345,678`) and the client id: the portal finds the project's name and region with the token and renews the tokens itself (website analytics) |
-| Google Analytics | `https://www.googleapis.com/auth/analytics.readonly`, offline access, consent asked each time, PKCE, the Google app above (no new secret) | the access token (an hour), the refresh token and how many seconds the access token lasts; the portal lists the person's properties with the token and renews it through `/renew/google-analytics`, since only the relay holds the app's secret |
+A new service is one entry with its secrets (and their rows in `tokens.registry.json`), or none for
+one that reads a client document.
 
-A new service is one more entry with its two secrets (and their rows in `tokens.registry.json`), or
-none for a service that reads a client document.
+| Flag or case | What it does |
+|---|---|
+| `cimd` (PostHog) | A Client ID Metadata Document at `https://<relay>/client/<id>`: the id, the name "Oltrem", the one way back `https://<relay>/back/<id>`, `token_endpoint_auth_method: none`, the scopes under `com.posthog`, kept an hour; nothing set up at PostHog |
+| `relayRenews` (Supabase, Google Analytics) | `POST /renew/<id>` with a form `refresh_token`: exchanged with the app's id and secret, answered `{token, refresh, expires}`, nothing kept. A service refusal (400, 401) is `400 {error: 'refused'}` (the sign-in ended), no secrets 503, else 502; a GET or another service refused |
+| `keepsRefresh` (Google Analytics) | Google answers a renewal without a refresh token, so the one given is handed back; for Supabase, which spends it, that is a failure |
+| No `clientSecret` (Airtable) | The code exchanged with the id and PKCE verifier, no Basic header; the verifier made from the seal key, so it is kept nowhere |
+| The sheet (Google) | The portal seals the link's address and title to the relay's key in the state; the relay writes only `=IMPORTDATA("<portal>/hooks/connect/sheet/<32 letters>.csv")` into the new sheet and seals back only its `https://docs.google.com/` address. A state without it is refused before sign-in, so a Google token never reaches a portal |
+| The project (Supabase) | Lists the account's projects (`GET /v1/projects`); reads a sealed `{project}` only when it is one of them, else the only one, else sends the list; the key is the first `secret` from `GET /v1/projects/<ref>/api-keys?reveal=true`; none sends address and name alone. Three calls |
 
-**No app to register (PostHog).** An entry with `cimd` signs in with a Client ID Metadata
-Document (the IETF draft PostHog follows): the client id is the address `https://<relay>/client/<id>`,
-and the relay answers that address with the document the service reads at sign-in: the id
-itself, the name "Oltrem" (PostHog refuses a name with its own in it), the one way back
-`https://<relay>/back/<id>`, no secret (`token_endpoint_auth_method: none`) and the scopes under
-`com.posthog`, kept an hour. PKCE is a must, its verifier made from the seal key as for Airtable.
-Nothing is set up at PostHog for it.
-
-**Renewals (Supabase, Google Analytics).** Supabase's access token lasts an hour and its refresh token needs the
-app's secret, which only the relay holds. An entry marked `relayRenews` answers
-`POST /renew/<id>` with a form `refresh_token`: the relay exchanges it at the service's token
-endpoint with the app's id and secret as HTTP Basic and answers `{token, refresh, expires}` in
-plain JSON, keeping nothing. The refresh token is itself the credential, so nothing else is
-asked. A refusal by the service (400 or 401) is `400 {error: 'refused'}`, which the portal reads
-as the sign-in having ended; no app secrets set is 503; anything else 502. Another service, or a
-GET, is refused. Google keeps its refresh token on a renewal and answers without one; for an
-entry marked `keepsRefresh` the relay hands the one it was given back, while for Supabase, which
-spends the old one, an answer without one is a failure. Who calls is not checked: a refresh token
-issued to the Vendor's app renews here for anyone holding it. The portals keep theirs sealed under
-their own key, so a copy of a portal's database or backup holds none in the clear; a signature
-from each portal on its renewals would close the rest, and needs a key per portal (not here yet,
-the security review of 2026-11-26).
-
-**The sheet.** For Google the portal puts the spreadsheet link's address and the sheet's title in
-the state, sealed to the relay's own key (they open the portal's list to whoever reads them, and
-the state passes through addresses others can see). After the code exchange the relay opens them,
-writes only an address of that portal's own spreadsheet links (`<portal>/hooks/connect/sheet/<32
-letters>.csv`) into `=IMPORTDATA("…")` in the new sheet's first cell, and seals back only the
-sheet's `https://docs.google.com/` address. A state without that sealed address is refused before
-anyone signs in. The owner's pick of 2026-11-22: a Google token never reaches a portal, so no
-portal can reach the files the Vendor's one Google app made for that person from another portal.
-
-**A public client (Airtable).** An entry without a `clientSecret` is an app registered without
-one. Its code is exchanged with the id in the form and the PKCE verifier, no secret and no HTTP
-Basic header (Airtable refuses one it never issued), and the verifier is made from the relay's own
-seal key instead of the app's secret, so it is still the same at the start and the return and
-kept nowhere.
-
-**The Supabase project.** The relay always lists the account's projects (`GET /v1/projects`). A
-project the portal sealed to the relay in the state (`{project}`) is read only when it is one of
-them; with none sealed, the account's only project is read, and with several the list goes back
-so the portal can ask which, then start again with that one. The project's secret key comes from
-`GET /v1/projects/<ref>/api-keys?reveal=true`, the first of type `secret`; a project without one
-sends back its address and name alone, so the portal asks for the key. Three calls in all.
+Who renews is not checked: a refresh token issued to the Vendor's app renews here for anyone holding
+it. Portals keep theirs sealed under their own key; a signature from each portal would close the
+rest (not built yet).
 
 ## Its secrets
 
-Eleven Worker secrets, by name only (their rows are in the token registry). `wrangler.jsonc` marks
-them required, so a deploy is refused until all eleven are set.
+Eleven Worker secrets, required in `wrangler.jsonc`, by name only (rows in the token registry):
 
 | Secret | Holds |
 |---|---|
-| `RELAY_PORTALS` | the portal addresses it may send a person back to, separated by spaces or commas, as `portal.example.com https://other.example.com` |
-| `RELAY_SEAL_KEY` | the relay's own key pair, made by `scripts/seal-key.mjs`; every answer is sealed with it |
-| `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` | the Slack app's |
-| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | the Discord application's |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | the Google OAuth client's |
-| `SUPABASE_CLIENT_ID`, `SUPABASE_CLIENT_SECRET` | the Supabase OAuth app's |
-| `AIRTABLE_CLIENT_ID` | the Airtable integration's id, which is public: it has no secret, and the relay hands it to the portal with the tokens |
+| `RELAY_PORTALS` | The portal addresses it may return to, separated by spaces or commas |
+| `RELAY_SEAL_KEY` | Its own key pair, from `scripts/seal-key.mjs` |
+| `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SUPABASE_CLIENT_ID`, `SUPABASE_CLIENT_SECRET` | Each app's |
+| `AIRTABLE_CLIENT_ID` | The integration's public id (it has no secret) |
 
-A service whose secrets are empty, or a relay without its seal key, answers "not set up" to
-the portal, which then offers the other way on the card. So does a service this relay does not
-know yet (a portal on a newer kit than the relay), when the state reads and the portal is listed;
-otherwise it answers "No such service." and sends nobody anywhere.
+A service with empty secrets, no seal key, or a service this relay does not know (a newer portal)
+answers "not set up" to a listed portal, which offers the other way; otherwise "No such service."
+and no redirect.
 
 ## The seal key
 
-The relay seals every answer with its own key, and answers the key's public half at
-`https://<relay>/key`. The portal reads it there (over https, from the address the Vendor set) each
-time an answer comes back, and opens only what that key sealed. A trip's state travels in addresses
-that the service, the browser's history and any proxy can see; without the relay's key, someone who
-read it could seal an answer of their own and have the portal make an alert to their channel. The
-first deploy makes the key itself (below); to replace it later, straight into the secret, so it
-never shows on the screen:
+Every answer is sealed with the relay's key, whose public half is at `https://<relay>/key`; the
+portal reads it each time and opens only what it sealed. A trip's state travels in addresses others
+can see, so without it anyone could seal an answer of their own. The first deploy makes it; to
+replace it, straight into the secret:
 
 ```sh
 node packages/relay/scripts/seal-key.mjs | pnpm --filter @oltrem/relay exec wrangler secret put RELAY_SEAL_KEY
 ```
 
-Running it again replaces the key at once; a trip on its way at that moment comes back as failed,
-and the person presses again.
+A trip on its way at that moment fails, and the person presses again.
 
 ## Setting it up (once, by the Vendor)
 
@@ -162,3 +119,22 @@ and the person presses again.
    Google", the data part's Connect Supabase and Connect Airtable pages "Continue with Supabase"
    and "Continue with Airtable", and the analytics pages "Continue with PostHog" and "Continue with
    Google Analytics".
+
+## Tests
+
+`test/relay.test.ts`, inside the Workers runtime with the token endpoints answered by the test: the
+seven entries and scopes; portals and states accepted; an unknown portal refused without a redirect
+at start and return; Slack and Discord exchanged with the secret and only the webhook sealed back;
+Google's sheet made by the relay, its verifier, and no sheet without the portal's own sealed link,
+for another portal, a formula with more than the link, or a Google failure; refused, expired (or
+dated ahead), not set up and failed trips said so; GET only; `/key`; a refusal page naming no
+setting; fields kept only as named and prefixed. Supabase: PKCE, HTTP Basic, the only project's key
+read once, several as a list, a sealed project only when the account's, none without a key, its
+tokens and `/renew/supabase` (a refused token 400). Airtable: scopes, PKCE, the id alone, tokens and
+id sealed back, an answer without a refresh token failed. An unknown service: not set up. PostHog:
+the client document, the id and PKCE, tokens and projects sealed back. Google Analytics: offline and
+consent, a renewal without a refresh token handing back the one given.
+
+`scripts/relay-deploy.test.mjs` (Node): required secrets read from `wrangler.jsonc`, a Worker not yet
+deployed read as having none, other wrangler failures reported, portals asked until named, a service
+skippable, a secret typed unseen.

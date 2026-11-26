@@ -21,9 +21,6 @@ How the portal starts and finishes a trip, and why each check is there, is in
 
 ## Contents
 
-This README is split by section, so each part can be read whole.
-
 | Part | Sections |
 |---|---|
-| [services](docs/services.md) | The services; Its secrets; The seal key; Setting it up (once, by the Vendor) |
-| [tests](docs/tests.md) | Tests |
+| [services](docs/services.md) | The services; its secrets; the seal key; setting it up (once, by the Vendor); tests |

@@ -1,12 +1,12 @@
 ---
-title: "@oltrem/backup: Settings and secrets; Not here yet; The table and the error codes; Tests"
+title: "@oltrem/backup: settings and secrets, the table, error codes, tests"
 status: living
 owner: vendor
 last_verified: 2026-11-26
-sources: [modules/backup/src; split from modules/backup/README.md]
+sources: [modules/backup/src/backup.ts, errors.ts, migrations]
 ---
 
-# @oltrem/backup: Settings and secrets; Not here yet; The table and the error codes; Tests
+# @oltrem/backup: settings and secrets, the table, error codes, tests
 
 > Part of [the @oltrem/backup README](../README.md).
 
@@ -33,24 +33,12 @@ npx wrangler r2 object get <bucket>/backups/d1/<copy>.sql.age --remote --file co
 age -d -i oltrem-backup-key.txt copy.sql.age > copy.sql
 ```
 
-## Not here yet
-
-- How much CPU encrypting a large dump takes is measured on the sandbox.
-- After a real restore from a copy in the SQLite tool's format, a search index such as Mail's is
-  empty: it is made again from its definition, not from the copy, and is filled again by the
-  module that owns it.
-- The cache (KV) and the Worker's secrets are not copied: the cache fills itself again, and the
-  secrets are made again from the Key recipes page.
-
 ## The table and the error codes
 
-`backup_runs` (migration `0012_backup.sql`): the id (the Workflow instance, or the drill's own),
-the kind (`export` or `drill`), who asked (none for the nightly run), the status (`running`, `ok`, `failed`,
-`skipped`), when it started and ended, the object key, the sizes, the bookmark, the recipient and
-the error. Migration `0066_backup_progress.sql` adds what the run copies (`parts`, comma
-separated), where a running run is (`step`), what its check found (`verified`) and how many files
-it copied and their size (`files`, `file_bytes`), where its files copy stopped when its steps ran
-out (`files_after`), and when it last said where it is (`beat`).
+| Migration | Adds to `backup_runs` |
+|---|---|
+| `0012_backup.sql` | id (the instance, or the drill's), kind (`export`, `drill`), who asked, status (`running`, `ok`, `failed`, `skipped`), start, end, object key, sizes, bookmark, recipient, error |
+| `0066_backup_progress.sql` | `parts`, `step`, `verified`, `files`, `file_bytes`, `files_after`, `beat` |
 
 | Code | Name | Status | When |
 |---|---|---|---|
@@ -63,14 +51,21 @@ out (`files_after`), and when it last said where it is (`beat`).
 
 A public key that is not an `age1` recipient is `KIT-E-1307` (`@oltrem/core-crypto`).
 
+## Not built yet
+
+- How much CPU encrypting a large dump takes is measured on the sandbox.
+- After a real restore from a copy in the SQLite tool's format, a search index such as Mail's is
+  empty: it is made again from its definition, not from the copy, and is filled again by the
+  module that owns it.
+- The cache (KV) and the Worker's secrets are not copied: the cache fills itself again, and the
+  secrets are made again from the Key recipes page.
+
 ## Tests
 
-Inside the Workers runtime against the real migrations, with Cloudflare's API and the signed
-address as a scripted fetch and the Workflow as a stand-in: a backup asked for by hand, audited,
-exported, polled, encrypted and kept, the copy equal to the age format's own output and streamed;
-a dump without its length held in memory, to the same bytes; a replayed instance; the
-capabilities; one export at a time; each refusal on its run without the token or the signed
-address; the bookmark; both checks' thresholds; the choice of parts and the refusal of none; the
-files copied in steps, never twice, and again once changed, without Cloudflare; a copy that reads
-back wrong failing with its fix; and a database with an FTS5 table exported in the SQLite tool's
-format.
+`test/backup.test.ts`, inside the Workers runtime on the real migrations, Cloudflare's API and the
+signed address scripted and the Workflow a stand-in: a backup by hand audited, exported, polled,
+encrypted (equal to the age format's own output) and streamed; a dump without its length; a
+replayed instance; the capabilities; one export at a time; each refusal without the token or
+address; the bookmark; both checks' thresholds; the parts and the refusal of none; files in steps,
+never twice, again once changed; a copy reading back wrong; a second copy outside Cloudflare; an
+FTS5 database exported in the SQLite tool's format.
