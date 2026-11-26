@@ -2,351 +2,201 @@
 title: 'Oltrem Mail: the setup page'
 status: approved
 owner: vendor
-last_verified: 2026-11-03
-sources: [Cloudflare docs read 2026-11-02 (Email Service, Email Routing API reference, email authentication), the provider API and free-plan pages read 2026-11-02, oltrem-admin modules/email, modules/providers and packages/core-http, the owner's decisions of 2026-11-02, ImprovMX's API reference (v4) read 2026-11-02 and again 2026-11-03]
+last_verified: 2026-11-26
+sources: [modules/email/src/connect.ts, spf.ts, reports.ts, modules/mail/src/cloudflare.ts, forwarding.ts, improvmx.ts, modules/campaigns/src/campaigns.ts, Cloudflare docs read 2026-11-02 (Email Service, Email Routing API), provider and ImprovMX (v4) API pages read 2026-11-02 and 2026-11-03]
 ---
 
 # Oltrem Mail: the setup page
 
-> **In plain words.** How a business turns on email in its portal: an email provider with two
-> fields, or Cloudflare's own email with one button, delivery reports that register themselves, a
-> backup provider, the check that keeps the domain's SPF record valid, and forwarding the way
-> ImprovMX does it, with a guided move from ImprovMX. Part of [the plan](plan.md), approved
-> 2026-11-02; built in phases 2 and 3, forwarding in bundle F.
+Why email is set up the way it is: a provider in two fields, Cloudflare's own email in one button,
+delivery reports that register themselves, a backup provider within the SPF limit, forwarding as
+ImprovMX does it, and what decides Gmail's tabs. Part of [the plan](plan.md); built in phases 2
+and 3, forwarding in bundle F. Routes and settings: the email module's README and
+[`modules/mail/docs/using-it.md`](../modules/mail/docs/using-it.md).
 
 ## 1. "Use an email provider"
 
-```mermaid
-flowchart TD
-  from["1. Default From address<br/>(toggle: a different sending subdomain)"] --> key["2. The provider's key"]
-  key --> who{"Does the key's start<br/>name the provider?"}
-  who -- "yes" --> extra["Extra fields only if this<br/>provider needs them"]
-  who -- "no" --> dnslook["Read the domain's DNS;<br/>preselect the provider found,<br/>else a row of logos"]
-  dnslook --> extra
-  extra --> look{"Does the provider<br/>know the domain?"}
-  look -- "yes, verified" --> hooks["Register delivery reports"]
-  look -- "no" --> add["Add it at the provider,<br/>write the records on Cloudflare"]
-  add --> check["Check now, then by itself:<br/>every 5 min, hourly, daily"]
-  check --> hooks
-  hooks --> test["Send a test to me"]
-```
+One card (Email, Set up) does every step in one press and lists each in words.
 
-- **Field 1, the default From address.** The domain is read after the @. The toggle "Use a
-  different sending subdomain" moves the address to a subdomain (`hello` at `mail.example.com`), and
-  that subdomain is what gets set up at the provider. Typing a subdomain address directly works the
-  same way.
-- **Finding the zone.** Whether the person uses the toggle or types an address at `mail.example.com`, the
-  portal finds the Cloudflare zone by walking up the name (`mail.example.com`, then `example.com`)
-  and writes every record relative to that parent zone.
-- **Field 2, the key.** Its start names the provider: `re_` Resend, `xkeysib-` Brevo, `SG.`
-  SendGrid, `api-` SMTP2GO, `AKIA` Amazon SES. When it does not (Mailjet and Postmark keys look
-  generic), the portal first reads the domain's DNS (the kit already detects providers this way)
-  and preselects what it finds; only if that finds nothing does a sideways row of logos ask for one
-  tap. A key of the wrong kind is refused in words, as the kit does today (for example Brevo's
-  SMTP key).
-- **Extra fields, only when needed:** Mailjet also needs its secret key; Amazon SES a secret and a
-  region; plain SMTP a host, user and password. Resend, Brevo, SendGrid, SMTP2GO and Postmark stay
-  at two fields.
-- **Already in the kit:** reading a provider's domains and addresses (8 providers), adding a domain
-  at Resend and Brevo, records with Copy buttons, the check in words, DMARC required, sender
-  addresses with permissions.
-- **Built in phase 3:** the single card (Email, Set up), which does every step in one press and
-  lists each in words; the records written on Cloudflare when Oltrem Mail is on (DNS Edit; only
-  adds, each press audited); delivery reports registered by themselves (section 3); a backup
-  provider from the same card (section 4); the placement test. What each step does is in the email
-  module's README ("The simple provider card") and the mail add-on's ("Records on Cloudflare").
-- **Built in bundle C:** a domain not yet passing is checked by itself every five minutes in its
-  first hour, hourly in its first day, then daily, the provider asked each time to look again; DMARC
-  is read from the domain or the nearest parent, and written in the same press only when none covers
-  it, so a parent's stricter policy is never weakened; each domain says whether it is ready for
-  Gmail, Yahoo and Outlook; a domain that has not passed in a day warns on System health; everyday
-  mail goes through the backup first once the main provider is down to its last tenth. The record is
-  [records/2026-11-02-sets-itself-up.md](../archive/records/2026-11-02-sets-itself-up.md).
+- **The From address.** Its domain is read after the @; "Use a different sending subdomain" (or a
+  an address typed at `mail.example.com`) sets up that subdomain at the provider. The zone is found by
+  walking up the name, and records are written relative to it.
+- **The key.** Its start names the provider: `re_` Resend, `xkeysib-` Brevo, `SG.` SendGrid,
+  `api-` SMTP2GO, `AKIA` Amazon SES. Otherwise (Mailjet and Postmark keys look generic) the
+  domain's DNS preselects one, and only then a sideways row of logos asks for a tap. A key of the
+  wrong kind (Brevo's SMTP key) is refused in words.
+- **Extra fields only when needed:** Mailjet its secret key; Amazon SES a secret and region; SMTP a
+  host, user and password.
+- **Then by itself:** the domain added at the provider and its records written on Cloudflare (only
+  added, never a second SPF, a parent's DMARC never weakened); a domain not passing is checked
+  every five minutes in its first hour, hourly in its first day, then daily, and warns on System
+  health after a day; each domain says whether it is ready for Gmail, Yahoo and Outlook; delivery
+  reports registered (section 3); the placement test
+  ([the record](../archive/records/2026-11-02-sets-itself-up.md)).
 
 ## 2. "Use Cloudflare email"
 
-Cloudflare Email Sending to any recipient is not available on Workers Free. On Free, the
-`send_email` binding still sends, without a count limit, to the account's verified addresses, from
-a domain with Email Routing on. The card sets up both cases and tells them apart:
+Cloudflare Email Sending to any recipient is not on Workers Free, but the `send_email` binding
+still sends, with no count limit, to the account's verified addresses from a domain with Email
+Routing on. The card starts from the portal's main address (`email.from_address`,
+`email.from_name`) and sets up both plans:
 
-The card's form starts from the portal's main address (the settings `email.from_address` and
-`email.from_name`, asked once at the first setup): its domain, the part before its @ as "Send
-as", and its name, each still changeable (built 2026-11-03, the first step of
-[mail settings set once](../archive/records/2026-11-03-mail-settings-once.md)). Forwarding's Add a domain
-starts from the same domain while it is not added yet.
+1. **Where mail is received.** A domain that receives mail elsewhere (Google Workspace, Microsoft
+   365) would lose its MX records to Routing at the root, so a subdomain is offered; existing MX
+   records are never replaced without an explicit choice.
+2. **Email Routing on** (`POST /zones/{zone_id}/email/routing/dns`, which adds and locks MX and
+   SPF), with Email Routing Rules Edit and DNS Edit ([decision 3](plan.md#11-the-owners-decisions)).
+   A 403 shows the one dashboard tap.
+3. **Staff verified:** each is added to Verified Destination Addresses and presses Cloudflare's link
+   once; the state is read back on demand, every five minutes for a day, then daily, and kept in
+   the database, never KV.
+4. **The domain onboarded for sending, and the test.** Cloudflare has no onboarding API (checked
+   2026-11-02 and 2026-11-03), so this is a dashboard tap and the key never needs Email Sending
+   Edit. A test refused only for that is sent again every five minutes for a day (`mail.soon`), so
+   the route turns ready without a second press. An unverified recipient says "verify it first";
+   any other failure says "could not check, try again" and never guesses a mode (R-10). The mode is
+   Paid only when the plan setting says Workers Paid, and a plan change asks for the test again. In
+   Paid mode Cloudflare writes its records on `cf-bounce.example.com` and a DMARC record.
+5. **The line** reads **"Ready (Free Plan: Verified Staff Addresses Only)"** or **"Ready (Paid
+   Plan: Staff & Customer Transactional)"**.
+6. **The route sends nothing until a test passed**, to the presser (verified first) or a typed
+   verified address.
+7. **What it carries:** never bulk mail (M-2); in Free mode only mail whose every recipient is a
+   verified staff address; in Paid mode customers' transactional mail too, once the Owner turns on
+   `mail.cloudflare_first`. A message the route got no clear answer for stays on it (M-1).
 
-1. **Where mail is received.** If the domain already receives mail elsewhere (Google Workspace,
-   Microsoft 365), turning Routing on at the root would replace those MX records, so the portal
-   offers a subdomain (for example `mail.example.com`) and never replaces existing MX records
-   without an explicit choice.
-2. **Turn on Email Routing** on that domain (`POST /zones/{zone_id}/email/routing/dns`, which adds
-   and locks the MX and SPF records). The owner confirmed this needs Email Routing Rules Edit plus
-   DNS Edit, both in [decision 3](plan.md#14-the-owners-decisions). If Cloudflare answers 403, the
-   card shows the one guided tap in the Cloudflare dashboard instead.
-3. **Verify staff addresses:** each staff member is added to Verified Destination Addresses
-   (`POST /accounts/{account_id}/email/routing/addresses`). Each person clicks Cloudflare's link
-   once; the portal reads the verified state back (on demand, every five minutes for a day after
-   asking, then daily) and keeps it in the
-   database, never in KV. New staff are added when they join.
-4. **Onboard the domain for sending, and send the test.** Cloudflare has no API for onboarding a
-   domain to Email Sending (checked 2026-11-02, when phase 2 was built), so this one step is a
-   tap in the dashboard (Email Service, Email Sending, Onboard Domain), and the portal never asks
-   for Email Sending Edit: the key needs the three rights above and nothing more, narrower than
-   [decision 3](plan.md#14-the-owners-decisions) allowed. Checked again on 2026-11-03: the
-   Email Sending API has sending, suppressions and SMTP, and still no onboarding call. The step's
-   line links straight to the dashboard's Email Sending page, and a test refused only because the
-   domain is not onboarded is sent again by itself to the same address every five minutes for a
-   day (the `mail.soon` job, four companies a run), so the route turns ready without a second
-   press. The test tells the states apart: an
-   answer that the domain is not onboarded shows the dashboard step; an unverified recipient
-   shows "verify it first"; a pass marks the route ready. The mode is read, never guessed: Paid
-   only when the portal's plan setting says Workers Paid, Free otherwise, and a plan that changes
-   sends the route through its test again. A network error, a server error or any other answer
-   shows "could not check, try again" and never quietly chooses a mode (fail closed, R-10). In
-   Paid mode Cloudflare writes its own records on `cf-bounce.example.com` (bounce MX, SPF, DKIM)
-   and a DMARC record.
-5. **The route's line on the page** reads either **"Ready (Free Plan: Verified Staff Addresses
-   Only)"** or **"Ready (Paid Plan: Staff & Customer Transactional)"**.
-6. **A test** goes to the person who pressed the button (verified first), or to the verified
-   address they type. The route sends nothing until a test passed on it.
-7. **What the route carries.** Never bulk mail (Cloudflare's rule, mail law M-2). In Free mode,
-   only mail whose every recipient is a verified staff address. In Paid mode also customers'
-   transactional mail, when the Owner turns on the setting `mail.cloudflare_first`. It sends from
-   the route's own address unless the message's From is on the route's domain; a message from an
-   address someone picked on another domain keeps its provider. A message the route took and got
-   no clear answer for stays on it and is never sent through a provider (mail law M-1).
-
-Sending always uses the structured call, `env.EMAIL.send({ to, from, subject, html, text, headers,
-attachments })` (with `cc`, `bcc` and `replyTo` when needed), never the older raw `EmailMessage`.
-The binding in the client template is `"send_email": [{ "name": "EMAIL" }]` ([decision
-4](plan.md#14-the-owners-decisions)).
-
-The page leads with **the next step**: the first of the four that has not passed, what was found and
-what to do, or "Everything is ready" once all four have; the four steps stay under **All four
-steps**, with how many are done.
+Sending uses the structured `env.EMAIL.send({ to, from, subject, html, text, headers, attachments
+})`, never the raw `EmailMessage`; the binding is `"send_email": [{ "name": "EMAIL" }]`
+([decision 4](plan.md#11-the-owners-decisions)). The page leads with the first step not passed, or
+"Everything is ready".
 
 ## 3. Delivery reports, registered by themselves
 
-The Sent timeline, the do-not-mail list and the bulk self-pause (0.3% complaints, 5% bounces) all
-need the provider's delivery reports. So once a provider's domain checks out, the portal registers
-its address there by API, for delivered, bounced, complained and opened:
+The Sent timeline, the do-not-mail list and the bulk self-pause (0.3% complaints, 5% bounces) need
+the provider's reports, so once a domain checks out the portal registers its address for
+delivered, bounced, complained and opened:
 
-| Provider | How it is registered | How a report is checked |
+| Provider | Registered by | A report checked by |
 |---|---|---|
-| Resend | Resend's webhook API; it returns a signing secret | The signature (the kit's Standard Webhooks check) |
-| Brevo | Brevo's webhook API, transactional events | Brevo does not sign: the long random token in the address (as the kit does today) |
-| Mailjet | Mailjet's event callback API, one call per event | Mailjet does not sign: the token in the address |
-| The others | The kit's guided manual step, as today | The kit's existing checks (six signature schemes) |
+| Resend | its webhook API, which returns a signing secret | the signature (Standard Webhooks) |
+| Brevo | its webhook API, transactional events | the long random token in the address |
+| Mailjet | its event callback API, one call per event | the token in the address |
+| The others | the kit's guided manual step | the kit's six signature schemes |
 
-- **The address** is the kit's public hook door, `/hooks/email/<provider instance>/<token>`.
-  Everything under `/api/` sits behind the Access sign-in and the cross-site check, so a provider
-  could never reach it; `/hooks/` is mounted before sign-in and let through by Access, for exactly
-  this. One address per provider instance, so two accounts at one provider never mix.
-- **The secret** is sealed with the provider's own key in the database, encrypted with the kit's
-  KEK. It is never in `tokens.registry.json`, which lists only the names of the Worker's own
-  secrets (R-05). No new Worker secret is needed.
-- **Known limits:** Resend's webhook API needs a full-access key; with a sending-only key the
-  portal shows the guided manual step. Mailjet has no "delivered" event; its "sent" means the
-  receiving server accepted the mail. "Opened" overcounts, because Apple Mail opens messages
-  automatically for privacy: it is shown with that note and never used for decisions.
-- **Removing a provider** removes its webhook there; both steps are audited.
+- **The address** is `/hooks/email/<provider instance>/<token>`: `/api/` sits behind sign-in and
+  the cross-site check, `/hooks/` is mounted before sign-in for exactly this. One per instance.
+- **The secret** is sealed with the provider's key under the kit's KEK; it is not a Worker secret,
+  so it has no registry row (R-05).
+- **Limits:** Resend's webhook API needs a full-access key (with a sending-only key, the manual
+  step); Mailjet has no "delivered", its "sent" means accepted; "opened" overcounts because Apple
+  Mail opens for privacy, so it carries a note and decides nothing.
+- **Removing a provider** removes its webhook there; both audited.
 
 ## 4. A backup provider, and the SPF limit
 
-The card offers "Add a backup provider". The recommendation is one main and one backup ([the
-plan](plan.md#1-your-questions-answered)): Brevo with Resend, or Brevo with Mailjet. Mailgun stays
-supported for clients who already use it.
+One main and one backup ([the plan](plan.md#1-your-questions-answered)): Brevo with Resend, or Brevo
+with Mailjet; Mailgun stays for clients who use it. Everyday mail goes through the backup first once
+the main provider is down to its last tenth.
 
-A domain's SPF record may cause at most **10 DNS lookups** when a receiver checks it, and at most 2
-lookups that find nothing; past that, receivers treat SPF as broken. The portal counts them the
-way the standard (RFC 7208) does: `include`, `a`, `mx`, `ptr`, `exists` and `redirect`, followed
-through every include. It warns at 9 and refuses to add a provider that would pass 10.
+SPF allows 10 DNS lookups and 2 that find nothing; past that receivers treat it as broken. The
+portal counts as RFC 7208 does (`include`, `a`, `mx`, `ptr`, `exists`, `redirect`, through every
+include), warns at 9 (`SPF_FULL_AT`) and refuses a provider that would pass 10. Where each route
+puts its SPF (the counter measures live records, not this list):
 
-Where each route puts its SPF, so the root stays small (the counter measures the live records
-instead of trusting this list):
-
-| Route | Its SPF | Lookups added at the root |
+| Route | Its SPF | Added at the root |
 |---|---|---|
-| Resend | On `send.example.com` | None |
-| Cloudflare Email Sending (Paid) | On `cf-bounce.example.com` | None |
-| Cloudflare Email Routing | `include:_spf.mx.cloudflare.net` on the domain Routing runs on | Its own, if Routing runs at the root |
-| Mailjet | `include:spf.mailjet.com` at the root | Its own |
-| Brevo | Whatever Brevo's own records ask for | Counted live |
+| Resend | on `send.example.com` | nothing |
+| Cloudflare Email Sending (Paid) | on `cf-bounce.example.com` | nothing |
+| Cloudflare Email Routing | `include:_spf.mx.cloudflare.net` where Routing runs | its own, at the root |
+| Mailjet | `include:spf.mailjet.com` at the root | its own |
+| Brevo | what Brevo's records ask | counted live |
 
 ## 5. Forwarding, as ImprovMX does it
 
-Built in bundle F ([its record](../archive/records/2026-11-02-forwarding.md)), on its own page,
-Forwarding (`/email/forwarding`), under Email's Settings tab. Since 2026-11-12 ([its
-record](../archive/records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
-**ImprovMX** and **Cloudflare**. A visit opens on ImprovMX, unless Cloudflare already forwards a
-domain and ImprovMX is not connected.
+The Forwarding page (`/email/forwarding`, Email's Settings tab) has two views, **ImprovMX** and
+**Cloudflare**; it opens on ImprovMX unless Cloudflare already forwards a domain and ImprovMX is
+not connected ([bundle F](../archive/records/2026-11-02-forwarding.md),
+[ImprovMX view](../archive/records/2026-11-12-forwarding-through-improvmx.md)).
 
 ### 5.1 Through ImprovMX, with its key
 
-The owner's pick of 2026-11-12: **Connect ImprovMX** takes the account's API key once (the API
-page of ImprovMX's dashboard). It is tried on the account first, and a key ImprovMX refuses is
-never kept; the right one is kept sealed by the kit's providers module, as an instance of the
-`improvmx` definition (kind `forwarding`), and is never logged, audited or shown again (its row,
-`IMPROVMX_API_KEY`, is in the [token registry](reference/tokens.md)). From then on the view reads
-ImprovMX itself, nothing of it kept here:
-
-| What it shows | From ImprovMX |
-|---|---|
-| The account, its plan | `GET /account` |
-| Each domain, whether its mail is forwarded, whether it follows ImprovMX's rules | `GET /domains` (the first 8 read, the rest named) |
-| Each domain's aliases, with their people and how many webhooks | `GET /domains/:domain/aliases`, 200 a domain |
-| Check its records: MX, SPF, DKIM and DMARC, each found or missing with the value it expects | `POST /domains/:domain/verify` |
-| Recent mail: the newest 20 messages forwarded, or tried, with their last step | `GET /domains/:domain/logs` |
-
-A view makes at most 10 calls. **Add a domain**, **Add the alias** (`*` for every other address),
-**Change** and **Delete** are made at ImprovMX at once, each on the audit log by its address,
-never the key; people are checked before any call (addresses only, ten at most), and ImprovMX's
-own refusal is shown in its words, as are a wrong key, a paid-plan wall and a wait. Webhooks among
-an alias's destinations are counted and changed in ImprovMX only. **Disconnect** forgets the key;
-the aliases stay at ImprovMX and keep forwarding.
-
-While ImprovMX is connected the Cloudflare view rests: the five-minute job and the health check
-pass the company's Cloudflare domains and aliases by, nothing of them is deleted, and
-disconnecting picks them up again.
+**Connect ImprovMX** takes the account's API key once; it is tried first, kept sealed as an
+`improvmx` instance (kind `forwarding`) and never logged, audited or shown
+([`IMPROVMX_API_KEY`](reference/tokens.md)). The view then reads ImprovMX live, at most 10 calls:
+the account and plan, the first 8 domains (the rest named) with whether each forwards, their
+aliases (200 a domain) with people and webhook counts, a records check (MX, SPF, DKIM, DMARC) and
+the newest 20 messages. Add a domain, add an alias (`*` for every other address), change and delete
+go to ImprovMX at once, audited by address, people checked first (ten at most); ImprovMX's refusals
+show in its words. **Disconnect** forgets the key; the aliases keep forwarding. While connected,
+the Cloudflare view rests: its jobs and checks skip those domains and delete nothing.
 
 ### 5.2 Through Cloudflare
 
-An **alias** forwards one address of a domain
-(`info@example.com`), or every address of it that has no alias or mailbox of its own (the
-catch-all, written `*@example.com`), to one person or up to ten, and keeps nothing. A **mailbox**
-of [the inbox](inbox.md) keeps the mail in the portal; an address is one or the other.
+An **alias** forwards one address, or every address without its own (the catch-all,
+`*@example.com`), to one to ten people and keeps nothing; a **mailbox** of [the inbox](inbox.md)
+keeps mail. To one person it is Cloudflare's own forward rule; to several, a rule to the Worker,
+which forwards to each confirmed person (a rule forwards to one address). Each person must be
+verified in Email Routing: Cloudflare emails each a link, eight a press and the rest by the
+five-minute job, and the alias starts once one is pressed.
 
-| What | How Cloudflare carries it |
-|---|---|
-| An alias to one person | Cloudflare's own forward rule: the Worker is not used at all |
-| An alias to several people | a rule that sends the mail to the portal's Worker, which forwards it to each confirmed person (Cloudflare forwards to exactly one address a rule) |
-| The catch-all | Cloudflare's catch-all rule, the same two ways |
-| Each person it goes to | an address verified in Email Routing; the portal asks Cloudflare to email each one its link, at most eight a press and the rest by the five-minute job, and starts the alias by itself once one is pressed |
+A domain is looked up in the account's zone (never cached DNS): with no MX, Routing is turned on;
+with Cloudflare's, its state is read; with ImprovMX's, aliases are set ahead and mail keeps going to
+ImprovMX until **Move from ImprovMX**; with another service's, nothing changes (use a subdomain).
 
-**A domain**, added by hand or by the first alias on it, is looked up in the account's Cloudflare
-zone (never a cached DNS answer):
+**Read from ImprovMX** takes the key for that press only (never stored) and imports every domain's
+aliases, 200 a page, in at most 12 ImprovMX calls beside 35 Cloudflare ones; an unreached domain is
+named for the next press, and a domain's non-alias rules are named. Without a key, a pasted list
+works: ImprovMX's export, or one alias a line with its people (spaces, commas, tabs, `->` or `=>`).
+Webhooks are left out, saying so; the same list again changes nothing.
 
-| Its MX records | What the portal does |
-|---|---|
-| None | turns Email Routing on in the same press: nothing is replaced |
-| Cloudflare's | reads Email Routing's state |
-| ImprovMX's | notes it: the aliases are saved and set on Cloudflare ahead, and the domain's mail keeps going to ImprovMX until **Move from ImprovMX** is pressed |
-| Another mail service's | notes it and changes nothing; forwarding there takes a subdomain |
+**The move**, one domain at a time, once every alias has a confirmed person:
 
-**The import** is one press: **Read from ImprovMX** takes the account's API key (the API page of
-ImprovMX's dashboard), reads every domain of the account and every alias of each, 200 a page, and
-takes them all. The key is used in that press's requests and nowhere else: it is not stored,
-logged, audited or shown again (its row, `IMPROVMX_API_KEY`, is in the
-[token registry](reference/tokens.md)). A press makes at most 12 calls to ImprovMX beside its 35
-to Cloudflare; a domain it could not reach is named, to fill in for the next press. A wrong key,
-ImprovMX asking to wait (with how long), or a domain it does not know each say so in words. A
-domain on ImprovMX's rules has its aliases read and its other rules named, since those are not
-aliases.
+1. ImprovMX's MX and the SPF record are kept, so Move back works from any point.
+2. `include:_spf.mx.cloudflare.net` joins the SPF record (ImprovMX's stays); passing 10 lookups
+   stops the move.
+3. The aliases' rules are made while mail still goes to ImprovMX.
+4. ImprovMX's MX are deleted and Routing turned on; if Cloudflare refuses either, ImprovMX's records
+   go back at once.
 
-Without a key, the import takes what a person pastes: ImprovMX's exported list as it is (a header
-naming the alias and its forwards), or one alias a line followed by its people, with spaces,
-commas, tabs, `->` or `=>` between. A line without a domain takes the one filled in. Either way a
-webhook is left out, saying so; the same list again changes nothing; a changed list changes the
-people.
+**Move back** adds ImprovMX's MX beside Cloudflare's (both forward, nothing lost), turns Routing off
+and takes Cloudflare's include out; ImprovMX is never changed by either. It is refused, with
+dashboard steps, while the zone also carries the sending route, another forwarding domain or
+mailboxes.
 
-**The move**, one domain at a time, is offered once every alias of the domain has at least one
-confirmed person. Its dialog says what changes. Then, in this order:
-
-1. ImprovMX's MX records and the SPF record are kept in the portal, so Move back works from any
-   point of the move.
-2. `include:_spf.mx.cloudflare.net` is added to the SPF record (ImprovMX's include stays, so mail
-   sent through ImprovMX keeps passing); a record that would pass 10 lookups stops the move first.
-3. The aliases' rules are made, while mail still goes to ImprovMX.
-4. ImprovMX's MX records are deleted and Email Routing is turned on, which adds Cloudflare's.
-   Should Cloudflare refuse either, ImprovMX's records are put back at once and the domain stays
-   with ImprovMX.
-
-**Move back** unlocks Cloudflare's records, adds ImprovMX's MX records again beside them (both
-forward, so no mail is lost in between), turns Email Routing off for the domain, which takes
-Cloudflare's own records away, and takes Cloudflare's include out of the SPF record. ImprovMX itself
-is never changed by either, so its aliases are there on the way back. When the same Cloudflare zone
-also carries the sending route, another forwarding domain or mailboxes, Move back is refused with
-the dashboard steps instead, since turning Email Routing off would stop those too.
-
-**On the builder's own computer** (the portal tried with the kit's start page), Cloudflare is
-never asked: each domain says "On this computer", everyone an alias names counts as confirmed,
-and Move and Move back say that nothing moves there. **Send a test**, on the Forwarding page and
-on Mailboxes, hands the portal a message as Email Routing would and says what became of it:
-forwarded to whom, kept in which inbox, or refused, as the sender would be told. Nothing leaves
-the computer. Read from ImprovMX works there too, since it only reads.
-
-Every Cloudflare and DNS call is counted: 35 a press and 8 a run of the five-minute job, inside
-Workers Free's 50 an invocation; what is left over is done by the next run. Each move, move back
-and import is on the audit log, a refused one too.
+**On the builder's computer** Cloudflare is never asked: domains say "On this computer", people
+count as confirmed, moves say nothing moves, and **Send a test** (here and on Mailboxes) reports
+forwarded, kept or refused. Every Cloudflare and DNS call is counted: 35 a press, 8 a five-minute
+run, inside Workers Free's 50; the rest waits for the next run. Moves, move backs and imports are
+audited, refusals too.
 
 ## 6. Landing in Gmail's Primary tab, not Promotions
 
-Added 2026-11-11, after the owner found every portal email in Promotions. No header or setting
-makes Gmail put a message in Primary: it decides for each recipient from who sends, what the
-message looks like, and how that person treated mail from the sender before (replies, moving a
-message to Primary, adding the sender to contacts). What the portal controls is that its everyday
-mail carries none of the signs of marketing mail.
+No header puts mail in Primary: Gmail decides per reader from the sender, how the message looks and
+how that reader treated the sender before. The portal keeps marketing signs off everyday mail:
 
-| Sign of marketing mail | What the portal does |
+| Sign | What the portal does |
 |---|---|
-| An open-tracking pixel, and links sent through the provider's own address | Everyday mail (Write, replies, automated notices) asks the provider not to track it, where the provider takes that for one message (Postmark, SendGrid, Mailgun, Mailjet). Resend tracks only when tracking is switched on for the domain in its dashboard, and it starts off. |
-| A provider that tracks every message and adds a `List-Unsubscribe` header to each (Brevo; Sender tracks every message too) | Everyday mail goes through another connected provider first, and the tracking one stays the backup. With no other provider, Ready to send says "Everyday email lands in the inbox" and names the fix: add one, such as Resend. |
-| `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both by law and by Gmail's bulk-sender rules. A campaign is marketing, and Gmail mostly files it under Promotions, which is not spam. |
-| A campaign that looks or reads like an advertisement | A campaign's plain message goes as a plain letter, as Write sends one: no coloured page, no card, the footer a small line under the words. Over its preview the page says which tab it will most likely reach: it names each sign (an offer in the subject, shouting in capital letters or rows of exclamation marks, many links, a design, a From name that says newsletter) and what to change, or says it reads like a letter. For a few people it points to Compose, where each gets their own copy from the everyday address. |
-| The email itself reads as an offer: an offer in the subject or the hidden preview line, a newsletter build (pictures, buttons, a hidden preview line), Unsubscribe or View in browser links, many links | Write asks once before it goes, naming each sign and the way to Primary, and names any link that goes nowhere (`#`, a template's yourwebsite.com). Gmail's own help files "deals, offers, and other promotional emails" under Promotions, so a designed offer lands there from any provider and any setup. |
-| One address for campaigns and everyday mail | The campaign page says so when its From address also sends everyday email: Gmail learns an address from its campaigns and then files its letters under Promotions too. |
+| Tracking pixels and rewritten links | Everyday mail asks the provider not to track where it can for one message (Postmark, SendGrid, Mailgun, Mailjet); Resend tracks only when switched on for the domain |
+| A provider that tracks every message and adds `List-Unsubscribe` (Brevo, Sender) | Everyday mail goes through another provider first; with none, Ready to send names the fix |
+| `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both and mostly land in Promotions (not spam) |
+| A campaign that reads as an advert | Sent as a plain letter; its preview names each sign (an offer in the subject, capitals, rows of !, many links, a design, a newsletter From name) and points a few recipients to Compose |
+| An everyday email that reads as an offer | Write asks once, naming each sign and any link that goes nowhere (`#`, yourwebsite.com) |
+| One address for campaigns and everyday mail | The campaign page warns: Gmail learns the address as Promotions |
 
-What only the client can do, outside the portal:
-
-1. Send everyday mail through a provider that does not track it (Resend, Postmark, Mailgun), and
-   keep a tracking provider such as Brevo for campaigns.
-2. Send campaigns from their own address on their own subdomain (`news.example.com`), so Gmail
-   learns the everyday address as a person's: Google's sender guidelines ask for a separate
-   address for each kind of mail.
-3. Write everyday mail like a letter: plain words, a few links, from a person's name ("Ana from
-   Example Co" rather than the business name alone), with a reply address on the same domain
-   that someone reads.
-4. Once DMARC reports show every provider passing, move DMARC from `p=none` to `p=quarantine`.
-5. Ask a few regular customers to reply once, or to move one email to Primary: Gmail then keeps
-   that sender in Primary for them. Gmail learns for each reader: someone who was sent designed
-   offers from an address may see even its plain letters in Promotions until they move one.
-
-What 2026-11-12 showed, from the owner's own test: the client's domain passed SPF (through the
-provider's return-path subdomain), DKIM and TLS, and the provider added no tracking, yet the
-email landed in Promotions. It was a newsletter design with "Deal" in its subject, a hidden
-preview line, a hero picture, a button and Unsubscribe and View in browser links that went
-nowhere, sent from the one address that also sent the client's campaign. That is what Gmail calls
-a promotion; the record says what was checked
-([2026-11-12](../archive/records/2026-11-12-promotions-tab-cause.md)).
-
-What 2026-11-15 showed: the owner's first campaign reached its four people, in Promotions. Its
-sending was right; it was a sales letter with package offers, lines in capital letters, rows of
-exclamation marks and a From name beginning "News Email from", inside the grey card every plain
-campaign then went out in. The card is gone and the page now names the rest before a campaign
-goes ([the record](../archive/records/2026-11-15-campaigns-as-letters.md)). Nothing makes Gmail put a
-campaign in Primary: a letter that reads as one person writing to another has the best chance,
-and an offer belongs in Promotions by Gmail's own definition.
+The client's own part: everyday mail through a provider that does not track (Resend, Postmark,
+Mailgun); campaigns from their own subdomain (`news.example.com`); everyday mail written as a
+letter from a person's name with a read reply address; DMARC to `p=quarantine` once reports pass;
+a few customers replying or moving one email to Primary. The owner's tests of 2026-11-12 and
+2026-11-15 landed in Promotions for their content, not their sending
+([cause](../archive/records/2026-11-12-promotions-tab-cause.md),
+[campaigns as letters](../archive/records/2026-11-15-campaigns-as-letters.md)).
 
 ### 6.1 The portal's own notices: Updates, and the one sure way to Primary
 
-Added 2026-11-22, after the owner found the portal's sign-in notices and alerts in Gmail's Updates
-tab once nothing in them read as an offer. Gmail's help describes Updates as "automated
-confirmations, notifications, statements, and reminders", which is what a sign-in notice is, from
-any provider and any setup. Google's own word on how its tabs learn (its Workspace blog, 2020) is
-that the reader's actions count most: moving a message to another tab, a filter, adding the sender
-to contacts, and replying.
-
-So the one way that holds for every message is the reader's own: a Gmail filter that says "mail
-from these domains: put it in Primary, never in Spam" beats Gmail's sorting each time, and it
-covers announcements to staff as well. The portal makes that one step for each person:
-
-- `GET /api/email/primary` names the main address and every sender address with their domains.
-- The Notifications page (the kit's screens) turns them into a Gmail filter file to import on a
-  computer (Settings, Filters and Blocked Addresses, Import filters) and a contact card to add on
-  a phone, with the steps for Gmail and Outlook, and a **Send me a test** button
-  (`POST /api/email/primary/test`, a plain test from the main address).
-- The kit's invitation, sign-in notice and alert emails each end with a line pointing to that
-  step, so a person who finds one under Updates sees where to fix it.
-
-What stays the client's: each person does the step once in their own mailbox; no sender can set a
-reader's filter, and a free account offers no way to set it for a whole company.
+Sign-in notices and alerts are what Gmail calls Updates ("automated confirmations, notifications,
+statements, and reminders"), and the reader's actions count most. So the one sure way is the
+reader's own filter, which the portal makes for each person: `GET /api/email/primary` names the
+main and sender addresses; the Notifications page turns them into a Gmail filter file and a contact
+card, with steps for Gmail and Outlook and **Send me a test** (`POST /api/email/primary/test`); the
+kit's invitation, sign-in and alert emails end with a line pointing there. Each person does it once;
+no sender can set a reader's filter.
