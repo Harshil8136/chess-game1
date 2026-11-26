@@ -105,6 +105,7 @@ sequenceDiagram
 | Checked three times | The relay keeps only named fields with their prefix (`https://hooks.slack.com/services/`, `https://discord.com/api/webhooks/`); the portal checks again, then the Developer module |
 | Same permissions | A chat needs `developer.manage`, a sheet `connect.share`; the alert is made as the person |
 | No Google token in a portal | The portal picks the link's secret first and sends its address sealed to the relay, which creates the sheet and returns only its address; the link is written only then |
+| Every failure said | A trip that brings nothing back writes `connect.oneclick-finish` to the audit log as `failed` (`refused` when the person cancelled) with the step that stopped it (`why`, never a value it carried), and logs it; the page shows only the reason's notice |
 
 Teams and Google Chat would need Microsoft's and Google's verification and a kept refresh token;
 Zapier and Make only for store-listed apps. They stay on the pasted link.

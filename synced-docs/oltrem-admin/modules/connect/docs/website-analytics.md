@@ -59,7 +59,8 @@ the portal renews itself; Google reuses the Vendor's app with offline access, re
 relay's `/renew/google-analytics`, which adds the secret.
 
 1. **Continue with <app>** posts `/connect/start`; the person allows read-only access.
-2. **The sites.** The portal checks the tokens (lifetime at most a day), then reads PostHog in the
+2. **The sites.** The portal checks the tokens (a lifetime past a day, such as the 7 days PostHog
+   gives an app like this one, is kept as a day and renewed then), then reads PostHog in the
    region that issued the token (`region`, else US then EU; only a 401 tries the other) by what the
    person allowed, as PostHog's scoping requires: chosen projects each by its own address
    (`/api/projects/<id>/`, a list is refused for them), a whole organization by its list

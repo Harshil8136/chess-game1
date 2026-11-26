@@ -156,3 +156,9 @@ From [record](../archive/records/2026-11-26-posthog-projects-by-scope.md):
 | # | Open | You should see |
 |---|---|---|
 | P1009 | After the fleet run that follows this push: Apps, Analytics, PostHog, Continue with PostHog; on PostHog's page pick your project and allow | Back on Connect with your project's name to pick; pick it and the connection is saved. Reload the page after any failure: the old notice is gone |
+
+From [record](../archive/records/2026-11-26-posthog-week-long-sign-in.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1010 | After the fleet run that follows this push: Apps, Analytics, PostHog, Continue with PostHog, allow on PostHog's page | "Pick your PostHog project" with your project; Connect saves it. If anything fails: Audit log, Integrations, a "failed" row for the sign-in that says which step stopped it |
