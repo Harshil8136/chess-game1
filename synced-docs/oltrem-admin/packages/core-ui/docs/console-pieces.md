@@ -38,11 +38,11 @@ on hover and to a screen reader, a fixed height whatever the data, and the hue o
 
 | Piece | Shows | Rule it keeps |
 |---|---|---|
-| `TrendChart` | a figure each day as a filled line, the period before as a dashed line, a scale of three steps (`niceTop`), the first, middle and last day | 176 px high; each day's figure and the same day before in a title; the key totals both periods |
+| `TrendChart` | a figure each day as a filled line, the period before as a dashed line, a scale of three steps (`niceTop`), the first, middle and last day | 176 px high; each day's figure and the same day before in a title; the key totals both periods; `events` (a column and its words) are dotted lines, said in that day's title and listed under the chart |
 | `Delta`, `moved` | how a figure moved: `↑50%`, `↓25%`, `new` | green the good way, red the bad way (`good: 'down'` for refusals), quiet when nothing moved; the full words for a screen reader |
 | `Heatmap` | a grid of shades, rows by columns (a week of hours) | five steps from the busiest cell; each cell's figure in a title; a key from Less to More |
 | `SplitBar` | one bar split into its parts, and the parts named under it with their figure and share | a part with a page and a count is a link |
-| `BarList` | names over faint bars of their share of the largest, with an optional `Spark`, the figure and its `Delta` | a row a link; long names end in an ellipsis, never push the figures off the card |
+| `BarList` | names over faint bars of their share of the largest, with an optional `Spark`, the figure (or its `shown` words, `1.2 GB`) and its `Delta` | a row a link; long names end in an ellipsis, never push the figures off the card |
 
 ## daisyUI and the Email pieces (Look 3)
 

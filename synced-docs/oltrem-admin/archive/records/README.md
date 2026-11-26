@@ -127,6 +127,8 @@ The records since 16 November:
 | [Reports, Money: days to get paid, win rate, each currency](2026-11-26-reports-money.md) | Invoices' days from sent to paid, the quotes' win rate, every currency listed apart once there are two; P976-P978 |
 | [Reports, Money: from visit to paid](2026-11-26-reports-funnel.md) | one funnel across apps on the Money tab: visitors, form answers, quotes sent and accepted, invoices paid, each with its move and the share that carried on; P979-P980 |
 | [Reports: an Email tab, from Email and Campaigns](2026-11-26-reports-email.md) | Email's sent, delivered, opened, bounced, refused, each integration and the addresses that bounce most; Campaigns' people mailed, opens, clicks and each campaign; P981-P983 |
+| [Reports: a Services tab](2026-11-26-reports-services.md) | storage against its room, webhooks and chat apps, automations, each connection's last check and allowance; P984-P987 |
+| [Reports: smarter readings](2026-11-26-reports-smarter.md) | the trend marks campaigns, invoices and new versions; an unusual day in words and, with the Unusual days extra, on Alerts; money and visitors in the Monday summary; Custom days; migration 0103; P988-P989, P1000-P1002 |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 24 November](2026-11-24-verification-log.md) | the log's rows of that day, moved when it reached its size |

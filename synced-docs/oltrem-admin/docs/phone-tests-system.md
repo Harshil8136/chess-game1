@@ -15,27 +15,6 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 
 ## Owed
 
-From [record](../archive/records/2026-11-26-reports-remade.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P900 | Admin, Reports, on the phone, light then dark | Days, then Everyone, People, Automatic, Vendor, each a sideways row; six figures, each with a coloured arrow and last period's number; nothing runs off the side |
-| P901 | Each day: tap People, then Refused or failed | The chart draws the figure picked, with a dashed line for the period before and a small scale; tap Show the days for the table |
-| P902 | What stands out, Who did the work, When work happens | Plain sentences (busier or quieter, the busiest day and hour); two split bars; a week of hours in shades on the company's clock |
-| P903 | By area, then tap a row | Each area with its own little trend and how it moved; the row opens the Audit log narrowed to that area and range |
-| P904 | Tap Automatic, then Download CSV | The figures and lists change to the portal's own work; the file downloads with vendor and sign-ins columns |
-| P905 | Scroll to the foot | People, Work done and Refused or failed lists; no Website part until an analytics app is connected on Apps |
-
-From [record](../archive/records/2026-11-26-reports-every-part.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P970 | Admin, Reports, on the phone | A sideways row of tabs with icons: Activity, Website (once an analytics app is connected), Money, Customers, Work; Activity opens first and looks as before |
-| P971 | Tap Money, then switch 7, 30 and 90 days | Invoices, Quotes and Expenses, each a pane with its figures and arrows, one line a day with the period before dashed, and its lists; amounts read in their currency (USD 1,250.50) |
-| P972 | Money, Invoices: tap a row under Overdue | The invoice opens; a part with no rows shows no empty list |
-| P973 | Tap Customers, then Work | New customers, customers and who signed in (no sign-in count at 90 days), form answers by form; tasks made, done and overdue, bookings and hours |
-| P974 | Sign in as someone who sees only one place | Only that place is counted; a section they may not see is not there at all |
-
 From [record](../archive/records/2026-11-26-scheduled-jobs-side-panel.md):
 
 | # | Open | You should see |
@@ -220,26 +199,3 @@ From [record](../archive/records/2026-11-25-audit-log-for-investigations.md):
 | P789 | Change a setting (for example a daily limit), then open its row | What changed: the old value muted, the new one in green |
 | P790 | With an API key, call the portal once with a wrong secret (or ask the Vendor to) | A red row "Someone outside the portal was refused a call with the API key …", the reason in its words; tap Everything this API key did |
 | P791 | Open a row, tap Everything from this address, then Everything from <network> | The log narrows to that address, then that network, with a "(show all)" to return |
-
-From [record](../archive/records/2026-11-26-reports-money.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P976 | Reports, Money, Invoices | Days to get paid with its arrow (down is good) and last period's days |
-| P977 | Reports, Money, Quotes, once a customer has declined one | Win rate as a share, with last period's share beside it |
-| P978 | Send an invoice in a second currency, then Reports, Money | An Each currency list naming both, with what was invoiced and paid in each |
-
-From [record](../archive/records/2026-11-26-reports-funnel.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P979 | Reports, Money, with a website app connected and some form answers, quotes and paid invoices | From visit to paid at the top: Visitors, Form answers, Quotes sent, Quotes accepted, Invoices paid, each with its arrow and a line such as 5% of visitors |
-| P980 | Switch 7, 30 and 90 days | Every step and its share change with the period; a step with nothing to count is not there |
-
-From [record](../archive/records/2026-11-26-reports-email.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P981 | Reports, Email tab | Sent, Failed and a line a day; with delivery reports also Delivered, Opened (a share), Bounced, Refused |
-| P982 | Reports, Email, its lists | Each integration's mail; a tap opens Email settings; the addresses bouncing most |
-| P983 | Reports, Email, after a campaign | People mailed, Opened, Clicked, Unsubscribed; a campaign opens its page |

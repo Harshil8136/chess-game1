@@ -13,17 +13,19 @@ sources: [packages/core-module/src; split from packages/core-module/README.md]
 ## Reports
 
 A module's section on the Reports page is declared as `report`: a title (the section's heading), the
-tab it sits under (`money`, `customers`, `work` or `email`), one of the module's own capabilities,
+tab it sits under (`money`, `customers`, `work`, `email` or `services`), one of the module's own capabilities,
 and `read(period, ctx)`, which answers up to `REPORT_FIGURES` (six) figures, each the period's
 number and the period before's (`before: null` when that cannot be known, so no move is shown;
-`good: 'down'` when less is better; `currency` for an amount in its smallest unit; `unit` `percent`
-or `days` for a share or a number of days), one number a day as a `trend`, and lists of up to
-`REPORT_ROWS` (eight) rows. `defineModule` adds `GET
-/api/<module>/report?days=7|30|90&to=YYYY-MM-DD` under that capability; any other period or day is
+`good: 'down'` when less is better; `currency` for an amount in its smallest unit; `unit` `percent`,
+`days` or `bytes`), one number a day as a `trend`, lists of up to `REPORT_ROWS` (eight) rows (a
+row's `unit` `percent` or `bytes`, or `shown`, its value in words), and a `note` for what the period
+cannot show. With `company: true` the capability is asked at the company, as a route's `company`. `defineModule` adds `GET
+/api/<module>/report?days=&to=YYYY-MM-DD` under that capability: `days` 7, 30 or 90 (`REPORT_DAYS`), or
+1 to `REPORT_MAX_DAYS` (90) for a range the person picked, ending on `to`; any other period or day is
 refused (422), and a row's address that is not a page of the portal is dropped. `reportPeriod(days,
 to)` is the period and the one before it; `tally(period, rows, pick)` folds rows counted by day
 (`d`), read from `beforeFrom` to `end`, into both totals and both daily lines; `mainCurrency(rows)`
-is the currency most rows use. A part that counts a step from an enquiry to a payment declares it in
+is the currency most rows use; `bytes(n)` writes a size (`1.2 MB`). A part that counts a step from an enquiry to a payment declares it in
 `steps` (`enquiries`, `quoted`, `won`, `paid`) and answers each in `steps`, the period's count and
 the one before's; the Money tab sets them after the website's visitors as "From visit to paid", and
 a step it did not declare is dropped. `read` reads the session from `ctx`, so a section counts only

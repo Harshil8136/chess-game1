@@ -57,6 +57,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Phone tests owed: the Apps page](phone-tests-apps.md) | the phone tests owed on the Apps page, from its makeover on 22 November on | living |
 | [Phone tests owed: Home and the frame](phone-tests-frame.md) | the phone tests owed on Home and the frame, split from the list above | living |
 | [Phone tests owed: Files](phone-tests-files.md) | the phone tests owed on the Files page from its rebuild on 23 November | living |
+| [Phone tests owed: Reports](phone-tests-reports.md) | the phone tests owed on Reports, from its remake on 26 November on | living |
 | [Phone tests owed: Backups and Status](phone-tests-system.md) | the phone tests owed on Home's backup step, the Backups page and Status, split from the list above | living |
 | [Phone tests owed: the flows fixed on 15 November](phone-tests-flows.md) | the phone tests owed on every journey the flow audits of 15 November fixed, in one sitting | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |

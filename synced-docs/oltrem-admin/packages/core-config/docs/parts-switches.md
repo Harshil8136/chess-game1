@@ -38,7 +38,8 @@ hand still runs), `backup.drill` (the restore-drill warning), and `settings.get-
 started card; it stops no job), and `iam.sign-in-alerts` (the email about a new or unusual sign-in),
 `iam.unusual` (the warning about unusual sign-ins), `audit.since` (Home's What changed card) and
 `health.status-pages` (Service status: the check that reads Cloudflare's and the email services'
-status pages), and `analytics.summary` (the Monday summary email to the Owners) and `data.watch`
+status pages), and `analytics.summary` (the Monday summary email to the Owners), `analytics.unusual`
+(Unusual days: the morning warning on Alerts when yesterday was far from usual) and `data.watch`
 (Database checks: the hourly check of each connected database). An extra switched off is kept in the
 same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and checks it
 stops, and the reader's set holds them beside the parts (ids with a dot never name a part). Nothing
@@ -46,13 +47,13 @@ they wrote is deleted. An extra marked `startsOff` (the daily seal, the nightly 
 reminder, since 2026-11-12: work on the timer that costs database rows every day; Access's
 ending-access emails and access-review reminder, the owner's pick: mail and warnings a new portal
 did not ask for; the four extras added on 2026-11-21; the Monday summary and Database checks,
-2026-11-22) is off on a new portal until someone switches it on (Sign-in alerts left that list on
+2026-11-22; Unusual days, 2026-11-26) is off on a new portal until someone switches it on (Sign-in alerts left that list on
 2026-11-24, the owner's pick: on for everyone): `EXTRAS_OFF_AT_FIRST` is the setting's default, so a
 portal whose list was already saved keeps what it saved. The others are on until switched off. An
 extra added later that should start off on every portal also needs a migration that adds it to a
 saved list, as `0067_parts_quiet_extras.sql` does for the four of 2026-11-21 and
-`0074_parts_summary_off.sql` for the Monday summary and `0077_parts_data_watch_off.sql` for Database
-checks: each one missing from a saved list is added, the configuration version moves and the change
+`0074_parts_summary_off.sql` for the Monday summary, `0077_parts_data_watch_off.sql` for Database
+checks and `0103_parts_unusual_off.sql` for Unusual days: each one missing from a saved list is added, the configuration version moves and the change
 is written to the settings history, so a client sees nothing new until someone switches it on.
 
 | Route | Capability | What it does |
@@ -84,8 +85,9 @@ Migration `0001_settings.sql`: `oltrem_meta` (the configuration version and, lat
 `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; the ledger is
 `oltrem_migrations`. Migration `0067_parts_quiet_extras.sql` adds the four extras of that day to a
 saved parts list as off (above); a portal that never saved the list keeps the default and gets no
-row. Migration `0074_parts_summary_off.sql` does the same for the Monday summary, and
-`0077_parts_data_watch_off.sql` for Database checks. Migration `0085_parts_sign_in_alerts_on.sql`
+row. Migration `0074_parts_summary_off.sql` does the same for the Monday summary,
+`0077_parts_data_watch_off.sql` for Database checks and `0103_parts_unusual_off.sql` for Unusual
+days. Migration `0085_parts_sign_in_alerts_on.sql`
 goes the other way: it takes Sign-in alerts out of a saved list, unless the settings history shows
 the list without them since they existed, which means an admin switched them off after they had been
 on.

@@ -106,6 +106,7 @@ before each deploy and records them in the `oltrem_migrations` table.
 | `0098_alerts_resolution.sql` | `@oltrem/alerts` | `sha256-g4pbPYd3OnPWqeuFKssGoPcMVFtsBSeB3XVyxw51i1k=` |
 | `0101_iam_idempotency.sql` | `@oltrem/iam` | `sha256-s5Bish+Rv5tYGYxwqW9I3OC9tWnR15kzETZCXHfn+Y8=` |
 | `0102_developer_rotation_replay.sql` | `@oltrem/developer` | `sha256-3Vt/LRk8FliGwIvOF1Tt7xBQKQoaayV6RXf9Ak6Xn+E=` |
+| `0103_parts_unusual_off.sql` | `@oltrem/core-config` | `sha256-p2DptJEX1/3ETXsXwtphRawdAyoQdsKSn5Q8vuRUhPE=` |
 | `1000_email_pinned_route.sql` | `@oltrem/email` | `sha256-CfXP4wNdiMgs31I0e+t723DpNjNZvJe+jUV9fulYpYA=` |
 | `1001_mail_cloudflare.sql` | `@oltrem/mail` | `sha256-FFNWuD9hyyhaEEw6hDEuZ+k57wauc5IbaqNY6PVTp5g=` |
 | `1002_mail_inbox.sql` | `@oltrem/mail` | `sha256-BCT8vtG7kEmrHTlsYgqyUv/cafoVLTrGWrX/hblgNG8=` |

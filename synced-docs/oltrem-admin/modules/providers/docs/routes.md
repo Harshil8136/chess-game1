@@ -21,6 +21,7 @@ instances and pastes their keys.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
+| `GET /report?days=&to=` | read, at the company | the section on Reports' Services tab: each connection's last check, the failing first, and the allowance used where a provider tells it; today's state only |
 | `PUT /definitions/:id` | definitions, at the company | the client's own definition, or its change to the kit's; checked, then a row |
 | `DELETE /definitions/:id` | definitions, at the company | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
 | `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set; never a data connection, a storage bucket or an analytics app |

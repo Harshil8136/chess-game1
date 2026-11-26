@@ -22,9 +22,12 @@ const modules = [iam.module, /* ... */ withPages(analytics.module, analyticsPage
 stands on the IAM module (sessions, the authorizer) and the audit log, and adds no binding, secret
 or variable. Its other options: `timeZone`, the company's time zone, which the hours of the week are
 read in (UTC without it; the client template passes the company clock's setting); `web`, which
-hands in the website reports (below); `parts`, the sections the portal's modules bring to Reports
-(below; the client template lists every module that is on and has a `report`); and `report`,
-where a failure of `web` is reported.
+hands in the website reports (below); `modules`, the portal's modules, whose `report` sections
+are listed for the page and whose money and steps the Monday summary reads (below; the client
+template passes every module that is on); `events`, what else is marked on the trend (the client
+template: each day a new version went live, from the deploy reports); `alerts`, where the morning
+check below says an unusual day; and `report`, where a failure of `web`, `events` or a summary's
+section is reported.
 
 With `send`, a function that emails one message (the client template passes the portal's email
 module, with the template `analytics.message`), the module also has the Monday summary below.
@@ -82,11 +85,29 @@ a retry sends nobody theirs twice; the week is marked sent only once every Owner
 with nothing done in either week sends nothing. A send that fails is counted and the job fails
 with the first cause, so the Jobs page shows it.
 
+Since 2026-11-26 the message also has the money (each Money section's amounts against the week
+before), one line of the steps from a visit to a payment, and each website app's visitors over its
+last 7 days. The sections are read in-process for the week, once a company, as its first Owner and
+after the same capability check their routes make; one that fails is reported and left out.
+
+## Unusual days
+
+An extra, **Unusual days** (`analytics.unusual`, 2026-11-26), off on a new portal and on every
+portal that had saved its modules before it (migration `0103_parts_unusual_off.sql`). With `alerts`
+handed in and the extra on, the daily job `analytics.unusual` reads yesterday's actions, and each
+website app's visitors (page views for an app without them), against the average of the same
+weekday in the four weeks before (three at least): a day that moved by half or more from a usual
+day of ten or more raises one warning on Alerts (`analytics.unusual`), in words ("Tuesday
+2026-12-08 had 75% fewer actions in the portal than a usual Tuesday"); a usual day resolves it. The
+page reads the same way: the period's last full day in What stands out, and each website app's
+under its figures (on 30 or 90 days, which hold four weeks).
+
 ## The page
 
 | Path | Shows |
 |---|---|
-| `/analytics` | tabs in a sideways row ([the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers**, **Work** and **Email** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
+| `/analytics` | tabs in a sideways row ([the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers**, **Work**, **Email** and **Services** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
+| `/analytics` (2026-11-26) | **Each day** marks what happened (campaigns that went out, invoices sent, and what `events` hands in) as dotted lines, listed under the chart. **Custom**, after the periods, opens From and To: any 1 to 90 days of the last year, each figure against as many days just before; the audit log, which keeps the last days only, is not linked, and the website apps, which report 7, 30 or 90 days, are not read |
 | `/analytics/csv` | the period's days as a CSV file (the same whose work): day, actions, automatic, vendor, people, sign-ins, refused, failed; numbers and dates only |
 
 The charts are the kit's report charts (`@oltrem/core-ui`, its README), SVG drawn on the server
@@ -110,8 +131,9 @@ KV), so a page view asks no app.
 ### The modules' sections
 
 Each module that declares `report` (`@oltrem/core-module`, its README) brings a section to one of
-the tabs Money, Customers, Work or Email: invoices, quotes and expenses under Money; customers and
-form answers under Customers; tasks and bookings under Work; email and campaigns under Email. The page asks `GET /parts` for the list
+the tabs Money, Customers, Work, Email or Services: invoices, quotes and expenses under Money;
+customers and form answers under Customers; tasks and bookings under Work; email and campaigns
+under Email; storage, webhooks and chat apps, automations and connections under Services. The page asks `GET /parts` for the list
 and today's date, then only the open tab's sections, each from its own module's
 `GET /api/<module>/report` as the person and side by side. A section is a pane: its figures with
 their moves against the period before (none when the period before cannot be known), one line a
@@ -130,7 +152,7 @@ step, so Money also reads the website and the form answers for it.
 
 | Route | Capability | What it answers |
 |---|---|---|
-| `GET /activity` (`days` 7, 30 or 90, 30 when left out; `who` people, automatic or vendor) | `analytics.read` | the period's totals and those of the period before, every day of both, the areas with their move and each day's count (the eight busiest), the ten most frequent actions and the six refused or failed most with their moves, the people (new, back, the eight busiest by address), the week of hours on the company's clock, the named work, when the counts reach and how many rows wait for the next run |
+| `GET /activity` (`days` 1 to 90, 30 when left out; `to` its last day, today at the latest and within the last year, today when left out; `who` people, automatic or vendor) | `analytics.read` | `range` when `to` was given, the marks of its days, the last full day when it was unusual, the period's totals and those of the period before, every day of both, the areas with their move and each day's count (the eight busiest), the ten most frequent actions and the six refused or failed most with their moves, the people (new, back, the eight busiest by address), the week of hours on the company's clock, the named work, when the counts reach and how many rows wait for the next run |
 | `GET /web` (`days`) | `analytics.read` | whether the portal hands website reports in (`wired`), each connected app's report, and `failed` when they could not be read |
 | `GET /parts` | `analytics.read` | the sections the portal's modules bring to Reports (module, title, tab), whether `web` is wired, and today (UTC) as the day to read them to; the same list for everyone, since each section checks the person itself |
 
@@ -150,7 +172,6 @@ check answers `KIT-E-0403`.
 
 - Website visitors without an analytics app: counting the portal's own website would belong to
   the website edition, with a privacy choice of its own.
-- Email, services and the money funnel as sections: the next batches of the plan of 2026-11-26.
 - Days in the company's own time zone (the hours are on its clock).
 
 ## Tests
@@ -170,4 +191,8 @@ filled or failed, and the CSV. The Monday summary (`test/analytics.test.ts`): no
 01:00 or on a quiet week, the last full week against the week before with its named lines and the
 portal's own work left out, the Owners (through a group too; not switched off, blocked, ended, not
 started, at a place only or a service account), nothing twice later that day or on Tuesday, and a
-failed send failing the job and made up the next day with the same keys.
+failed send failing the job and made up the next day with the same keys; its money, steps and
+website lines read once as the first Owner (work and money the Owner does not hold left out). An
+unusual day (`test/unusual.test.ts`); a range with its marks and its last full day; the morning
+check raising and resolving its alert; the marks, the unusual line, the website's and Custom on
+the page.

@@ -112,6 +112,7 @@ name, for someone who holds the capability at the company; anyone else finds non
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /actions`, `GET /automations`, `GET /automations/:id` | `automations.read` | the actions with their fields; the automations; one with what it still needs and its runs; both with `timeZone`, the clock schedules are read on |
+| `GET /report?days=&to=` | `automations.read` at the company | the section on Reports' Services tab: runs that went through, failed and were skipped, each automation; past the 30 days kept it says so instead |
 | `POST /automations` (`name`, `trigger`, `events` or `schedule`, `condition`, `action`, `input`, `on`), `PATCH /automations/:id` (those and `on`), `DELETE /automations/:id`, `POST /automations/:id/run` | `automations.manage` | the automations |
 
 Every change is audited by the module: `automations.create`, `.update` (the fields changed, never
