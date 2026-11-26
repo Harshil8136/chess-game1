@@ -12,15 +12,13 @@ sources: [packages/screens/src; split from packages/screens/README.md]
 
 ## The frame, continued
 
-  | Group | Entries (tabs) | |---|---| | Customers | Customers (Customers, Privacy requests),
-  Bookings, Sales (Quotes, Invoices), Forms | | Work | Tasks, Lists, Files, Approvals, Reports | |
-  Team | Time (Time off, Time clock, Shifts), Expenses, Equipment, Announcements | | Email | Email
-  (Compose, Inbox with Mail, Drafts, Sent, Delivery log, Templates), Campaigns (Campaigns, Mailing
-  lists), Email settings (Setup, Addresses; with Mail, also Mail setup and Forwarding) | | Admin |
-  Integrations (Apps, Email services, Developer), Automations, Users and access (Users, Roles,
-  Groups, Locations, Settings; Signed in today and Access requests open under Users, Access reviews
-  and Vendor access under Settings), Settings (Features, Settings), System (Status, Alerts, Backups,
-  Deployments, Audit log, Settings) |
+  | Group | Entries (tabs) |
+  |---|---|
+  | Customers | Customers (Customers, Privacy requests), Bookings, Sales (Quotes, Invoices), Forms |
+  | Work | Tasks, Lists, Files, Approvals, Reports |
+  | Team | Time (Time off, Time clock, Shifts), Expenses, Equipment, Announcements |
+  | Email | Email (Compose, Inbox with Mail, Drafts, Sent, Delivery log, Templates), Campaigns (Campaigns, Mailing lists), Email settings (Setup, Addresses; with Mail, also Mail setup and Forwarding) |
+  | Admin | Integrations (Apps, Email services, Developer), Automations, Users and access (Users, Roles, Groups, Locations, Settings; Signed in today and Access requests open under Users, Access reviews and Vendor access under Settings), Settings (Features, Settings), System (Status, Alerts, Backups, Deployments, Audit log, Settings) |
 - **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
   words fade: no icon moves. A section's name shows beside the rail while the pointer or the
   keyboard is on it. The choice posts `side` (`closed` or `open`) and `back` to `POST /do/side`,

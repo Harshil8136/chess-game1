@@ -23,10 +23,10 @@ Refused and Failed, each section).
 
 A module switched off on the Features page (the `partsOff` set `@oltrem/core-http` puts on each
 request) is gone for that request: no sidebar entry or tab, no Home card or Needs you, nothing in
-the search; its pages, a module's own by their pattern and a kit section by its address, answer
-404. Opened in the browser, such a page says which part it belongs to and that it is switched off
-     (`PartOff`); the Vendor and Owners get Switch on, which posts to `/do/switch` and comes back to
-     the same address with its query. Switched back on, all of it is there on the next request.
+the search; its pages, a module's own by their pattern and a kit section by its address, answer 404.
+Opened in the browser, such a page says which part it belongs to and that it is switched off
+(`PartOff`); the Vendor and Owners get Switch on, which posts to `/do/switch` and comes back to the
+same address with its query. Switched back on, all of it is there on the next request.
 
 **A page's reads go together**. Each read is a trip to the database, tens to a few hundred
 milliseconds from where the Worker runs, and a page that makes them one after another waits for
