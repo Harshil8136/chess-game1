@@ -154,9 +154,11 @@ and the person presses again.
    the tokens with the id alone, and adding a secret later would stop every portal's renewals.
    Copy its Client ID into `AIRTABLE_CLIENT_ID`.
 7. **PostHog.** Nothing to do: the relay serves its own client document.
-8. **Each portal.** Add its address to `RELAY_PORTALS`, and as the Vendor set Settings, System,
-   "Sign-in service for Slack, Discord, Google, Supabase, Airtable and PostHog" to `https://<relay>`. The
-   Apps page then offers "Continue to Slack", "Continue to Discord" and "Create the sheet in
+8. **Each portal.** Nothing to do when the portals update through the fleet: each run gives every
+   portal with its own address the relay's address and keeps `RELAY_PORTALS` to their list
+   (docs/reference/fleet.md, step 6). A portal outside the fleet: add its address to
+   `RELAY_PORTALS`, and as the Vendor set Settings, System, "Sign-in service for Slack, Discord,
+   Google, Supabase, Airtable and PostHog" to `https://<relay>`. The Apps page then offers "Continue to Slack", "Continue to Discord" and "Create the sheet in
    Google", the data part's Connect Supabase and Connect Airtable pages "Continue with Supabase"
    and "Continue with Airtable", and the analytics pages "Continue with PostHog" and "Continue with
    Google Analytics".

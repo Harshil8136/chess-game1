@@ -3,7 +3,7 @@ title: "Phone tests owed: the Apps page"
 status: living
 owner: vendor
 last_verified: 2026-11-25
-sources: [archive/records/2026-11-22-apps-page-and-one-click-connect.md; archive/records/2026-11-26-analytics-sign-in.md; archive/records/2026-11-23-apps-logs-connected-look.md; archive/records/2026-11-24-everyones-links.md; modules/connect/README.md; modules/developer/README.md]
+sources: [archive/records/2026-11-22-apps-page-and-one-click-connect.md; archive/records/2026-11-26-analytics-sign-in.md; archive/records/2026-11-26-relay-linked-by-fleet.md; archive/records/2026-11-23-apps-logs-connected-look.md; archive/records/2026-11-24-everyones-links.md; modules/connect/README.md; modules/developer/README.md]
 ---
 
 # Phone tests owed: the Apps page
@@ -144,3 +144,9 @@ From [record](../archive/records/2026-11-26-vendor-checkup.md):
 | P1005 | Status, Checkup, Check every connection now | Back on the page with "Checked every connection", each row checked just now; with more than six, "Press again for the rest" |
 | P1006 | Status, Checkup, Checks in the audit log | The audit log narrowed to Integrations: a row for each check of a service, the daily ones by providers.checkup |
 | P1007 | Status, Checkup, on a phone | No sideways scroll; each row's name wraps, the Open link and the state stay on screen |
+
+From [record](../archive/records/2026-11-26-relay-linked-by-fleet.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1008 | After the fleet run that follows this push: Apps, Analytics, PostHog | "Continue with PostHog" first in the pop-up, the key boxes second; nothing was typed in Settings |

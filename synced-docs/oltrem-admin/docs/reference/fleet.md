@@ -70,7 +70,15 @@ flowchart TD
    before the Worker runs. The free plan allows one such rule per zone; a zone that already has a
    rule of the client's own is left as it is and the step says so. A key without Zone WAF Edit is
    named with that fix and the update still counts.
-6. **Says how it went.** The build's log first names the accounts the key reaches and any
+6. **Links the sign-in service** (2026-11-26, the owner: nobody should paste it). It looks for
+   the relay, the Worker `oltrem-relay` with its workers.dev address on, in the accounts the key
+   reaches. Each portal with an address of its own whose "Sign-in service" setting is empty gets
+   the relay's address, saved with its history as `oltrem fleet`, and its cached settings are
+   cleared so it shows within a minute. A value someone set is never replaced. The relay's
+   `RELAY_PORTALS` is kept to every portal's address, rewritten only when that list changes (each
+   portal's `relay_mark` row). No relay found is only said; a relay in two accounts links nothing
+   and turns the build red until one is removed.
+7. **Says how it went.** The build's log first names the accounts the key reaches and any
    database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
    `held` or `failed`, with the steps under it; a failed deploy ends with what wrangler said, its
    error lines (since 2026-11-24, when builds failed for half a day with no reason shown). The build is red when any portal failed or was
@@ -103,8 +111,8 @@ but Cloudflare's build secrets.
      on its public hooks, 2026-11-24).
    - User: Memberships Read, User Details Read.
    - Account Resources: the accounts that hold portals, your own and each client's. All accounts
-     works too: the fleet only ever acts on an Oltrem portal, and only reads the lists of any
-     other account. Zone Resources: All zones. TTL: no shorter than a year.
+     works too: the fleet only ever acts on an Oltrem portal and the sign-in service
+     (`oltrem-relay`), and only reads the lists of any other account. Zone Resources: All zones. TTL: no shorter than a year.
 4. **Connect the kit once.** In the Vendor's account: Workers and Pages, Create, Import a
    repository, pick the kit repository, name the project `oltrem-fleet`, with these build
    settings (all of it works from a phone):

@@ -58,7 +58,10 @@ fleet](../../../docs/reference/fleet.md) has the why and setup), with `OLTREM_FL
    current or `autoUpdate` is false (set by hand, or by a deploy with `ownModules` when the
    repository has its own modules). Otherwise the template is copied to `.fleet/<worker>`, the
    choices written in, and `oltrem release` run on its account without `WRANGLER_CI_*`.
-5. **Report:** a line each; with `OLTREM_FLEET_GITHUB_TOKEN` and `OLTREM_FLEET_REPO`, an issue
+5. **Sign-in service** (`linkRelay`): `oltrem-relay` on workers.dev in the one account that has
+   it; each portal with an address and an empty `connect.relay` gets it (the cached settings
+   cleared), and the relay's `RELAY_PORTALS` is set to every address when `relay_mark` differs.
+6. **Report:** a line each; with `OLTREM_FLEET_GITHUB_TOKEN` and `OLTREM_FLEET_REPO`, an issue
    `Fleet: <worker> did not update`, closed once it updates.
 
 `--check` changes nothing. Exit `0` all current or updated, `1` one failed, held or unreadable, `3`
