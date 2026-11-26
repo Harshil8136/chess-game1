@@ -1,6 +1,6 @@
 ---
 title: "Making mail easier: familiar, automatic and checked (2026-11-02)"
-status: proposal
+status: record
 owner: vendor
 last_verified: 2026-11-02
 sources: [the owner's ask of 2026-11-02 13:33; Google's Gmail and Workspace announcements; Microsoft's Outlook support pages; Yahoo Mail's app notes; Cloudflare's Email Routing, Email Workers and DMARC Management documentation; Resend's SMTP documentation; the bulk-sender rules of Gmail, Yahoo and Microsoft; this repository's modules and docs as built on 2026-11-02]
@@ -154,27 +154,27 @@ Email Routing treats a Worker's error, and live Brevo and Resend accounts for th
 in Gmail's form. Each bundle's first push checks its own on a live account before it is promised.
 
 Built so far (the owner chose all five, in this order, on 2026-11-02): bundle C, as
-[its record](../../archive/records/2026-11-02-sets-itself-up.md) says. Two parts changed in the building:
+[its record](2026-11-02-sets-itself-up.md) says. Two parts changed in the building:
 "a message when done" is the domain's line and System health's warning when it is stuck, rather
 than an email of its own; and the placement test is not re-run by itself, since a person has to
 look where the message landed.
 
-Bundle A followed, as [its record](../../archive/records/2026-11-02-familiar-inbox.md) says. Suggested
+Bundle A followed, as [its record](2026-11-02-familiar-inbox.md) says. Suggested
 contacts were already on Write (its To field offers recent recipients), so nothing was added
 there; a search looks in every box, so its chips narrow rather than widen.
 
-Bundle B followed, as [its record](../../archive/records/2026-11-02-answers-by-itself.md) says. The automatic
+Bundle B followed, as [its record](2026-11-02-answers-by-itself.md) says. The automatic
 reply goes through the provider route (email's send), not Cloudflare's `message.reply()`, whose
 free-plan behaviour is not confirmed; so it carries the journal, consent and the allowance, and
 its loops are stopped by the skip rules and the four days rather than by a header.
 
-Bundle L followed, as [its record](../../archive/records/2026-11-02-cleaner-lists.md) says. Misspellings are
+Bundle L followed, as [its record](2026-11-02-cleaner-lists.md) says. Misspellings are
 put right on import by default, named in the import's answer, with a tick to keep them as
 written, rather than listed for a press afterwards: one fewer step each time. A domain with no MX
 record counts as having no mail server, without a second question for its address record.
 
 Bundle F followed, the owner's question of 2026-11-02 ("we have ImprovMX on our domains for email
-rerouting: can't we have the same?"), as [its record](../../archive/records/2026-11-02-forwarding.md) says.
+rerouting: can't we have the same?"), as [its record](2026-11-02-forwarding.md) says.
 Two facts read that day shaped it: a Cloudflare forward rule takes exactly one verified address,
 so an alias to several people goes through the Worker; and ImprovMX's API (v4) needs the account's
 key, so the import takes a pasted list first, and reading ImprovMX with a key waits for the

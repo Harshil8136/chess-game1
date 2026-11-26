@@ -168,7 +168,7 @@ setting keeps both in bounds.
 
 ## 7. What people already know (as built, bundle A)
 
-Built from [the research on making mail easier](research/2026-11-02-easier-mail.md), bundle A,
+Built from [the research on making mail easier](../archive/records/2026-11-02-easier-mail.md), bundle A,
 so the inbox works the way Gmail, Outlook and Yahoo taught everyone
 ([the record](../archive/records/2026-11-02-familiar-inbox.md)):
 
@@ -196,7 +196,7 @@ so the inbox works the way Gmail, Outlook and Yahoo taught everyone
 
 ## 8. The inbox answers by itself (as built, bundle B)
 
-Bundle B of [the same research](research/2026-11-02-easier-mail.md)
+Bundle B of [the same research](../archive/records/2026-11-02-easier-mail.md)
 ([the record](../archive/records/2026-11-02-answers-by-itself.md)):
 
 - **Automatic reply** on each mailbox (Mailboxes and rules, under the mailbox): on or off, an
@@ -215,7 +215,7 @@ Bundle B of [the same research](research/2026-11-02-easier-mail.md)
 
 ## 9. Gmail's stars, labels, keys and pane (as built, 2026-11-11)
 
-From [the research on making Email feel like Gmail](research/2026-11-11-gmail-style.md)
+From [the research on making Email feel like Gmail](../archive/records/2026-11-11-gmail-style.md)
 ([the record](../archive/records/2026-11-11-gmail-style-email.md)):
 
 - **Stars.** A star on each row and on the open conversation, kept on the conversation for the

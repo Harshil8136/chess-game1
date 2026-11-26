@@ -15,7 +15,7 @@ sources: [modules/mail/src/arrival.ts; modules/mail/src/inbox.ts; modules/mail/s
 > everything else from the same sender. Every change can be undone from the line that confirms
 > it. Search understands `from:`, `subject:`, `has:attachment` and the other words Gmail uses,
 > and on a phone a swipe archives or marks read. This is bundle A of
-> [the research on making mail easier](../../docs/research/2026-11-02-easier-mail.md), built at the
+> [the research on making mail easier](2026-11-02-easier-mail.md), built at the
 > owner's choice of all five bundles.
 
 ## What changed

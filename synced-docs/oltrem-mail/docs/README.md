@@ -26,7 +26,3 @@ So everything here is written as public (R-04), and is public once the kit takes
 | [What pnpm verify runs](reference/verify.md) | the gates, in order, from `scripts/lib/gates.mjs` | generated |
 | [The dependencies](reference/dependencies.md) | every dependency and why it is here, from `dependencies.registry.json` and the catalog | generated |
 | [The records](../archive/records/README.md) | the dated history of each bigger change, outside docs/ so no agent loads it for a task | index |
-| [Making mail easier](research/2026-11-02-easier-mail.md) | what to copy from Gmail, Outlook and Yahoo, what to confirm, retry and check by itself, using Gmail or Outlook alongside, what not to do, and an order to build it in | proposal |
-| [Every step by hand, and by itself](research/2026-11-03-hand-steps.md) | each Mail step from a computer to a live portal: what runs by itself, what still needs a person and why, what would let more run by itself | living |
-| [Mail settings set once](research/2026-11-03-mail-settings-once.md) | one domain, one address mail comes from, which address each module's mail uses, and who may send from what, asked once and used by every page | built 2026-11-03 |
-| [Making Email feel like Gmail](research/2026-11-11-gmail-style.md) | Gmail's layout and keyboard map, the features a Gmail user expects, which open-source projects and libraries may be reused under their licences, how big products show storage and quotas, the free plans' limits as published on 2026-11-11 | built 2026-11-11 |

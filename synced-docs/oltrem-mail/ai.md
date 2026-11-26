@@ -56,6 +56,7 @@ here. `pnpm check:agents` holds this file to one line for each.
 | `pnpm test` | the tests of the verify chain and the packing scripts |
 | `pnpm typecheck`, `pnpm lint`, `pnpm format` | the type check, ESLint, Prettier over the code files |
 | `pnpm docs:build` | regenerates the documents marked generated |
+| `pnpm docs:lower` | lowers `docs-budget.json` after a trim (the kit's doc policy) |
 | `pnpm kit:refresh <folder>` | takes the kit's packed packages (oltrem-admin `pnpm kit:pack`) into kit/ |
 | `pnpm mail:pack [folder]` | packs the three modules, with oltrem-mail.json, for the kit to keep a copy |
 | `pnpm changeset` | a release note for a change a client would notice |
@@ -97,17 +98,9 @@ Package names, tables, routes and hook addresses never change in a move.
 
 ## 8. Where things stand
 
-| Phase | What | State |
-|---|---|---|
-| Plan | docs/plan.md, docs/setup.md, docs/inbox.md | approved 2026-11-02 |
-| 1 | This repository's tooling, and the kit's email and campaigns modules moved in | done 2026-11-02 |
-| 2 | The `@oltrem/mail` add-on: the Cloudflare route, Mail setup, one error list, journal pinning | done 2026-11-02 |
-| 3 | The simple provider card in one press, records written on Cloudflare, delivery reports registered by API, the backup provider, the SPF count, the placement test | done 2026-11-02 |
-| 4 | The inbox: mailboxes and their routing rules, arrival, search, the safe reader, replies in the conversation, rules and blocked senders, retention | done 2026-11-02 |
-| 5 | Consent: three scopes for leaving, Mail me again, the list skip before each run, the warm-up of a new domain | done 2026-11-02 |
-
-Approved by the owner and wired by the kit: the `send_email` binding and the portal key's wider
-rights (phase 2), the bucket and the `email` handler (phase 4).
+The plan's five phases are built (the records in archive/records/ say how). The owner approved,
+and the kit wires, the `send_email` binding, the portal key's wider rights, the bucket and the
+`email` handler.
 
 ## 9. Before you say done
 

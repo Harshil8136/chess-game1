@@ -294,7 +294,7 @@ above, the main address). Bulk mail, such as a campaign, always names one.
 ### Which address each kind of mail comes from
 
 Since 2026-11-03 (the owner's "Yes, all of it" to mail settings asked once,
-`docs/research/2026-11-03-mail-settings-once.md` in oltrem-mail): a kind is a module that emails,
+`archive/records/2026-11-03-mail-settings-once.md` in oltrem-mail): a kind is a module that emails,
 read from the part of its template ids before the dot (`invoices.message` is Invoices), so the
 kit's modules name no sender and need no change. Each kind comes from the main address unless
 someone who holds `email.senders.manage` for the whole company picks another everyday sender for
@@ -594,6 +594,7 @@ too (`holdsAnywhere`): code is how an email looks, not whose data it reaches.
 | `POST /release` | `email.manage` at the company | The messages held because no provider was ready, released and the first ten sent now that one is, without waiting for `email.release` (which sends the rest); the Email services page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` at the company | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed; read through `email_messages_created` (migration `1018`), so only the day's rows |
+| `GET /report?days=&to=` | `email.read` | The section on the Reports page's Email tab (2026-11-26), from the rows already kept: sent and failed against the period before and one line a day; delivered, the share of those opened, bounced and refused only once a delivery report has come in; each integration's messages, and the addresses with the most temporary bounces (`email_softbounces`) |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
 | `POST /domains` | `email.senders.manage` | Add a domain (`domain`, `instanceId`), through the provider where it can, and check it |
 | `POST /domains/discover` | `email.senders.manage` | Read the domains and addresses each email provider lists, and add the new ones, or only those in `names` (see Senders) |

@@ -10,7 +10,7 @@ sources: [modules/mail/src/inbox-pages.tsx; modules/mail/src/inbox.ts; modules/m
 
 > **In plain words.** The owner asked that anyone coming from Gmail find what they know in Email,
 > that the left pane look better, and that every page say how much of each free allowance is used,
-> in words a client understands. [The research](../../docs/research/2026-11-11-gmail-style.md) found what
+> in words a client understands. [The research](2026-11-11-gmail-style.md) found what
 > Gmail does and what may be reused. Now conversations can be starred and labelled, labels have
 > colours and their own folders, Gmail's keyboard shortcuts work, the list has Gmail's top bar
 > with a search, menus and a quick-settings panel (split view, compact rows), and the left pane is

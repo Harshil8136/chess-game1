@@ -74,7 +74,7 @@ a domain with Email Routing on. The card sets up both cases and tells them apart
 The card's form starts from the portal's main address (the settings `email.from_address` and
 `email.from_name`, asked once at the first setup): its domain, the part before its @ as "Send
 as", and its name, each still changeable (built 2026-11-03, the first step of
-[mail settings set once](research/2026-11-03-mail-settings-once.md)). Forwarding's Add a domain
+[mail settings set once](../archive/records/2026-11-03-mail-settings-once.md)). Forwarding's Add a domain
 starts from the same domain while it is not added yet.
 
 1. **Where mail is received.** If the domain already receives mail elsewhere (Google Workspace,

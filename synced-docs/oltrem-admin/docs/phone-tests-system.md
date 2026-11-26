@@ -235,3 +235,11 @@ From [record](../archive/records/2026-11-26-reports-funnel.md):
 |---|---|---|
 | P979 | Reports, Money, with a website app connected and some form answers, quotes and paid invoices | From visit to paid at the top: Visitors, Form answers, Quotes sent, Quotes accepted, Invoices paid, each with its arrow and a line such as 5% of visitors |
 | P980 | Switch 7, 30 and 90 days | Every step and its share change with the period; a step with nothing to count is not there |
+
+From [record](../archive/records/2026-11-26-reports-email.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P981 | Reports, Email tab | Sent, Failed and a line a day; with delivery reports also Delivered, Opened (a share), Bounced, Refused |
+| P982 | Reports, Email, its lists | Each integration's mail; a tap opens Email settings; the addresses bouncing most |
+| P983 | Reports, Email, after a campaign | People mailed, Opened, Clicked, Unsubscribed; a campaign opens its page |

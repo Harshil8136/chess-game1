@@ -16,7 +16,7 @@ sources: [modules/email/src/senders.ts; modules/email/src/card.ts; modules/email
 > nothing is lost. Everyday mail such as a password reset moves to the backup provider before the
 > main one runs out for the day. Each domain also says, in one line, whether it is ready for
 > Gmail, Yahoo and Outlook. This is bundle C of
-> [the research on making mail easier](../../docs/research/2026-11-02-easier-mail.md), built at the
+> [the research on making mail easier](2026-11-02-easier-mail.md), built at the
 > owner's choice of all five bundles.
 
 ## What changed

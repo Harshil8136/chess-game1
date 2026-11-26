@@ -166,6 +166,13 @@ one that was added by hand, bounced or refused; an unsubscribe or a complaint st
 The portal's search (`GET /api/campaigns/search?q=`, `campaigns.read`) finds campaigns by name, at
 the places the person may see, with their state.
 
+## Reports
+
+The section on the Reports page's Email tab (`GET /api/campaigns/report?days=&to=`,
+`campaigns.read`, 2026-11-26): the people campaigns were handed to in the period against the period
+before, one line a day, the share that opened and clicked once a provider has reported an open, the
+unsubscribes, and each campaign with its own shares, at the places the person may read.
+
 ## Personal data
 
 For a privacy request (`personal`, read by the privacy module) the module answers each campaign

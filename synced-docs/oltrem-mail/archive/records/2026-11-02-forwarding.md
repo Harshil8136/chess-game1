@@ -16,7 +16,7 @@ sources: [modules/mail/src/forwarding.ts; modules/mail/src/forwarding-pages.tsx;
 > mail from ImprovMX to Cloudflare. A dialog says first what will change. Should something go
 > wrong halfway, ImprovMX's records are put back straight away. **Move back** returns the domain
 > to ImprovMX at any time. ImprovMX itself is never touched, so its aliases are still there. This
-> is bundle F, added to [the research on making mail easier](../../docs/research/2026-11-02-easier-mail.md)
+> is bundle F, added to [the research on making mail easier](2026-11-02-easier-mail.md)
 > after the owner's question of 2026-11-02. The owner chose to build it right after bundle C's
 > work.
 

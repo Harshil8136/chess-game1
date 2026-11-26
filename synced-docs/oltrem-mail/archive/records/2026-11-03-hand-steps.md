@@ -1,6 +1,6 @@
 ---
 title: "Oltrem Mail: every step still done by hand, and what runs by itself (2026-11-03)"
-status: living
+status: record
 owner: vendor
 last_verified: 2026-11-03
 sources: [the owner's ask of 2026-11-03 05:29; Cloudflare's Email Service documentation (Email Sending onboarding, the Email Sending API, Email Routing addresses), read 2026-11-03; this repository's modules as built on 2026-11-03; the kit's start page, dev script and deploy as built on 2026-11-03]

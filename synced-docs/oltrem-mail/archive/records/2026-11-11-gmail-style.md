@@ -1,6 +1,6 @@
 ---
 title: "Making Email feel like Gmail, without copying Gmail (2026-11-11)"
-status: active
+status: record
 owner: vendor
 last_verified: 2026-11-11
 sources: [Gmail Help and Google Workspace help pages, 9to5Google, TechCrunch, Material 3 tokens (Flutter gen_defaults), Cloudflare docs (Workers, D1, R2, KV, Queues, Email Routing, Email Service, GraphQL Analytics), the email providers' pricing pages, the open-source projects' LICENSE files and npm, all read 2026-11-11; links beside each fact]
@@ -13,7 +13,7 @@ sources: [Gmail Help and Google Workspace help pages, 9to5Google, TechCrunch, Ma
 > non-technical client understands. This page is what was found: Gmail's layout and shortcuts,
 > the features a Gmail user expects, which open-source projects may be reused and how, how the big
 > products show storage and quotas, and the free plans' limits today. What was built from it is in
-> [the record](../../archive/records/2026-11-11-gmail-style-email.md).
+> [the record](2026-11-11-gmail-style-email.md).
 
 Prepared 2026-11-11. Web research only. No personal data is included.
 

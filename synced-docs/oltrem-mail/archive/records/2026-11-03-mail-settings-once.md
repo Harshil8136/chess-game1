@@ -1,6 +1,6 @@
 ---
 title: "Mail settings set once, used by every module (2026-11-03)"
-status: active
+status: record
 owner: vendor
 last_verified: 2026-11-03
 sources: [the owner's ask of 2026-11-03 06:38 (point 1); modules/email (settings email.from_address and email.from_name, email_domains, email_senders, companyFrom, prepare), modules/mail (mail_cloudflare, mail_mailboxes, mail_forward_domains), modules/campaigns; the kit's templates/client/src/index.ts, where every kit module calls email.send; all read 2026-11-03]
@@ -73,7 +73,7 @@ default sender when that is empty, and Mail setup's "Send as" may replace either
 
 - One migration in oltrem-mail (a `main` flag on `email_domains` and one table or setting for the
   module rows); no new Worker, binding or variable; no KV writes (mail law M-3).
-- The kit's own code is unchanged; the contract in [kit-contract.md](../kit-contract.md) gains
+- The kit's own code is unchanged; the contract in [kit-contract.md](../../docs/kit-contract.md) gains
   the module rows.
 - Existing portals keep working. Their main domain is the domain of `email.from_address`, set the
   first time the new code runs.
