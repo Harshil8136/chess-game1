@@ -2,8 +2,9 @@
 
 Analytics (the owner's request of 2026-10-27 for "an analytics system"): the portal's activity in
 numbers and charts. How much was done each day, by how many people, how much the portal did on
-its own, what was refused or failed, which areas and actions were busiest, and how all of it
-compares with the period before. Read from the audit log, so every module that audits its changes
+its own, what was refused or failed, which areas and actions were busiest, who did the most, when
+in the week work happens, and how all of it compares with the period before; and, when the Apps
+page hands them in, the company's website visitors from its connected analytics apps (2026-11-26). Read from the audit log, so every module that audits its changes
 is counted with no code of its own, and nothing is made up: a day without activity shows zero.
 
 ## Using it
@@ -19,7 +20,9 @@ const modules = [iam.module, /* ... */ withPages(analytics.module, analyticsPage
 
 `createAnalytics` returns the `store` (the counting and the reading) and the module manifest. It
 stands on the IAM module (sessions, the authorizer) and the audit log, and adds no binding, secret
-or variable.
+or variable. Its other options: `timeZone`, the company's time zone, which the hours of the week are
+read in (UTC without it; the client template passes the company clock's setting); `web`, which
+hands in the website reports (below); and `report`, where a failure of `web` is reported.
 
 With `send`, a function that emails one message (the client template passes the portal's email
 module, with the template `analytics.message`), the module also has the Monday summary below.
@@ -45,10 +48,17 @@ mounted. Each statement and the cursor move in one transaction, so a row is coun
 | Done automatically | the rows whose actor is the system: jobs, automations, website answers |
 | People active | the people (actor kind `person`) with at least one row that day, each once |
 | Areas | the part of an action's name before its first dot: `files.upload` is `files` |
+| Hours | every audit row, by UTC day, hour and kind of actor (2026-11-26), for the week of hours |
+
+The hours have their own cursor (`analytics.hours_seq`): on a portal that counted by day before
+they were kept, the job first counts the whole log by hour, a chunk at a time within the same four
+statements a run, then moves the hours with the days in the same transaction. The week of hours is
+read on the company's clock, shifted by its offset today (a zone that changes its clocks reads the
+weeks before the change an hour off).
 
 The job `analytics.prune` removes the counts older than 455 days: a year, and a period of ninety
 days before it to compare with. The audit log itself is untouched; the counts can be rebuilt from
-it by removing the cursor and the two tables' rows.
+it by removing the two cursors and the three tables' rows.
 
 ## The Monday summary
 
@@ -74,22 +84,40 @@ with the first cause, so the Jobs page shows it.
 
 | Path | Shows |
 |---|---|
-| `/analytics` | a row of periods (7, 30 or 90 days, today included); the four figures (actions, people active, done automatically, refused or failed), each against the period before; a bar chart of the actions and one of the people active each day, every bar's day and figure on hover; the days as a table; the busiest areas with a bar each, by their names; the ten most frequent actions in words (`Tasks: create`), never their codes; when the newest change counted was made. The refused or failed figure opens the audit log narrowed to them |
-| `/analytics/csv` | the period's days as a CSV file: day, actions, automatic, people, refused, failed; numbers and dates only |
+| `/analytics` | remade 2026-11-26 ([the record](../../docs/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it; and, when the portal hands reports in, **Website** (below). A part with nothing to show is left out |
+| `/analytics/csv` | the period's days as a CSV file (the same whose work): day, actions, automatic, vendor, people, sign-ins, refused, failed; numbers and dates only |
 
-The charts are SVG drawn on the server: one hue, the busiest day as the top of the scale, nothing
-running in the browser. Days are UTC, as every time the portal keeps.
+The charts are the kit's report charts (`@oltrem/core-ui`, its README), SVG drawn on the server
+with nothing running in the browser, each a fixed height so nothing moves. Days are UTC, as every
+time the portal keeps; the hours are on the company's clock. Whose work narrows the actions; the
+people figures are always everyone's.
+
+### Website
+
+The Apps page fetches each connected website analytics app (PostHog, Plausible, Umami Cloud,
+Cloudflare Web Analytics first, then Google Analytics) and hands its reports in through `web`
+(`WebReport` in `src/types.ts`, the contract agreed with that work on 2026-11-26: totals, the
+period before, live visitors, each day, and lists of pages, sources, countries, devices, browsers
+and events, each optional). Each report is a pane: its figures with their moves, a trend of its
+visitors (or page views), its lists, how many are on the site now and a link to the app's own
+dashboard; a report that could not be made says why with a link to fix it on Apps. Without `web`
+the part is not shown; with it and no app connected, it says how to connect one; when the call
+fails it is reported and the part says so. The Apps page caches each report (the Cache API, never
+KV), so a page view asks no app.
 
 ## The routes
 
 | Route | Capability | What it answers |
 |---|---|---|
-| `GET /activity` (`days` 7, 30 or 90; 30 when left out) | `analytics.read` | the period's totals and those of the period before, every day, the areas, the ten most frequent actions, when the counts reach and how many rows wait for the next run |
+| `GET /activity` (`days` 7, 30 or 90, 30 when left out; `who` people, automatic or vendor) | `analytics.read` | the period's totals and those of the period before, every day of both, the areas with their move and each day's count (the eight busiest), the ten most frequent actions and the six refused or failed most with their moves, the people (new, back, the eight busiest by address), the week of hours on the company's clock, the named work, when the counts reach and how many rows wait for the next run |
+| `GET /web` (`days`) | `analytics.read` | whether the portal hands website reports in (`wired`), each connected app's report, and `failed` when they could not be read |
 
 ## Tables
 
 Migration `0024_analytics.sql`, additive and idempotent: `analytics_daily` (a day, an action, an
-outcome, a kind of actor, a count) and `analytics_people` (a day, a person's id, a count). They
+outcome, a kind of actor, a count) and `analytics_people` (a day, a person's id, a count). Migration
+`0097_analytics_hours.sql` (2026-11-26): `analytics_hours` (a day, an hour, a kind of actor, a
+count). They
 hold counts and the ids the audit log already holds, never what was changed.
 
 ## Errors
@@ -99,11 +127,11 @@ check answers `KIT-E-0403`.
 
 ## Not here yet
 
-- Website visitors (page views, sources): that analytics belongs to the website edition, with a
-  privacy choice of its own.
+- Website visitors without an analytics app: counting the portal's own website would belong to
+  the website edition, with a privacy choice of its own.
 - Figures a module counts itself (emails delivered, files stored): the audit log counts what was
   done; a module's own series would need a small contract in core-module.
-- Days in the company's own time zone.
+- Days in the company's own time zone (the hours are on its clock since 2026-11-26).
 
 ## Tests
 
@@ -113,8 +141,12 @@ each row once, the people by day; a period with its quiet days at zero, the peri
 areas and the most frequent actions, the rows waiting and then counted; the capability read at the
 company and another period refused; pruning. The client template's screens test opens the page
 before any count, then after a tick reads its figures, charts and areas, and downloads the CSV.
-The page, against answers of the API (`test/pages.test.ts`): every area and action in words, and
-the refused or failed figure linked to the audit log. The Monday summary
+Since 2026-11-26 also whose work, the week of hours on a company clock ahead of UTC, and the hours
+caught up for a portal that counted by day first; the people (new, back, the busiest), the refused
+or failed most and the named work. The page, against answers of the API (`test/pages.test.ts`):
+every area and action in words and linked to the audit log, the refused or failed figure linked to
+it, what stands out in words, the rows of options keeping each other, the figure the chart draws,
+the Website part hidden, empty, filled or failed, and the CSV. The Monday summary
 (`test/analytics.test.ts`): nothing before Monday 01:00 or on a quiet week, the last full week
 against the week before with its named lines and the portal's own work left out, the Owners
 (through a group too; not switched off, blocked, ended, not started, at a place only or a

@@ -97,5 +97,6 @@ The records since 16 November:
 | [The audit log, rich enough to trace a breach or a stolen key](2026-11-25-audit-log-for-investigations.md) | every API key call and refusal, downloads, refused reads, audit log reads, network and sign-in on each row, settings before and after, refusal reasons; signals and pivots on the page; P786-P791 |
 | [The Audit log: a strip of days, unusual sign-ins, every action in words](2026-11-25-audit-log-days-and-words.md) | the range as a chart of days, a tap lists one day; sign-ins from an unusual country or new browser flagged; every action written has a sentence, kept by a test; P780-P782 |
 | [Every dialog remade](2026-11-25-dialogs-remade.md) | head, body, foot |
+| [Reports remade](2026-11-26-reports-remade.md) | one trend with the period before, six figures with their move, what stands out in words, who and when, every list with its trend and an audit log link, the website from connected apps; migration 0097; P900-P905 |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |

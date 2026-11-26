@@ -148,6 +148,19 @@ them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
 | `Facts` | `<dl>` | label above value on a narrow pane, side by side from 26 rem |
 | `ColumnChart` | an SVG whose sizes are attributes, a key, a caption and a table for a screen reader | stacked columns by series, each column named on hover, each series keyed with its total; no inline style |
 
+The report charts (`src/charts.tsx`, 2026-11-26, the Reports page remade) follow the same rules:
+drawn on the server, sized by attributes and classes (never a style attribute), every figure said
+on hover and to a screen reader, a fixed height whatever the data, and the hue of their pane
+(`data-hue`), else the primary.
+
+| Piece | Shows | Rule it keeps |
+|---|---|---|
+| `TrendChart` | a figure each day as a filled line, the period before as a dashed line, a scale of three steps (`niceTop`), the first, middle and last day | 176 px high; each day's figure and the same day before in a title; the key totals both periods |
+| `Delta`, `moved` | how a figure moved: `↑50%`, `↓25%`, `new` | green the good way, red the bad way (`good: 'down'` for refusals), quiet when nothing moved; the full words for a screen reader |
+| `Heatmap` | a grid of shades, rows by columns (a week of hours) | five steps from the busiest cell; each cell's figure in a title; a key from Less to More |
+| `SplitBar` | one bar split into its parts, and the parts named under it with their figure and share | a part with a page and a count is a link |
+| `BarList` | names over faint bars of their share of the largest, with an optional `Spark`, the figure and its `Delta` | a row a link; long names end in an ellipsis, never push the figures off the card |
+
 ## daisyUI and the Email pieces (Look 3)
 
 Since 2026-11-08 (the owner's choice, [the record](../../docs/records/2026-11-08-look-3-foundation.md))
@@ -241,4 +254,4 @@ On Node: every primitive rendered to HTML with `preact-render-to-string` and its
 back (roles, ids, the command attributes, the order of buttons, the card list and the table);
 the theme compiled with Tailwind's Node API (the semantic utilities exist, the defaults do
 not); the contrast of every text-on-colour pair in light and in dark; and the three widgets
-rendered closed (no inline style, the roles, the hidden values, the locale's date format); and the Email pieces (`test/mail.test.tsx`).
+rendered closed (no inline style, the roles, the hidden values, the locale's date format); and the Email pieces (`test/mail.test.tsx`); the report charts (`test/charts.test.tsx`): the round scale, the moves and their colours, the dashed period before, the five shades, the parts as shares, the bars as shares of the largest, and no style attribute.

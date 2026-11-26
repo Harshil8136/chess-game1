@@ -17,6 +17,12 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P900 | Admin, Reports, on the phone, light then dark | Days, then Everyone, People, Automatic, Vendor, each a sideways row; six figures, each with a coloured arrow and last period's number; nothing runs off the side | [record](records/2026-11-26-reports-remade.md) |
+| P901 | Each day: tap People, then Refused or failed | The chart draws the figure picked, with a dashed line for the period before and a small scale; tap Show the days for the table | [record](records/2026-11-26-reports-remade.md) |
+| P902 | What stands out, Who did the work, When work happens | Plain sentences (busier or quieter, the busiest day and hour); two split bars; a week of hours in shades on the company's clock | [record](records/2026-11-26-reports-remade.md) |
+| P903 | By area, then tap a row | Each area with its own little trend and how it moved; the row opens the Audit log narrowed to that area and range | [record](records/2026-11-26-reports-remade.md) |
+| P904 | Tap Automatic, then Download CSV | The figures and lists change to the portal's own work; the file downloads with vendor and sign-ins columns | [record](records/2026-11-26-reports-remade.md) |
+| P905 | Scroll to the foot | People, Work done and Refused or failed lists; no Website part until an analytics app is connected on Apps | [record](records/2026-11-26-reports-remade.md) |
 | P880 | Admin, Scheduled jobs, on the phone and then a computer | One line at the top says whether the jobs are fine, a coloured bar with a segment a job, then Overview, All jobs, Timeline and History in a sideways row; nothing runs off the side | [record](records/2026-11-25-scheduled-jobs-remade.md) |
 | P881 | Overview, then All jobs, then Timeline | Overview: Needs you, Up next, Just ran. All jobs: a section a part in its colour, one short row a job with its hours bar. Timeline: a row of hour cells for each job | [record](records/2026-11-25-scheduled-jobs-remade.md) |
 | P882 | Open a job, press Run now, confirm | A green note says it ran and what it did, with its time and queries; History lists "Ran now" with your name | [record](records/2026-11-25-scheduled-jobs-remade.md) |
