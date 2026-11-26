@@ -17,7 +17,7 @@ sources: [modules/data/src/dialects/ask.ts; modules/data/src/dialects/libsql.ts;
 
 The plan of 2026-11-22 lists "Ask a question in SQL, read-only by default" with the edits. Reading
 a table one page at a time cannot join or count; a question can. How each database is kept to
-reading is in [the data README](../../modules/data/README.md#questions-in-sql).
+reading is in [the data README](../../modules/data/docs/a-supabase-project-beyond-its-tables.md#questions-in-sql).
 
 While testing the Ask page, the kit's text box (`Textarea` in core-ui) was found to write its
 value as a `value` attribute, which a browser ignores on a text box: every edit form with a text

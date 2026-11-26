@@ -1,10 +1,9 @@
 # @oltrem/forms
 
-Forms for the company's website, and the inbox where what arrives is taken, answered and tracked
-(the owner's second pick for every kind of business, 2026-10-22). Contact, quote requests,
-feedback, sign-ups, or any other form: the company designs it with no code, pastes the code it
-gets onto its website, and every answer lands in the portal. Nothing in the module knows one kind
-of business from another.
+Forms for the company's website, and the inbox where what arrives is taken, answered and tracked .
+Contact, quote requests, feedback, sign-ups, or any other form: the company designs it with no code,
+pastes the code it gets onto its website, and every answer lands in the portal. Nothing in the
+module knows one kind of business from another.
 
 ## Using it
 
@@ -77,19 +76,20 @@ already in keep every value the sender gave, with the field's name as they saw i
 
 Answers are newest first, narrowed by status (to do, which is new and open together; new; open;
 done; all), by the ones the person took, and by a search across their text, a page at a time. An
-answer's name in the inbox is its first short text, email or phone. Taking an answer, or noting
-or replying to a new one, opens it. A reply goes by email to the first email address the sender
-gave, from the company's sending address, with the person replying as the address a reply comes
-back to; it is kept beside the notes. The download (`GET /forms/:id/export`) is a CSV file of up
-to 5000 answers (past it, since 2026-11-24, the file's name ends `-first-5000`, so a cut file never passes for a whole one), oldest first, with formulas defused as in `@oltrem/records`.
+answer's name in the inbox is its first short text, email or phone. Taking an answer, or noting or
+replying to a new one, opens it. A reply goes by email to the first email address the sender gave,
+from the company's sending address, with the person replying as the address a reply comes back to;
+it is kept beside the notes. The download (`GET /forms/:id/export`) is a CSV file of up to 5000
+answers (past it, the file's name ends `-first-5000`, so a cut file never passes for a whole one),
+oldest first, with formulas defused as in `@oltrem/records`.
 
-**Read and unread** (2026-11-21). An answer nobody has opened yet is unread for the whole team:
-the inbox shows it in bold, and its Unread view (`view=unread`) and count (`unread`, beside the
-count per status, from the same grouped read) find it. It turns read the first time someone opens
-it: the answer's page asks the browser to mark it once the page is shown (`data-seen`, the frame
-script's), so a page fetched ahead of a tap marks nothing. Mark unread puts it back. Neither is
-audited, as nothing about the answer changes; a later opening keeps the first time. The unread
-have an index of their own (migration `0071`), so the count and the view read them alone.
+**Read and unread**. An answer nobody has opened yet is unread for the whole team: the inbox shows
+it in bold, and its Unread view (`view=unread`) and count (`unread`, beside the count per status,
+from the same grouped read) find it. It turns read the first time someone opens it: the answer's
+page asks the browser to mark it once the page is shown (`data-seen`, the frame script's), so a page
+fetched ahead of a tap marks nothing. Mark unread puts it back. Neither is audited, as nothing about
+the answer changes; a later opening keeps the first time. The unread have an index of their own
+(migration `0071`), so the count and the view read them alone.
 
 The people a form names (up to five addresses) are told by email when an answer arrives: a link to
 the inbox, never what was sent, and at most one email per form in 15 minutes.
@@ -147,15 +147,15 @@ answers would tell someone about forms their places do not show them.
 ## Tables
 
 Migration `0018_forms.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
-`forms_forms` (the form, its tenant, place, name, line, fields as JSON, public key, whether it
-takes answers, the page after sending, who is told and when they last were), `forms_entries`
-(each answer as the sender saw it, the address to reply to, its status, who took it, the
-sender's digest, its search text, when it came and changed) and `forms_notes` (each note or
-reply, who wrote it, when). Migration `0039_forms_reply_to.sql` adds an index on the address to
-reply to, in lower case, which a customer's account page reads by. Migration `0071_forms_read.sql`
-(2026-11-21) adds `forms_entries.read_at`, when the answer was first opened, and marks every answer
-already in as read, so an inbox looks as it did until a new answer arrives (one write for each
-answer, once), then indexes the unread ones (`forms_entries_unread`).
+`forms_forms` (the form, its tenant, place, name, line, fields as JSON, public key, whether it takes
+answers, the page after sending, who is told and when they last were), `forms_entries` (each answer
+as the sender saw it, the address to reply to, its status, who took it, the sender's digest, its
+search text, when it came and changed) and `forms_notes` (each note or reply, who wrote it, when).
+Migration `0039_forms_reply_to.sql` adds an index on the address to reply to, in lower case, which a
+customer's account page reads by. Migration `0071_forms_read.sql` adds `forms_entries.read_at`, when
+the answer was first opened, and marks every answer already in as read, so an inbox looks as it did
+until a new answer arrives (one write for each answer, once), then indexes the unread ones
+(`forms_entries_unread`).
 
 ## Errors
 

@@ -34,7 +34,7 @@ both without asking anything, then serves the portal at <http://localhost:8787> 
 port, said out loud, when another program already holds 8787). The migrations
 run in one database session (a few seconds for all of them, where wrangler's own command takes
 one session each), and wrangler's own commands run instead should that fail. It shows a line per
-step in [the kit's look](../../packages/cli/README.md#the-look-in-a-terminal), keeps wrangler's
+step in [the kit's look](../../packages/cli/docs/look-in-a-terminal.md#the-look-in-a-terminal), keeps wrangler's
 output in `.oltrem/dev.log` until the portal answers, then shows only wrangler's errors; Ctrl+C
 stops it. While the portal starts, the line under the spinner is wrangler's own latest line (its
 routine notices left out); the portal is found at the address wrangler says it is ready on, on

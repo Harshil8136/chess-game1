@@ -39,6 +39,7 @@ Detail (routes, tables, numbers) goes in the document that owns it, not here. Ad
 | [Mail settings set once](2026-11-03-mail-settings-once.md) | one domain, one address mail comes from, which address each module's mail uses, and who may send from what, asked once and used by every page |
 | [Making Email feel like Gmail](2026-11-11-gmail-style.md) | Gmail's layout and keyboard map, the features a Gmail user expects, which open-source projects and libraries may be reused under their licences, how big products show storage and quotas, the free plans' limits as published on 2026-11-11 |
 | [Living documents trimmed](2026-11-26-living-docs-trimmed.md) | research and the phase table out of the living set |
+| [Module READMEs split into pages](2026-11-26-readmes-split.md) | the three module READMEs split into 22 pages beside them; dated asides stripped |
 | [Phase 1: the move](2026-11-02-phase-1-move.md) | email and campaigns moved out of the kit, the vendoring both ways, how it was checked |
 | [Phase 2: the Cloudflare route](2026-11-02-phase-2-cloudflare-route.md) | the `@oltrem/mail` add-on, the one error list, journal pinning, how it was checked |
 | [Phase 3: the simple provider card](2026-11-02-phase-3-provider-card.md) | one press to connect email, records on Cloudflare, delivery reports by API, the SPF limit, the placement test, how it was checked |

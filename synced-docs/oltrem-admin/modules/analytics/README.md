@@ -1,11 +1,11 @@
 # @oltrem/analytics
 
-Analytics (the owner's request of 2026-10-27 for "an analytics system"): the portal's activity in
-numbers and charts. How much was done each day, by how many people, how much the portal did on
-its own, what was refused or failed, which areas and actions were busiest, who did the most, when
-in the week work happens, and how all of it compares with the period before; and, when the Apps
-page hands them in, the company's website visitors from its connected analytics apps (2026-11-26). Read from the audit log, so every module that audits its changes
-is counted with no code of its own, and nothing is made up: a day without activity shows zero.
+Analytics: the portal's activity in numbers and charts. How much was done each day, by how many
+people, how much the portal did on its own, what was refused or failed, which areas and actions were
+busiest, who did the most, when in the week work happens, and how all of it compares with the period
+before; and, when the Apps page hands them in, the company's website visitors from its connected
+analytics apps. Read from the audit log, so every module that audits its changes is counted with no
+code of its own, and nothing is made up: a day without activity shows zero.
 
 ## Using it
 
@@ -50,7 +50,7 @@ mounted. Each statement and the cursor move in one transaction, so a row is coun
 | Done automatically | the rows whose actor is the system: jobs, automations, website answers |
 | People active | the people (actor kind `person`) with at least one row that day, each once |
 | Areas | the part of an action's name before its first dot: `files.upload` is `files` |
-| Hours | every audit row, by UTC day, hour and kind of actor (2026-11-26), for the week of hours |
+| Hours | every audit row, by UTC day, hour and kind of actor, for the week of hours |
 
 The hours have their own cursor (`analytics.hours_seq`): on a portal that counted by day before
 they were kept, the job first counts the whole log by hour, a chunk at a time within the same four
@@ -86,7 +86,7 @@ with the first cause, so the Jobs page shows it.
 
 | Path | Shows |
 |---|---|
-| `/analytics` | tabs in a sideways row (2026-11-26, [the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers**, **Work** and **Email** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
+| `/analytics` | tabs in a sideways row ([the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers**, **Work** and **Email** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
 | `/analytics/csv` | the period's days as a CSV file (the same whose work): day, actions, automatic, vendor, people, sign-ins, refused, failed; numbers and dates only |
 
 The charts are the kit's report charts (`@oltrem/core-ui`, its README), SVG drawn on the server
@@ -138,9 +138,8 @@ step, so Money also reads the website and the form answers for it.
 
 Migration `0024_analytics.sql`, additive and idempotent: `analytics_daily` (a day, an action, an
 outcome, a kind of actor, a count) and `analytics_people` (a day, a person's id, a count). Migration
-`0097_analytics_hours.sql` (2026-11-26): `analytics_hours` (a day, an hour, a kind of actor, a
-count). They
-hold counts and the ids the audit log already holds, never what was changed.
+`0097_analytics_hours.sql`: `analytics_hours` (a day, an hour, a kind of actor, a count). They hold
+counts and the ids the audit log already holds, never what was changed.
 
 ## Errors
 
@@ -152,24 +151,23 @@ check answers `KIT-E-0403`.
 - Website visitors without an analytics app: counting the portal's own website would belong to
   the website edition, with a privacy choice of its own.
 - Email, services and the money funnel as sections: the next batches of the plan of 2026-11-26.
-- Days in the company's own time zone (the hours are on its clock since 2026-11-26).
+- Days in the company's own time zone (the hours are on its clock).
 
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module: the manifest; nothing
 counted before the first run, with the rows waiting; the log counted from its first row in chunks,
-each row once, the people by day; a period with its quiet days at zero, the period before, the
-areas and the most frequent actions, the rows waiting and then counted; the capability read at the
-company and another period refused; pruning. The client template's screens test opens the page
-before any count, then after a tick reads its figures, charts and areas, and downloads the CSV.
-Since 2026-11-26 also whose work, the week of hours on a company clock ahead of UTC, and the hours
-caught up for a portal that counted by day first; the people (new, back, the busiest), the refused
-or failed most and the named work. The page, against answers of the API (`test/pages.test.ts`):
-every area and action in words and linked to the audit log, the refused or failed figure linked to
-it, what stands out in words, the rows of options keeping each other, the figure the chart draws,
-the Website part hidden, empty, filled or failed, and the CSV. The Monday summary
-(`test/analytics.test.ts`): nothing before Monday 01:00 or on a quiet week, the last full week
-against the week before with its named lines and the portal's own work left out, the Owners
-(through a group too; not switched off, blocked, ended, not started, at a place only or a
-service account), nothing twice later that day or on Tuesday, and a failed send failing the job
-and made up the next day with the same keys.
+each row once, the people by day; a period with its quiet days at zero, the period before, the areas
+and the most frequent actions, the rows waiting and then counted; the capability read at the company
+and another period refused; pruning. The client template's screens test opens the page before any
+count, then after a tick reads its figures, charts and areas, and downloads the CSV. Also whose
+work, the week of hours on a company clock ahead of UTC, and the hours caught up for a portal that
+counted by day first; the people (new, back, the busiest), the refused or failed most and the named
+work. The page, against answers of the API (`test/pages.test.ts`): every area and action in words
+and linked to the audit log, the refused or failed figure linked to it, what stands out in words,
+the rows of options keeping each other, the figure the chart draws, the Website part hidden, empty,
+filled or failed, and the CSV. The Monday summary (`test/analytics.test.ts`): nothing before Monday
+01:00 or on a quiet week, the last full week against the week before with its named lines and the
+portal's own work left out, the Owners (through a group too; not switched off, blocked, ended, not
+started, at a place only or a service account), nothing twice later that day or on Tuesday, and a
+failed send failing the job and made up the next day with the same keys.

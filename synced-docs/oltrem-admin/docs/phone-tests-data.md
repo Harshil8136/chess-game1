@@ -77,7 +77,7 @@ From [record](../archive/records/2026-11-23-connected-data-hidden-columns.md):
 | P461 | As someone without hidden columns, open that table | The hidden one gone with a line saying so; the masked one shows its last 4 characters |
 | P462 | As that person, search for a value of the masked column | No row found by it |
 
-From [README](../modules/data/README.md#questions-in-sql):
+From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#questions-in-sql):
 
 | # | Open | You should see |
 |---|---|---|
@@ -88,13 +88,13 @@ From [README](../modules/data/README.md#questions-in-sql):
 | P572 | Remove saved question | Removed; the chip gone |
 | P704 | On the database's page, Ask: SELECT count(*) FROM public.<a table> | One row with the count |
 
-From [README](../modules/data/README.md#editing):
+From [README](../modules/data/docs/timed-check-and-home.md#editing):
 
 | # | Open | You should see |
 |---|---|---|
 | P522 | A database with more than 10 changes, its page, Older changes, then Newest changes | The next 10 older changes, then the newest again |
 
-From [README](../modules/data/README.md#the-pages):
+From [README](../modules/data/docs/pages.md#the-pages):
 
 | # | Open | You should see |
 |---|---|---|
@@ -118,7 +118,7 @@ From [README](../modules/data/README.md#the-pages):
 | P891 | Open an Airtable database | Each base's heading ends with your access there (such as Editor); each table's card shows its description, its fields and its views as tags |
 | P892 | Open an Airtable table, then press one of its views in the row of chips | The records that view shows, in its order ("As in the view"); search and Next page keep the view; All records goes back |
 
-From [README](../modules/data/README.md#a-supabase-project-beyond-its-tables):
+From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#a-supabase-project-beyond-its-tables):
 
 | # | Open | You should see |
 |---|---|---|
@@ -133,7 +133,7 @@ From [README](../modules/data/README.md#a-supabase-project-beyond-its-tables):
 | P755 | (Owner, once: redeploy the relay, and give the Supabase OAuth app Database, Edge Functions and Analytics Read where listed.) Remove a Supabase database, then on Data, Connect Supabase, press Sign in with Supabase and Connect | It connects with no access token pasted; its Logs, Functions, Advisors and Health's Requests and Backups open without "Add a Supabase access token" |
 | P756 | Come back to that database's Logs more than an hour later | The lines load (the token was renewed on the way); a sign-in Supabase ended instead says to paste a token or sign in again |
 
-From [README](../modules/data/README.md#a-databases-usage-neon-turso-and-upstash):
+From [README](../modules/data/docs/a-supabase-project-beyond-its-tables.md#a-databases-usage-neon-turso-and-upstash):
 
 | # | Open | You should see |
 |---|---|---|

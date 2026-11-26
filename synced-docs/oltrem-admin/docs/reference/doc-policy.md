@@ -41,7 +41,9 @@ column on every row.
 - Current truth only. No "since 2026-…", "used to", "now" or the story of a fix: the record holds
   that, and the living document links it at most once.
 - Over the cap: split by section into documents one level down, each linked from the parent.
-  Never squeeze the prose until it is hard to read.
+  A README's pages go in `docs/` beside it (`<package>/docs/<part>.md`), each with front matter,
+  listed in the README's Contents table and shipped in the package (`files`); the docs gate and
+  the mirror take them. Never squeeze the prose until it is hard to read.
 
 ## A record
 

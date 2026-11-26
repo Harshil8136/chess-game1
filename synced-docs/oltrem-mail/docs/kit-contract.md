@@ -11,7 +11,7 @@ sources: [modules/email/src; modules/campaigns/src; modules/mail/src; kit/kit.js
 > **In plain words.** Oltrem Mail runs inside the portal the kit builds, so it uses the kit's
 > sign-in, permissions, audit trail, settings and look instead of making its own. This page says
 > what mail takes from the kit, what it gives back, which numbers each side holds, and how a
-> change crosses from one repository to the other. The owner asked (2026-11-02) for each
+> change crosses from one repository to the other. The owner asked for each
 > repository to have its own thread, with the two threads talking whenever a change touches
 > this agreement.
 
@@ -25,21 +25,20 @@ Mail never builds its own version of any of these.
 | Permissions | `@oltrem/iam` | each module declares its capabilities on its own bit plane, checked by the kit's check; the Owner and Vendor floors, roles, grants and fresh sign-in are the kit's |
 | Audit trail and logs | `@oltrem/core-audit`, the kit's alerts | every change is audited through the kit's wrapper; mail keeps no log store of its own |
 | Settings | `@oltrem/core-config` | settings are rows in the client's database, never new variables (R-09) |
-| Sending and jobs | `@oltrem/core-outbox`, `@oltrem/core-module` | a message leaves through the outbox, with the kit's lease per message key; scheduled work is a job the kit's tick runs. A job that polls declares `idle` and answers `'idle'` when it found nothing, so it runs at that slower pace, and the write that gives it work calls `wakeJobs` (2026-11-12); `Outbox.prune` removes finished sends, which `email.outbox` calls (2026-11-22); the tests take `@oltrem/core-jobs` for the jobs' table |
-| Providers | `@oltrem/providers` | provider instances, their sealed keys, adapters and failover order; the email module hands its registry to the Mail add-on (`Email.providers`), which keeps an ImprovMX key there as kind `forwarding` (2026-11-12) |
+| Sending and jobs | `@oltrem/core-outbox`, `@oltrem/core-module` | a message leaves through the outbox, with the kit's lease per message key; scheduled work is a job the kit's tick runs. A job that polls declares `idle` and answers `'idle'` when it found nothing, so it runs at that slower pace, and the write that gives it work calls `wakeJobs`; `Outbox.prune` removes finished sends, which `email.outbox` calls; the tests take `@oltrem/core-jobs` for the jobs' table |
+| Providers | `@oltrem/providers` | provider instances, their sealed keys, adapters and failover order; the email module hands its registry to the Mail add-on (`Email.providers`), which keeps an ImprovMX key there as kind `forwarding` |
 | Errors | `@oltrem/core-errors` | codes in the blocks mail holds (below) |
-| The look | `@oltrem/core-ui`, `@oltrem/core-module/pages` | the kit's tokens and primitives, pages in the sidebar's Email group, phone first (R-12); what a press did (done, refused, imported, sent with Undo) inside the kit's `Toasts`, at the bottom right, while a state of things stays in the page; the kit's stylesheet is built from mail's packed pages; Email's pages are drawn in the kit's `MailShell`, and the kit's delivery log page joins them through the screens' `frames` option, which the client fills with `emailFrame` from `@oltrem/email/pages` (2026-11-10); a row's command marked `data-optimistic` changes the row before the portal answers, through the kit's frame script (2026-11-13) |
+| The look | `@oltrem/core-ui`, `@oltrem/core-module/pages` | the kit's tokens and primitives, pages in the sidebar's Email group, phone first (R-12); what a press did (done, refused, imported, sent with Undo) inside the kit's `Toasts`, at the bottom right, while a state of things stays in the page; the kit's stylesheet is built from mail's packed pages; Email's pages are drawn in the kit's `MailShell`, and the kit's delivery log page joins them through the screens' `frames` option, which the client fills with `emailFrame` from `@oltrem/email/pages`; a row's command marked `data-optimistic` changes the row before the portal answers, through the kit's frame script |
 | Storage | the client's one database and one bucket | no second Worker, database or bucket; never KV for mail (M-3) |
 
 ## What mail gives the kit
 
-Three packages. `@oltrem/email` and `@oltrem/campaigns` keep the names they had before the move,
-and every client has them: their pages, their routes under `/api/email` and `/api/campaigns`,
-their public hooks (`/hooks/email/<instance>/<token>` for delivery reports,
-`/hooks/campaigns/u/<token>` for unsubscribe) and their migrations. `@oltrem/mail` is the
-add-on a client gets only when Mail is ticked at setup (the owner's choice of 2026-11-02: left
-unticked, a client keeps provider sending, Write, Sent and Bulk mail exactly as today). Each
-module's README lists its capabilities, settings, errors and routes; those READMEs own the lists.
+Three packages. `@oltrem/email` and `@oltrem/campaigns` keep the names they had before the move, and
+every client has them: their pages, their routes under `/api/email` and `/api/campaigns`, their
+public hooks (`/hooks/email/<instance>/<token>` for delivery reports, `/hooks/campaigns/u/<token>`
+for unsubscribe) and their migrations. `@oltrem/mail` is the add-on a client gets only when Mail is
+ticked at setup. Each module's README lists its capabilities, settings, errors and routes; those
+READMEs own the lists.
 
 ### How a client wires the add-on
 
@@ -70,7 +69,7 @@ addon = mail?.({ email, /* the rest of MailAddonDeps, below */ });
 | `account` | the client's Cloudflare account, from the setting the deploy writes |
 | `plan` | the client's Workers plan, from `health.cloudflare_plan` |
 | `index`, `report` | the capability index and the error reporter, as for every module |
-| `bucket` | the client's one bucket (`FILES`); the inbox keeps each message whole under `mail/inbox/`; without it the inbox refuses mail and its health check fails. `@oltrem/email` takes the same bucket in `bindings` (since 2026-11-08) for files attached on Write, under `mail/attachments/`; without it Write offers no files |
+| `bucket` | the client's one bucket (`FILES`); the inbox keeps each message whole under `mail/inbox/`; without it the inbox refuses mail and its health check fails. `@oltrem/email` takes the same bucket in `bindings` for files attached on Write, under `mail/attachments/`; without it Write offers no files |
 | `worker` | the Worker's own name, as the client's wrangler file names it; each mailbox's routing rule sends its mail to it |
 | `local` | optional: true only on the builder's computer (the kit hands `(env) => !env.ACCESS_AUD`, so a deployed portal is never local); a mailbox is then made without Email Routing and its rule, on the domain of `email.from_address` or example.com, so mail tried there reaches the inbox; forwarding asks Cloudflare nothing (each domain is "on this computer", everyone an alias names counts as confirmed, nothing moves); and Send a test is offered on Forwarding and Mailboxes |
 
@@ -146,12 +145,12 @@ flowchart LR
 
 - **A kit change mail uses:** the kit's thread packs the kit and tells the mail thread, which
   refreshes `kit/`, runs `pnpm verify` and fixes what broke before its next push.
-- **A mail change:** the mail thread commits, runs `pnpm verify` and `pnpm mail:pack`, and tells
-  the kit's thread, which copies the folder into `vendor/mail/`, runs `pnpm install` (and
-  `pnpm ui:build` when a page changed), runs its verify and pushes. The folder includes
-  `published/`, every document of this repository at its own path (the owner's ask of
-  2026-11-02); the kit's docs mirror rebuilds `synced-docs/oltrem-mail/` from it on that push, so
-  mail's documents are public with every pack and never need a step of their own.
+- **A mail change:** the mail thread commits, runs `pnpm verify` and `pnpm mail:pack`, and tells the
+  kit's thread, which copies the folder into `vendor/mail/`, runs `pnpm install` (and `pnpm
+  ui:build` when a page changed), runs its verify and pushes. The folder includes `published/`,
+  every document of this repository at its own path; the kit's docs mirror rebuilds
+  `synced-docs/oltrem-mail/` from it on that push, so mail's documents are public with every pack
+  and never need a step of their own.
 - **A change to this agreement** (a new capability plane, error block or migration range, a
   hook address, a kit interface mail needs, a permission floor, a step in the setup page, the
   shape of what is audited or logged): the thread that wants it messages the other thread first.

@@ -50,19 +50,17 @@ flowchart TD
 - **Already in the kit:** reading a provider's domains and addresses (8 providers), adding a domain
   at Resend and Brevo, records with Copy buttons, the check in words, DMARC required, sender
   addresses with permissions.
-- **Built in phase 3 (2026-11-02):** the single card (Email, Set up), which does every step in
-  one press and lists each in words; the records written on Cloudflare when Oltrem Mail is on
-  (DNS Edit; only adds, each press audited); delivery reports registered by themselves (section
-  3); a backup provider from the same card (section 4); the placement test. What each step does
-  is in the email module's README ("The simple provider card") and the mail add-on's ("Records
-  on Cloudflare").
-- **Built in bundle C (2026-11-02):** a domain not yet passing is checked by itself every five
-  minutes in its first hour, hourly in its first day, then daily, the provider asked each time to
-  look again; DMARC is read from the domain or the nearest parent, and written in the same press
-  only when none covers it, so a parent's stricter policy is never weakened; each domain says
-  whether it is ready for Gmail, Yahoo and Outlook; a domain that has not passed in a day warns
-  on System health; everyday mail goes through the backup first once the main provider is down
-  to its last tenth. The record is
+- **Built in phase 3:** the single card (Email, Set up), which does every step in one press and
+  lists each in words; the records written on Cloudflare when Oltrem Mail is on (DNS Edit; only
+  adds, each press audited); delivery reports registered by themselves (section 3); a backup
+  provider from the same card (section 4); the placement test. What each step does is in the email
+  module's README ("The simple provider card") and the mail add-on's ("Records on Cloudflare").
+- **Built in bundle C:** a domain not yet passing is checked by itself every five minutes in its
+  first hour, hourly in its first day, then daily, the provider asked each time to look again; DMARC
+  is read from the domain or the nearest parent, and written in the same press only when none covers
+  it, so a parent's stricter policy is never weakened; each domain says whether it is ready for
+  Gmail, Yahoo and Outlook; a domain that has not passed in a day warns on System health; everyday
+  mail goes through the backup first once the main provider is down to its last tenth. The record is
   [records/2026-11-02-sets-itself-up.md](../archive/records/2026-11-02-sets-itself-up.md).
 
 ## 2. "Use Cloudflare email"
@@ -123,9 +121,9 @@ attachments })` (with `cc`, `bcc` and `replyTo` when needed), never the older ra
 The binding in the client template is `"send_email": [{ "name": "EMAIL" }]` ([decision
 4](plan.md#14-the-owners-decisions)).
 
-Since 2026-11-12 the page leads with **the next step**: the first of the four that has not
-passed, what was found and what to do, or "Everything is ready" once all four have; the four
-steps stay under **All four steps**, with how many are done.
+The page leads with **the next step**: the first of the four that has not passed, what was found and
+what to do, or "Everything is ready" once all four have; the four steps stay under **All four
+steps**, with how many are done.
 
 ## 3. Delivery reports, registered by themselves
 
@@ -177,9 +175,9 @@ instead of trusting this list):
 
 ## 5. Forwarding, as ImprovMX does it
 
-Built in bundle F ([its record](../archive/records/2026-11-02-forwarding.md)), on its own page, Forwarding
-(`/email/forwarding`), under Email's Settings tab (since 2026-11-22). Since 2026-11-12
-([its record](../archive/records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
+Built in bundle F ([its record](../archive/records/2026-11-02-forwarding.md)), on its own page,
+Forwarding (`/email/forwarding`), under Email's Settings tab. Since 2026-11-12 ([its
+record](../archive/records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
 **ImprovMX** and **Cloudflare**. A visit opens on ImprovMX, unless Cloudflare already forwards a
 domain and ImprovMX is not connected.
 
@@ -294,9 +292,9 @@ mail carries none of the signs of marketing mail.
 | An open-tracking pixel, and links sent through the provider's own address | Everyday mail (Write, replies, automated notices) asks the provider not to track it, where the provider takes that for one message (Postmark, SendGrid, Mailgun, Mailjet). Resend tracks only when tracking is switched on for the domain in its dashboard, and it starts off. |
 | A provider that tracks every message and adds a `List-Unsubscribe` header to each (Brevo; Sender tracks every message too) | Everyday mail goes through another connected provider first, and the tracking one stays the backup. With no other provider, Ready to send says "Everyday email lands in the inbox" and names the fix: add one, such as Resend. |
 | `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both by law and by Gmail's bulk-sender rules. A campaign is marketing, and Gmail mostly files it under Promotions, which is not spam. |
-| A campaign that looks or reads like an advertisement | Since 2026-11-15 a campaign's plain message goes as a plain letter, as Write sends one: no coloured page, no card, the footer a small line under the words. Over its preview the page says which tab it will most likely reach: it names each sign (an offer in the subject, shouting in capital letters or rows of exclamation marks, many links, a design, a From name that says newsletter) and what to change, or says it reads like a letter. For a few people it points to Compose, where each gets their own copy from the everyday address. |
-| The email itself reads as an offer: an offer in the subject or the hidden preview line, a newsletter build (pictures, buttons, a hidden preview line), Unsubscribe or View in browser links, many links | Write asks once before it goes (since 2026-11-12), naming each sign and the way to Primary, and names any link that goes nowhere (`#`, a template's yourwebsite.com). Gmail's own help files "deals, offers, and other promotional emails" under Promotions, so a designed offer lands there from any provider and any setup. |
-| One address for campaigns and everyday mail | The campaign page says so when its From address also sends everyday email (since 2026-11-12): Gmail learns an address from its campaigns and then files its letters under Promotions too. |
+| A campaign that looks or reads like an advertisement | A campaign's plain message goes as a plain letter, as Write sends one: no coloured page, no card, the footer a small line under the words. Over its preview the page says which tab it will most likely reach: it names each sign (an offer in the subject, shouting in capital letters or rows of exclamation marks, many links, a design, a From name that says newsletter) and what to change, or says it reads like a letter. For a few people it points to Compose, where each gets their own copy from the everyday address. |
+| The email itself reads as an offer: an offer in the subject or the hidden preview line, a newsletter build (pictures, buttons, a hidden preview line), Unsubscribe or View in browser links, many links | Write asks once before it goes, naming each sign and the way to Primary, and names any link that goes nowhere (`#`, a template's yourwebsite.com). Gmail's own help files "deals, offers, and other promotional emails" under Promotions, so a designed offer lands there from any provider and any setup. |
+| One address for campaigns and everyday mail | The campaign page says so when its From address also sends everyday email: Gmail learns an address from its campaigns and then files its letters under Promotions too. |
 
 What only the client can do, outside the portal:
 

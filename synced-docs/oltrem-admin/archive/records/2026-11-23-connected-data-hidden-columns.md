@@ -17,7 +17,7 @@ sources: [modules/data/src/module.ts; modules/data/src/dialects/call.ts; modules
 
 The plan of 2026-11-22: "Hide or mask columns. For example, personal data such as phone numbers,
 per connection, for people without the right permission." The rules and what they do are in
-[the data README](../../modules/data/README.md#hidden-and-masked-columns). They are kept as one
+[the data README](../../modules/data/docs/timed-check-and-home.md#hidden-and-masked-columns). They are kept as one
 option on the connection (the providers registry's `columns`), so no table, setting or call was
 added.
 

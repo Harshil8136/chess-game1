@@ -149,7 +149,7 @@ From [record](../archive/records/2026-11-14-switched-off-pages-and-head-menus.md
 | # | Open | You should see |
 |---|---|---|
 | P225 | Bulk mail off in Modules; a list with contacts: Send email, then Switch on Bulk mail | "This page is part of Bulk mail"; the press opens New campaign to that list, saying Switched on |
-| P226 | A list's ⋮ (with Bulk mail on and off); then Edit name and description | The menu opens just under the ⋮ and fades in, then fades out on a tap elsewhere (2026-11-15); the edit window opens |
+| P226 | A list's ⋮ (with Bulk mail on and off); then Edit name and description | The menu opens just under the ⋮ and fades in, then fades out on a tap elsewhere; the edit window opens |
 
 From [record](../archive/records/2026-11-12-quiet-portal.md):
 
@@ -200,7 +200,7 @@ From [record](../archive/records/2026-11-11-compose-and-phone-bar.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P72 | Any page on the phone, scrolled to the bottom | Nothing sits along the bottom any more (2026-11-11): the page runs to the foot of the screen; the page's own heading (with its buttons) is under the bar at the top, no empty space above it |
+| P72 | Any page on the phone, scrolled to the bottom | Nothing sits along the bottom any more: the page runs to the foot of the screen; the page's own heading (with its buttons) is under the bar at the top, no empty space above it |
 | P71 | Any page on the phone: tap each button of the bar along the top | Menu (left) opens the sidebar as a drawer from the left; the portal's name goes Home; Search and the bell (with its unread figure) open their pages; there is no bar along the bottom |
 
 From [record](../archive/records/2026-11-08-vendor-accounts.md):

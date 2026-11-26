@@ -1,9 +1,9 @@
 # @oltrem/developer
 
-Developer tools (the owner's request of 2026-10-27): the portal's changes sent out to the
-company's other services as they happen, and the portal's API described from the code that runs
-it. Two parts behind one section of the sidebar, **Developer**. The jobs page it had until
-2026-11-25 is now its own part, always on: [Scheduled jobs](../jobs/README.md).
+Developer tools: the portal's changes sent out to the company's other services as they happen, and
+the portal's API described from the code that runs it. Two parts behind one section of the sidebar,
+**Developer**. The jobs page it had until 2026-11-25 is now its own part, always on: [Scheduled
+jobs](../jobs/README.md).
 
 - **Webhooks**: an https address of the company's is sent each change it asks for, signed as
   [Standard Webhooks](https://www.standardwebhooks.com/) sign them, tried again on a ladder when
@@ -52,15 +52,15 @@ changes of every place.
 | Retries | After 5 minutes, 30 minutes, 2, 8 and 24 hours; after the sixth attempt it has failed for good. **Try again** on the page sends one now, its attempts counted afresh. |
 | Switched off | Ten deliveries in a row that failed for good switch the webhook off, audited as the system's `developer.webhook-off`; switching it on starts the count again. A switched-off webhook is sent nothing. |
 | Kept | Deliveries thirty days, removed daily by `developer.prune`; one still waiting is kept. |
-| Chat alerts | A `format` of `slack`, `teams`, `discord` or `google-chat` (2026-11-22, for the Apps page) instead of `standard`. The address must be the service's own (Slack's `hooks.slack.com/services/`, a Teams workflow on `logic.azure.com` or `powerplatform.com`, Discord's `/api/webhooks/`, Google Chat's `chat.googleapis.com/v1/spaces/`), and may change only to the same service's. Each event is sent as one plain line in the service's own body, made from the envelope just before the request, so the delivery log and a retry read the same: named events in words ("A website form was answered: Contact (by ann@example.com)"), others as the module and action. Unsigned, so the signing secret never reaches the chat service. Nothing typed may ping a channel: Slack's and Google Chat's angle brackets are replaced, Discord is told to parse no mention, and Discord's and Teams' Markdown links are kept apart so no address hides behind words. The test button posts one line saying alerts reach the channel. |
+| Chat alerts | A `format` of `slack`, `teams`, `discord` or `google-chat` (for the Apps page) instead of `standard`. The address must be the service's own (Slack's `hooks.slack.com/services/`, a Teams workflow on `logic.azure.com` or `powerplatform.com`, Discord's `/api/webhooks/`, Google Chat's `chat.googleapis.com/v1/spaces/`), and may change only to the same service's. Each event is sent as one plain line in the service's own body, made from the envelope just before the request, so the delivery log and a retry read the same: named events in words ("A website form was answered: Contact (by ann@example.com)"), others as the module and action. Unsigned, so the signing secret never reaches the chat service. Nothing typed may ping a channel: Slack's and Google Chat's angle brackets are replaced, Discord is told to parse no mention, and Discord's and Teams' Markdown links are kept apart so no address hides behind words. The test button posts one line saying alerts reach the channel. |
 
 ## The pages
 
 | Path | Shows |
 |---|---|
-| `/developer`, `/developer?show=webhooks` | a row of **Webhooks**, **API reference** and **API keys** (a link to the keys, 2026-11-25); the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
+| `/developer`, `/developer?show=webhooks` | a row of **Webhooks**, **API reference** and **API keys**; the webhooks with their state and last delivery, **Add a webhook** for a manager, and how a receiver checks a delivery |
 | `/developer?show=reference` | a note leading to API keys and its How to use, then each mounted module, folded, with its routes (method, full path, summary, capability), hooks, jobs, checks and error codes |
-| `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again**, and above them (2026-11-26) the deliveries at a glance (`src/deliveries.ts`): the share delivered of those settled, how many wait, the typical and the slowest answer, and the newest failure with what to do about its answer (a refused signature, an address that moved or is gone, a service that asked to slow down or failed on its side, no answer in time) |
+| `/developer/webhooks/:id` | the webhook's state; the secret, once, after it is made or renewed; **Send a test**, **Switch off** or **on**, **New secret**, **Remove**; its address, events and description; the newest fifty deliveries with **Try again**, and above them the deliveries at a glance (`src/deliveries.ts`): the share delivered of those settled, how many wait, the typical and the slowest answer, and the newest failure with what to do about its answer (a refused signature, an address that moved or is gone, a service that asked to slow down or failed on its side, no answer in time) |
 
 ## The routes
 
@@ -69,7 +69,7 @@ changes of every place.
 | `GET /webhooks`, `GET /webhooks/:id` | `developer.read` | the webhooks; one with its newest fifty deliveries |
 | `POST /webhooks` (`url`, `events`, `description`, `format`), `PATCH /webhooks/:id` (those and `on`), `DELETE /webhooks/:id`, `POST /webhooks/:id/rotate`, `POST /webhooks/:id/test`, `POST /deliveries/:id/retry` | `developer.manage` | the webhooks and their deliveries |
 | `GET /reference` | `developer.read` | the API as the mounted modules declare it; `?schemas=all` or `?schemas=iam,files` adds those modules' route bodies (a GET's query) as JSON Schema, written once per isolate (a whole portal's at once takes longer than 10 ms of CPU, so a page asks for the part it shows) |
-| `GET /todo` | `developer.manage` (at the company) | Home's Needs you: up to five webhooks failing now or switched off by their failures (not one a person paused), the stopped ones first, each opening its page (2026-11-25) |
+| `GET /todo` | `developer.manage` (at the company) | Home's Needs you: up to five webhooks failing now or switched off by their failures (not one a person paused), the stopped ones first, each opening its page |
 
 Every change is audited by the module: `developer.webhook-create` (with its address's host only: a path or query often carries the receiver's own
 secret, 2026-11-20), `.webhook-update` (what changed, from what to what), `.webhook-delete`,

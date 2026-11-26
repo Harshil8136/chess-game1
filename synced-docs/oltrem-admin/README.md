@@ -61,8 +61,8 @@ installed for you.
      Cloudflare address (this needs `cloudflared` installed, and no account; see
      [sharing it](./templates/client/README.md#sharing-it-with-other-devices)).
 
-   Putting a portal on Cloudflare is not on this page (since 2026-11-25): it is `npm run setup` or
-   `npm run deploy`, and every push to the kit reaches the live portals by itself (the fleet).
+   Putting a portal on Cloudflare is not on this page: it is `npm run setup` or `npm run deploy`,
+   and every push to the kit reaches the live portals by itself (the fleet).
 
    What runs shows its steps under the cards as one log, and **Clear** takes it away; errors the
    portal reports while it runs gather in a small console there, each counted once. The header
@@ -94,7 +94,7 @@ With Node 22 or newer, from this folder:
 | `npm install` | installs the kit (npm is all you need: it fetches the pnpm version `package.json` names) |
 | `npm start` | the start page above |
 | `npm run dev` | the portal on this computer; [the client template's README](./templates/client/README.md#on-your-own-computer) walks through the first run |
-| `npm run live` | a client's real portal on this computer, on its live database, files and cache after a typed yes ([`oltrem live`](./packages/cli/README.md#oltrem-live---portal-worker---yes)) |
+| `npm run live` | a client's real portal on this computer, on its live database, files and cache after a typed yes ([`oltrem live`](packages/cli/docs/oltrem-check-files-dir.md#oltrem-live---portal-worker---yes)) |
 | `npm run update` | gets the newest kit and says what is new |
 | `npm run setup` | puts the portal on Cloudflare with the questions and progress in a page |
 | `npm run deploy` | the same, with the questions in the terminal |

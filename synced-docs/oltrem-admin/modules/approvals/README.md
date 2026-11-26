@@ -47,14 +47,13 @@ The person who asked always sees their own requests and may withdraw one while i
 they hold later (`approvals.self`, which every account holds). Someone who neither asked nor
 decides at the place cannot open a request.
 
-Answering one's own (the owner's policy of 2026-11-15, so that a company of one never waits for a
-second person): an Owner or the Vendor may approve or decline their own request when no other
+Answering one's own: an Owner or the Vendor may approve or decline their own request when no other
 person of the company decides at its place. "Decides" is each active person's access as it is now,
 overrides and denies included; the Vendor never counts as that other person. At most ten people who
-could decide are checked; with more, someone is taken to decide, and it waits for them. The audit row of such
-an answer names the asker and carries `self: true`, and no email is sent, since they gave it. While
-another person decides there, the separation stands (`KIT-E-3001`). Anyone else whose request
-nobody else can answer is told so on its page, with a link to invite the person who should.
+could decide are checked; with more, someone is taken to decide, and it waits for them. The audit
+row of such an answer names the asker and carries `self: true`, and no email is sent, since they
+gave it. While another person decides there, the separation stands (`KIT-E-3001`). Anyone else whose
+request nobody else can answer is told so on its page, with a link to invite the person who should.
 
 ## A request
 

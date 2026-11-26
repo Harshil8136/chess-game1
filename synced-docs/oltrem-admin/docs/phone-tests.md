@@ -8,7 +8,7 @@ sources: [the records under archive/records/ from 2026-10-21 to 2026-11-03, thei
 
 # Phone tests owed
 
-> **In plain words.** Every change since 2026-10-21 was tested by machine, and almost none of it
+> **In plain words.** Every change was tested by machine, and almost none of it
 > has been looked at on a real phone yet. This is the one list of what is still owed, grouped by
 > page, each a few taps with what you should see. When a line passes, say so (or tick it here)
 > and it moves to "Passed" with the date; when it fails, say what you saw and it becomes a fix.

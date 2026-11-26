@@ -60,16 +60,16 @@ flowchart TD
 4. **Skips what is current.** After a good update, the run records a fingerprint of the kit's
    folders (`packages`, `modules`, `vendor`, `templates/client`) and the choices. When neither has
    changed, the portal is skipped. A push that changes only documents updates nobody.
-5. **Updates the rest.** For each portal it copies the client template beside it (`.fleet/`),
-   writes the choices in, and runs `oltrem release`: the restore point, the migrations, the
-   deploy, the health check and the step back. The database is never stepped back: the kit's
-   migrations only add, so the version before runs on it (`scripts/migrations.test.mjs` holds
-   every kit migration to that on each verify, 2026-11-24). After a good update on a portal's own
-   address, the run makes sure that zone has the rate-limit rule `oltrem_hooks` (2026-11-24): at
-   most 30 calls to `/hooks/` in 10 seconds from one address at one Cloudflare location, past
-   which the edge refuses for 10 seconds before the Worker runs. The free plan allows one such
-   rule per zone; a zone that already has a rule of the client's own is left as it is and the
-   step says so. A key without Zone WAF Edit is named with that fix and the update still counts.
+5. **Updates the rest.** For each portal it copies the client template beside it (`.fleet/`), writes
+   the choices in, and runs `oltrem release`: the restore point, the migrations, the deploy, the
+   health check and the step back. The database is never stepped back: the kit's migrations only
+   add, so the version before runs on it (`scripts/migrations.test.mjs` holds every kit migration to
+   that on each verify, 2026-11-24). After a good update on a portal's own address, the run makes
+   sure that zone has the rate-limit rule `oltrem_hooks`: at most 30 calls to `/hooks/` in 10
+   seconds from one address at one Cloudflare location, past which the edge refuses for 10 seconds
+   before the Worker runs. The free plan allows one such rule per zone; a zone that already has a
+   rule of the client's own is left as it is and the step says so. A key without Zone WAF Edit is
+   named with that fix and the update still counts.
 6. **Says how it went.** The build's log first names the accounts the key reaches and any
    database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
    `held` or `failed`, with the steps under it; a failed deploy ends with what wrangler said, its
@@ -78,10 +78,10 @@ flowchart TD
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
    closed by the first run that updates it.
 
-A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row; a later
-`npm run deploy` from the client's computer keeps that false (since 2026-11-20; it used to write it
-back to true). To put it back in the updates, set it to `true` in the row again. A portal whose repository has modules of its own is kept out by its own deploy (see
-Not done yet).
+A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row; a later `npm run
+deploy` from the client's computer keeps that false. To put it back in the updates, set it to `true`
+in the row again. A portal whose repository has modules of its own is kept out by its own deploy
+(see Not done yet).
 
 ## The one-time setup
 
@@ -134,10 +134,9 @@ permissions, replace the build secret, delete the old one. Its row is in the
 
 ## Not done yet
 
-- **The door.** An update keeps the portal's Access as it is, since the key cannot change
-  Access. A door change (such as the open paths of 2026-11-11) reaches a portal only with
-  `npm run deploy`; so nothing the screens need signed in may sit on a path an older door opened
-  (the actions moved to `/do/` on 2026-11-12 for that reason).
+- **The door.** An update keeps the portal's Access as it is, since the key cannot change Access. A
+  door change reaches a portal only with `npm run deploy`; so nothing the screens need signed in may
+  sit on a path an older door opened (the actions moved to `/do/` on 2026-11-12 for that reason).
 - **Client modules.** A client's own modules (`oltrem new module`) live in a client repository,
   which the fleet does not build. So every `npm run deploy` of a repository with modules of its
   own records them in `build_choices` (`ownModules`) with `autoUpdate` false, and the fleet lists

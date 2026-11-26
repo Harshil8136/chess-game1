@@ -57,10 +57,10 @@ Mail never sends from an IP address of its own:
 What matters on every route is the **domain's** reputation: SPF, DKIM and DMARC records, a modest
 start and low complaints. The portal checks those records daily (section 11).
 
-One caveat: Cloudflare's sending has been in public beta since 2026-04-16, and nobody has measured
-yet how often its mail reaches the inbox compared with Resend or Brevo. So providers carry
-customers' mail, Cloudflare carries staff mail and alerts first, and we measure placement ourselves
-before trusting it with more (phase 2).
+One caveat: Cloudflare's sending has been in public beta, and nobody has measured yet how often its
+mail reaches the inbox compared with Resend or Brevo. So providers carry customers' mail, Cloudflare
+carries staff mail and alerts first, and we measure placement ourselves before trusting it with more
+(phase 2).
 
 ### "What is the ceiling of emails we can send, and the free-tier usage?"
 
@@ -129,7 +129,7 @@ underneath; the page hides their differences.
 | It is | It is not |
 |---|---|
 | Every email feature of a portal: sending, setup, templates, lists, campaigns, an optional inbox | A webmail product with its own sign-in: the portal's people, roles and pages are used |
-| Always inside the portal's one Worker (the owner's decision: never a second Worker) | A separate service with its own address |
+| Always inside the portal's one Worker | A separate service with its own address |
 | Its own private repository, packed into each client's repository like the kit | A public package or service: no registry, no organisation |
 | Built for Cloudflare's free plan; Workers Paid only widens the Cloudflare route | A mail server: no machine, no port 25, no IP address of our own |
 | Phone first, like the rest of the portal | A calendar, drive or booking product |
@@ -144,7 +144,7 @@ underneath; the page hides their differences.
 | `@oltrem/campaigns` | The core packages (errors, HTTP, jobs, outbox, UI) Oltrem Mail builds on |
 | The new parts: the Cloudflare route, the setup page, the inbox, the records of section 7 | Every other module: they send through one small interface and never know which route was used |
 
-**How the two repositories fit together**, with no registry and no token (the owner's rule):
+**How the two repositories fit together**, with no registry and no token:
 
 1. Oltrem Mail builds and tests against the kit's packed packages, kept in its own committed
    `kit/` folder, exactly as a client repository does.
@@ -191,8 +191,8 @@ flowchart TD
   error codes and each provider's answers): a recipient problem (record it, move on), a throttle or
   a used-up day (wait, or try the backup), a setup problem (stop and tell the owner in words). An
   unclear answer, such as a timeout, is never sent again by another route: the first may have
-  delivered it. Since 2026-11-21 (the owner's ruling) it is asked again only on a route that
-  knows the message's key (Resend); on any other it ends as "may have been sent".
+  delivered it. It is asked again only on a route that knows the message's key (Resend); on any
+  other it ends as "may have been sent".
 - **Every route carries the thread.** A reply passes `In-Reply-To` and `References` on every route
   ([inbox](inbox.md#5-threads)).
 
@@ -262,7 +262,7 @@ Sections in the sidebar, each page's options in a sideways row (R-12).
 
 ## 9. Limits and constraints
 
-### Cloudflare's email rules (read 2026-11-02)
+### Cloudflare's email rules
 
 | Rule | Effect on the plan |
 |---|---|

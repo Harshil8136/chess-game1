@@ -1,10 +1,9 @@
 # @oltrem/records
 
-The company's own records (the owner's choice of 2026-10-22): lists it designs for itself, with
-no code. A list has a name, a line on what it is for, the fields its records hold, and the place
-of the company it belongs to. Contacts, tasks, stock, orders, equipment, or anything else a
-business keeps track of, are all lists; nothing in the module knows one kind of business from
-another.
+The company's own records: lists it designs for itself, with no code. A list has a name, a line on
+what it is for, the fields its records hold, and the place of the company it belongs to. Contacts,
+tasks, stock, orders, equipment, or anything else a business keeps track of, are all lists; nothing
+in the module knows one kind of business from another.
 
 ## Using it
 
@@ -24,9 +23,9 @@ const app = createApp<Env>({
 });
 ```
 
-`createRecords` returns the `store` functions and the module manifest. It stands on the IAM
-module: the same sessions and authorizer, the same audit wrapper. The client template mounts it
-after the users module, and the screens give it a **Lists** section (named Records before 2026-11-22) (`@oltrem/screens`).
+`createRecords` returns the `store` functions and the module manifest. It stands on the IAM module:
+the same sessions and authorizer, the same audit wrapper. The client template mounts it after the
+users module, and the screens give it a **Lists** section (`@oltrem/screens`).
 
 ## Who may do what: the place of a list
 
@@ -60,9 +59,10 @@ who added it and when, and who changed it last. The records of a list are search
 text, narrowed by one choice or yes or no field, sorted by when they changed, when they were
 added, or any field, and paged (50 by default, 200 at most).
 
-The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records (past it, since 2026-11-24, the file's name ends `-first-5000`, so a cut file never passes for a whole one), oldest first, for a
-spreadsheet. Every cell is quoted, and a cell that starts with `=`, `+`, `-`, `@`, a tab or a
-carriage return gets a leading `'`, so a spreadsheet never runs a value as a formula.
+The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records (past it, the file's name
+ends `-first-5000`, so a cut file never passes for a whole one), oldest first, for a spreadsheet.
+Every cell is quoted, and a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return
+gets a leading `'`, so a spreadsheet never runs a value as a formula.
 
 The upload (`POST /lists/:id/import`, `records.write`, the CSV file as the body of a `bytes`
 route, 128 KB and 1000 rows at most) adds a record for each row, all or none. The first row
@@ -112,8 +112,8 @@ Migration `0017_records.sql`, additive and idempotent, in the one ledger `oltrem
 `records_lists` (the list, its tenant, its place, name and description; one name per company),
 `records_fields` (each field's label, kind, whether it is needed, its choices and position) and
 `records_items` (each record's values as JSON, its search text, who added and changed it, when).
-Migration `0057_records_trash.sql` (2026-11-03): `records_trash`, a removed record's row with who
-removed it and when, for its Undo; removing a list empties its rows there.
+Migration `0057_records_trash.sql`: `records_trash`, a removed record's row with who removed it and
+when, for its Undo; removing a list empties its rows there.
 
 ## Jobs
 

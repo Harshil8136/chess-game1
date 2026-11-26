@@ -25,7 +25,7 @@ export const notes = defineModule({
 | `idle` | optional: a slower pace, longer than `every`, for a job that mostly finds nothing to do (below) |
 | `summary` | a few words the jobs page shows |
 | `run(env, ctx)` | the work; it throws to fail, and may answer `'idle'` |
-| `check(env)` | optional (2026-11-21): what waits for it now, in one plain sentence, without doing any of it; the jobs page's **Check for work** asks it. A few reads at most, never a write |
+| `check(env)` | optional: what waits for it now, in one plain sentence, without doing any of it; the jobs page's **Check for work** asks it. A few reads at most, never a write |
 
 The contract (`@oltrem/core-module`) refuses a bad id, interval or summary when the module loads,
 and an `idle` that is not longer than `every`.
@@ -86,22 +86,21 @@ health's own, which measure and judge the budgets) is `paused`: it is not run an
 runs on the first tick after the reason is gone. A pause that cannot be read is reported through
 `report(error, 'pause')` and the jobs run, as if nothing were spent.
 
-A job paused by hand (`setPaused(env, id, by)`, from `@oltrem/jobs`) is `stopped` instead: due,
-not run, and kept due until `setPaused(env, id, null)` resumes it, when the next tick runs it.
-`setPaused(env, id, by, until)` pauses it for a while (2026-11-25): the first tick past `until`
-clears the pause, lists the job in `resumed` and runs it. `runSoon(env, id)` makes a job due now, so
-the next tick (within five minutes) runs it. `runNow(env, ctx, id)` runs it inside the request
-under the same lease and the same write as a tick, so no tick runs it twice, keeps its schedule,
-and answers what it did (`ok`, `idle`, `failed` with the error, or `busy` while a lease is held),
-its time and its queries. All write the rows of the declared jobs first, so they work before the
-first tick; `runSoon` and `setPaused` answer false, `runNow` null, for a job no mounted module
-declares.
+A job paused by hand (`setPaused(env, id, by)`, from `@oltrem/jobs`) is `stopped` instead: due, not
+run, and kept due until `setPaused(env, id, null)` resumes it, when the next tick runs it.
+`setPaused(env, id, by, until)` pauses it for a while: the first tick past `until` clears the pause,
+lists the job in `resumed` and runs it. `runSoon(env, id)` makes a job due now, so the next tick
+(within five minutes) runs it. `runNow(env, ctx, id)` runs it inside the request under the same
+lease and the same write as a tick, so no tick runs it twice, keeps its schedule, and answers what
+it did (`ok`, `idle`, `failed` with the error, or `busy` while a lease is held), its time and its
+queries. All write the rows of the declared jobs first, so they work before the first tick;
+`runSoon` and `setPaused` answer false, `runNow` null, for a job no mounted module declares.
 
-`list(env)` returns every row, with `declared` false for the row of a job no mounted module
-declares any more; the row and its history are kept. `standDown(env)` answers the pause's reason
-while the due jobs wait for a spent budget, or null (2026-11-21, for the jobs page).
+`list(env)` returns every row, with `declared` false for the row of a job no mounted module declares
+any more; the row and its history are kept. `standDown(env)` answers the pause's reason while the
+due jobs wait for a spent budget, or null (for the jobs page).
 
-### The last day of a job (2026-11-21)
+### The last day of a job
 
 The write that records a run also keeps what the job did in each of the last 24 hours, as one
 short line in its row (`last_day`, `<hour>|<24 marks>`): `markDay` moves the line the run found on
@@ -183,13 +182,12 @@ started by hand (`startFlow`), it still runs.
 
 ## Table
 
-Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
-`lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
-index on `next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand;
-`0031` adds `last_queries`, the database queries the last run made; `0069` (2026-11-21) adds
-`last_day`, the last 24 hours above; `0094` (2026-11-25) adds `paused_until`, when a pause
-for a while ends. Tiers
-(plan 4.3) come later; the budgets' pause above needs no column.
+Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`, `lease_until`,
+`last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an index on
+`next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand; `0031` adds
+`last_queries`, the database queries the last run made; `0069` adds `last_day`, the last 24 hours
+above; `0094` adds `paused_until`, when a pause for a while ends. Tiers (plan 4.3) come later; the
+budgets' pause above needs no column.
 
 ## Tests
 

@@ -107,13 +107,12 @@ setting keeps both in bounds.
   links carry it) and strips `<form>` and every
   form control. A click opens a new tab and never navigates the frame to a portal address.
 - **Images:** remote images are blocked by default, by the policy and by DOMPurify moving their
-  addresses aside; "Show images" brings them back for that message, those on another site only:
-  a relative address, or one on the portal's own host, would be fetched as the reader with the
-  portal's cookies (2026-11-20). Inline pictures (`cid:`) are
-  shown from the parsed message, flat picture types only (PNG, JPEG, GIF, WebP, AVIF, BMP): an
-  SVG is a document, and opened on its own from the address the portal gives it, it would run its
-  script as the portal (2026-11-17). `<meta name="referrer" content="no-referrer">` keeps senders from
-  learning the portal's address.
+  addresses aside; "Show images" brings them back for that message, those on another site only: a
+  relative address, or one on the portal's own host, would be fetched as the reader with the
+  portal's cookies. Inline pictures (`cid:`) are shown from the parsed message, flat picture types
+  only (PNG, JPEG, GIF, WebP, AVIF, BMP): an SVG is a document, and opened on its own from the
+  address the portal gives it, it would run its script as the portal. `<meta name="referrer"
+  content="no-referrer">` keeps senders from learning the portal's address.
 - **Height:** a `ResizeObserver` on the frame's body sets the frame's height, so there is one
   scrollbar on a phone, and the frame grows smoothly as images load after "Show images". Images and
   tables get `max-width: 100%` so nothing scrolls sideways.
@@ -155,10 +154,10 @@ setting keeps both in bounds.
 - **Rules:** when the sender, the subject or a recipient contains some words: archive, mark read,
   label, or file as spam, for one mailbox or every one (forwarding is per mailbox). A spam score
   is recorded, nothing is hidden until a manager sets a threshold; a sender block list.
-- **Quick actions:** several at once go in one request and one `db.batch()`. As built they are
-  forms the server answers; since 2026-11-13 the kit's frame shows the change at once
-  (`data-optimistic`): a conversation that leaves the box goes from the list, and the server's
-  answer then replaces the list. Opening a conversation marks it read by itself.
+- **Quick actions:** several at once go in one request and one `db.batch()`. As built they are forms
+  the server answers; the kit's frame shows the change at once (`data-optimistic`): a conversation
+  that leaves the box goes from the list, and the server's answer then replaces the list. Opening a
+  conversation marks it read by itself.
 - **Undo Send:** the same Undo that Write has. A reply taken back leaves the conversation and its
   words go back into the reply form.
 - **Room:** mail is kept until the Owner sets how many days to keep it (`mail.inbox.keep_days`,
@@ -213,7 +212,7 @@ Bundle B of [the same research](../archive/records/2026-11-02-easier-mail.md)
   clears it; a muted, snoozed or spam conversation is left alone.
 - **Undo send** lasts 5 to 30 seconds, as the Owner sets it (`email.undo_seconds`, 10 by default).
 
-## 9. Gmail's stars, labels, keys and pane (as built, 2026-11-11)
+## 9. Gmail's stars, labels, keys and pane
 
 From [the research on making Email feel like Gmail](../archive/records/2026-11-11-gmail-style.md)
 ([the record](../archive/records/2026-11-11-gmail-style-email.md)):

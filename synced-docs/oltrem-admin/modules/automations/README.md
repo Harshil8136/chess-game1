@@ -1,10 +1,10 @@
 # @oltrem/automations
 
-Automations (the owner's request of 2026-10-27 for "an auto run system"): the portal does
-something on its own, when something happens or on a schedule. "When a website form is answered,
-email the sales team"; "when a file is shared, raise an alert"; "every Monday at 08:00, send the
-team a reminder". Each automation is one trigger and one action, switched on as it is made or
-later, only once its action has what it needs, and every time it acts is a run in its log.
+Automations: the portal does something on its own, when something happens or on a schedule. "When a
+website form is answered, email the sales team"; "when a file is shared, raise an alert"; "every
+Monday at 08:00, send the team a reminder". Each automation is one trigger and one action, switched
+on as it is made or later, only once its action has what it needs, and every time it acts is a run
+in its log.
 
 ## Using it
 
@@ -51,7 +51,7 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 | Part | What it is |
 |---|---|
 | When something happens | Audited actions that went through. The pages offer the common ones as chips by plain names (a website form is answered, a file is shared, anything in Files, a task is made, someone asks for a yes, a request is approved or declined, something is booked, any change at all), and any other by its name under "Other events", separated by spaces: `customers.add`, or `<part>.*` for anything in a part. The API takes the names: `forms.answer`, `files.*`, `*`. The Developer page's API reference and the audit page name them. One optional condition: a value of the event (`name`, `target`, `actor`, or a detail such as `form`) equals a text, without regard to case. |
-| On a schedule | Every hour at a minute, every day at a time, or one day of the week at a time, on the company's clock: the time zone the client hands in (`timeZone`; the kit's client template gives the company's, `bookings.time_zone`, since 2026-11-20, where it was UTC). The form names the zone on its time field ("At (America/Mexico_City)") and the page says it after the time; a time the clocks skip runs an hour later, one they repeat runs the first time. A schedule made before keeps its hour and minute, now read on that clock from its next run. The tick runs every five minutes, so a run starts within five minutes of its time; a time missed while the portal was down runs once on the next tick. |
+| On a schedule | Every hour at a minute, every day at a time, or one day of the week at a time, on the company's clock: the time zone the client hands in (`timeZone`; the kit's client template gives the company's, `bookings.time_zone`, where it was UTC). The form names the zone on its time field ("At (America/Mexico_City)") and the page says it after the time; a time the clocks skip runs an hour later, one they repeat runs the first time. A schedule made before keeps its hour and minute, now read on that clock from its next run. The tick runs every five minutes, so a run starts within five minutes of its time; a time missed while the portal was down runs once on the next tick. |
 | Then | One action, with the values of its form. A text value may name the event: `{{target}}`, `{{actor}}`, `{{at}}`, `{{type}}`, `{{automation}}`, `{{details.<name>}}` (or `{{<name>}}` for a detail). A schedule's event has the automation's name as its detail. |
 | Switched on | Only when the action's required fields are filled in and valid (`KIT-E-2702` names what is not). It is made switched off unless it is asked to be on (`on`), which is refused the same way while a value is missing; the page's dialog ticks "Switch it on now" by default. Switching it back on starts its count of failures again and works out a schedule's next time from then. |
 | Run now | Runs it at once: an event automation on the newest audited action it matches among the last three hundred, or a stand-in `automations.test` event; a schedule as if its time had come, its next time kept. |
@@ -60,7 +60,7 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 
 | Action | Fields | What it does |
 |---|---|---|
-| `email`, Send an email | To (up to twenty addresses), Subject, Message (plain text) | through the email module, one email per address so nobody sees who else it went to (since 2026-11-08), under the run's key (`<key>.<n>` for the second address on), so a run never sends twice; the email module's failover and delivery reports apply |
+| `email`, Send an email | To (up to twenty addresses), Subject, Message (plain text) | through the email module, one email per address so nobody sees who else it went to, under the run's key (`<key>.<n>` for the second address on), so a run never sends twice; the email module's failover and delivery reports apply |
 | `alert`, Raise an alert | Title, How serious (warning or critical), Detail | through the alerts module, under the key `automations.<automation>`, so a second run while it is open counts on the same alert; emailed to the alerts' recipients as any alert is |
 | `task`, Make a task | What is to be done, Given to (one address), Due in days (0 to 365), Notes | through the tasks module, at the company itself, given to someone who may see the tasks there and told by email; once per run, under the run's key |
 | `announce`, Post an announcement | Title, What it says, Each person confirms (no, or yes with "I have read it"), Shown for days (1 to 365) | through the announcements module, at the company itself, so everyone who may see the company's announcements finds it on Home; once per run, the run's key its id. On a schedule, it is a reminder that comes back: every Monday, the week's safety check |
@@ -72,11 +72,11 @@ What `run` returns is the run's note; a throw is a failed run.
 
 ## How it runs
 
-While no automation is on the job sleeps (2026-11-12): it reads no audit row, moves its place to
-the end of the log in one write, answers `'idle'` and looks again every hour. Switching an
-automation on, or changing one that is on, wakes it in the same batch; when it is the only one on,
-the place moves to the end of the log first, so what was audited while nothing was on sets
-nothing off, and what is audited from then on does.
+While no automation is on the job sleeps: it reads no audit row, moves its place to the end of the
+log in one write, answers `'idle'` and looks again every hour. Switching an automation on, or
+changing one that is on, wakes it in the same batch; when it is the only one on, the place moves to
+the end of the log first, so what was audited while nothing was on sets nothing off, and what is
+audited from then on does.
 
 The job `automations.run`, every five minutes while one is on:
 

@@ -77,9 +77,7 @@ const app = createApp({
 | `actor` | the caller; `outside` (as the system) for a call refused before anyone was let in, such as a key that is not one |
 | `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the refusal's `reason` and `fields`, the `download` and `bytesOut` a read handed over, `notLoggedBefore` (below), and what the pipeline noted for the request (next table) |
 
-What every row of a request carries, a module's own included (2026-11-25, the owner: rows rich
-enough to trace a breach or a stolen API key, modelled on Okta's `client` and `securityContext`,
-CloudTrail's `userIdentity`, GitHub's `actor_location` and token id, and Elastic's `source.as`):
+What every row of a request carries, a module's own included:
 
 | Fact | What it is |
 |---|---|
@@ -106,8 +104,8 @@ isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 ## The public addresses
 
 Every call to a public hook (a provider's delivery report, an inbound webhook, a calendar or
-spreadsheet link another app reads) is a row too, for data-loss prevention and compliance
-(2026-11-23): `createHookAudit` is the app's `onHook` (`@oltrem/core-http`).
+spreadsheet link another app reads) is a row too, for data-loss prevention and compliance :
+`createHookAudit` is the app's `onHook` (`@oltrem/core-http`).
 
 | Field | Value |
 |---|---|
@@ -148,20 +146,19 @@ const audit = createAuditModule<Env>({
 | Route | Capability | What it answers |
 |---|---|---|
 | `GET /entries?outcome=&module=&actor=&target=&action=&since=&until=&kind=&ip=&asn=&key=&session=&signal=&q=&count=1&offset=&countSince=&before=` | `audit.read` at the company | each reading is itself a row (`audit.read`); 50 rows, newest first, narrowed by outcome, module, person, time (`since`), people, the portal or API keys (`kind`), one address (`ip`), network (`asn`), API key (`key`) or sign-in (`session`), the signals (`signal=downloads` or `flagged`: sign-ins from a new country or browser), words (`q`, up to 100 characters; the Audit log page's search), with `counts` by result, `signals` (key calls, downloads, new places) and `days` (each day's counts by result, in the reader's clock when `offset` gives their minutes from UTC; over `countSince` when given, so a page can list one day and still count the range) when `count=1`, an end time (`until`), what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
-| `GET /since?at=` | `audit.read` at the company | Home's What changed card (2026-11-21): what others did since `at` (the person's last Mark as seen; a day back without it, a week back at most, `SINCE_DAYS`), the kinds of change by action, the most made first, the first six (`SINCE_KINDS`) with their counts, and the total. Only a person's changes that went through count: not the person asking, not refusals or failures, not the system's own rows (the Vendor's count), and not coming and going (`iam.sign-in`, `iam.sign-out`, `iam.sign-out-everywhere`, `iam.device-end`). One grouped read on `oltrem_audit_log_at`, which reads the rows since that time, a week's at most; the card is an extra that starts off (`audit.since`, `@oltrem/core-config`) |
+| `GET /since?at=` | `audit.read` at the company | Home's What changed card: what others did since `at` (the person's last Mark as seen; a day back without it, a week back at most, `SINCE_DAYS`), the kinds of change by action, the most made first, the first six (`SINCE_KINDS`) with their counts, and the total. Only a person's changes that went through count: not the person asking, not refusals or failures, not the system's own rows (the Vendor's count), and not coming and going (`iam.sign-in`, `iam.sign-out`, `iam.sign-out-everywhere`, `iam.device-end`). One grouped read on `oltrem_audit_log_at`, which reads the rows since that time, a week's at most; the card is an extra that starts off (`audit.since`, `@oltrem/core-config`) |
 | `GET /seals` | `audit.read` at the company | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) at the company | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands; nothing about the seal when `sealing` answers false (the Daily seal switched off) |
 
-**The daily seal** is optional: the Features page switches it (`audit.seal`, an extra of the
-audit part in `@oltrem/core-config`), and a new portal starts with it off (since 2026-11-12); off,
-`audit.seal`, `audit.recheck` and the check `audit.sealed` stop, and the log itself keeps every
-row. While on, the job `audit.seal` runs once a day. It closes the UTC day before today:
-the hash of the previous seal and of every row of that day, in order, hashed together
-(`chainHash`), so each seal depends on all before it. A day with no row is sealed too, which
-keeps the chain unbroken. The seal goes into `oltrem_audit_seals` (migration `0016`) and a copy
-with every row's hash goes into the bucket at `logs/audit/<day>.json`, where the backup's
-lifecycle rules keep it.
+**The daily seal** is optional: the Features page switches it (`audit.seal`, an extra of the audit
+part in `@oltrem/core-config`), and a new portal starts with it off; off, `audit.seal`,
+`audit.recheck` and the check `audit.sealed` stop, and the log itself keeps every row. While on, the
+job `audit.seal` runs once a day. It closes the UTC day before today: the hash of the previous seal
+and of every row of that day, in order, hashed together (`chainHash`), so each seal depends on all
+before it. A day with no row is sealed too, which keeps the chain unbroken. The seal goes into
+`oltrem_audit_seals` (migration `0016`) and a copy with every row's hash goes into the bucket at
+`logs/audit/<day>.json`, where the backup's lifecycle rules keep it.
 
 **The recheck.** The job `audit.recheck` runs every 15 minutes while it has seals to check, and
 every six hours once a run finds none left for the day (it answers `'idle'`). It checks again the newest 7
@@ -180,24 +177,23 @@ checked over more than a day, never skipped. The daily seal no longer rechecks: 
 change it rechecked all 7 seals in one run, which took most of a tick's CPU on its own
 (`archive/records/2026-11-01-cpu-budget.md`).
 
-**Ninety days in the database (2026-11-22).** The log keeps its last 90 days in D1
-(`KEEP_DAYS`, the owner's database review). The job `audit.archive` moves older rows into the
-bucket, oldest first, at most 1,000 a run (`ARCHIVE_ROWS`), one UTC day at a time: each slice
-is written whole, with its hashes, to `logs/audit/rows/<day>/<first seq>.json` (`ARCHIVE_PREFIX`),
-and only then removed from the table, so a failed write removes nothing. The removal uses the
-same day and time bounds as the read, so a row written across midnight by another request, whose
-number falls among the slice's, stays for its own day's run. The job runs hourly while rows wait
-and daily once none do (it answers idle), so a portal behind by months, or one logging more than
-1,000 rows a day, catches up at up to 24,000 rows a day. The export reads those files for the
-days older than the database holds, and refuses an export that would need more than 40 of them
-(`ARCHIVE_FILES`) rather than run past a request's limits; a file listed but gone, or one that is
-not rows, fails the export by its name (`KIT-E-0500`) instead of leaving a day out. The page and
-Home read only the database. Only the newest 7 seals are rechecked, so moving older rows breaks
-no check; the files keep each row's hash, so the chain of a moved day can still be checked by
-hand, sealed or not (Daily seal is off by default). The moved rows are personal data like the
-table's (who did what): they stay in the bucket, with the bucket's backups, until removed by
-hand, and the privacy search reads only the database's 90 days (privacy module, "Find their
-data"), so an older day is answered with this export.
+**Ninety days in the database.** The log keeps its last 90 days in D1 (`KEEP_DAYS`, the owner's
+database review). The job `audit.archive` moves older rows into the bucket, oldest first, at most
+1,000 a run (`ARCHIVE_ROWS`), one UTC day at a time: each slice is written whole, with its hashes,
+to `logs/audit/rows/<day>/<first seq>.json` (`ARCHIVE_PREFIX`), and only then removed from the
+table, so a failed write removes nothing. The removal uses the same day and time bounds as the read,
+so a row written across midnight by another request, whose number falls among the slice's, stays for
+its own day's run. The job runs hourly while rows wait and daily once none do (it answers idle), so
+a portal behind by months, or one logging more than 1,000 rows a day, catches up at up to 24,000
+rows a day. The export reads those files for the days older than the database holds, and refuses an
+export that would need more than 40 of them (`ARCHIVE_FILES`) rather than run past a request's
+limits; a file listed but gone, or one that is not rows, fails the export by its name (`KIT-E-0500`)
+instead of leaving a day out. The page and Home read only the database. Only the newest 7 seals are
+rechecked, so moving older rows breaks no check; the files keep each row's hash, so the chain of a
+moved day can still be checked by hand, sealed or not (Daily seal is off by default). The moved rows
+are personal data like the table's (who did what): they stay in the bucket, with the bucket's
+backups, until removed by hand, and the privacy search reads only the database's 90 days (privacy
+module, "Find their data"), so an older day is answered with this export.
 
 **The check.** `audit.sealed`, in the audit lane of Status: failing when a seal is
 broken, a warning before the first seal and when the last seal is more than two days old (its
