@@ -60,9 +60,20 @@ the person and whoever looks after access, each with the one step that ends it.
 - The device keeps the time zone Cloudflare placed the sign-in in (`timeZoneOf`); `localTime`
   prints it in the emails, with UTC beside it, and UTC alone when there is none.
 
+## Later the same day: seen in the lists, and one browser signed out
+
+- My access, Your sign-ins, and a person's Sessions page show where else a sign-in was used, in the
+  attention colour: "Also used from Firefox on Android, from Mexico" (the device's `moved`, passed
+  by `GET /api/users/people/:id/sessions` too).
+- My access, Your sign-ins: Sign out on each other browser, a dialog first
+  (`POST /access/mine/sign-ins/:id/end`, the existing `DELETE /api/iam/me/devices/:id`), so a
+  person can end one browser without signing out everywhere. Checked by the screens test (the
+  line, the colour, one Sign out on the other browser and none on this one) and the client
+  template (a second browser signed out from My access, the first one still in).
+
 ## Phone tests
 
-P644 and P645, in [Phone tests owed: Users and access](../phone-tests-users.md).
+P644 to P647, in [Phone tests owed: Users and access](../phone-tests-users.md).
 
 ## How it was checked
 

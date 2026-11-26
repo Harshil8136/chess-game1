@@ -151,3 +151,4 @@ The rounds after the phases, each with its record. The modules themselves are on
 | Report a sign-in that was not you: one press on My access ends every sign-in and raises a critical alert for whoever looks after access; the sign-in alert points to it | **done** 2026-11-24: [the record](records/2026-11-24-report-a-sign-in.md) |
 | Sign-in alerts on for everyone (the owner's pick): on from the start, and switched on where they were off only by default | **done** 2026-11-24: [the record](records/2026-11-24-sign-in-alerts-on.md) |
 | A sign-in used from another country or browser: the person emailed, an alert for whoever looks after access; sign-in emails in local time | **done** 2026-11-25: [the record](records/2026-11-25-sign-in-used-elsewhere.md) |
+| Your sign-ins and Sessions show where else a sign-in was used; Sign out on one browser from My access | **done** 2026-11-25: [the record](records/2026-11-25-sign-in-used-elsewhere.md) |

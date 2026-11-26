@@ -152,7 +152,7 @@ audited.
 |---|---|---|
 | `GET /people`, `GET /people/:id` | `users.read` | the directory, searchable (`q`: part of a name or address, `%` and `_` taken as typed), filtered (`kind`, `active`), paged; one person |
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason if one is given |
-| `GET /people/:id/sessions` | `users.manage` | the person's remembered sign-ins, newest first |
+| `GET /people/:id/sessions` | `users.manage` | the person's remembered sign-ins, newest first; since 2026-11-25 each with `moved`, where else it was used ("<country> <browser>") |
 | `DELETE /people/:id/sessions/:device` | `users.manage` | end one of them: that browser must sign in again |
 | `PATCH /people/:id/sessions/:device` | `users.manage` | give one an end time (`endsAt`, thirty days at most), or clear it with `null` |
 | `POST /people/:id/block`, `POST /people/:id/unblock` | `users.manage` | block sign-in until a time, or for good without one, with a reason if one is given; lift either |
