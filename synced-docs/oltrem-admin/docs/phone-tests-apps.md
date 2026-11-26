@@ -56,3 +56,15 @@ sources: [docs/records/2026-11-22-apps-page-and-one-click-connect.md; docs/recor
 | P798 | The same Home, as someone who cannot keep the webhooks | No such line | [Developer](../modules/developer/README.md) |
 | P895 | Admin, Developer, open a webhook that has deliveries | Above the deliveries: the share delivered, how many wait, the typical and slowest answer | [Developer](../modules/developer/README.md) |
 | P896 | The same, for a webhook whose last delivery failed (for example a wrong address) | A notice with when it failed, the answer, and what to do, such as checking the address in Settings | [Developer](../modules/developer/README.md) |
+
+### Website analytics apps, 26 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P910 | As an Owner, Admin, Integrations, Apps, then the Analytics filter | PostHog, Plausible, Umami and Cloudflare Web Analytics, each with its logo and a line on what it reads | [record](records/2026-11-26-website-analytics-apps.md) |
+| P911 | PostHog's card | The steps in PostHog with links to its pages, then Name, Region, Project ID and Personal API key; a key starting phc_ is refused with what to make instead | [record](records/2026-11-26-website-analytics-apps.md) |
+| P912 | Fill them with a real key, then Connect PostHog | Its page: Connected, the last check Working, and the last 7 days: visitors, visits, page views, the share that left, the average visit, page views each day, top pages, sources and countries | [record](records/2026-11-26-website-analytics-apps.md) |
+| P913 | On that page, Check now; then Open in PostHog | Checked; PostHog's web analytics opens in a new tab | [record](records/2026-11-26-website-analytics-apps.md) |
+| P914 | Change the key with a wrong key, then Save and check | "Saved, but PostHog did not answer" with "PostHog refused the key"; Apps shows it under Connected as Not answering | [record](records/2026-11-26-website-analytics-apps.md) |
+| P915 | Disconnect, then Disconnect again in the window; then as someone without the permission, Apps, Analytics | Disconnected, the card back to Connect; the other person sees the four cards greyed with "Ask an Owner" | [record](records/2026-11-26-website-analytics-apps.md) |
+| P916 | Connect PostHog again, then Admin, Reports, and switch between 7, 30 and 90 days | A Website part with PostHog's visitors, page views and top lists for that period, and Open in PostHog; a refused key reads "could not be read" with a link to its connection | [record](records/2026-11-26-website-analytics-apps.md) |

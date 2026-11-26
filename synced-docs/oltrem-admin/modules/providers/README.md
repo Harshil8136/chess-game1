@@ -90,6 +90,17 @@ refuse a connection of the kind `data` too: setting one up is refused as an unkn
 the listing leaves them out, and every route on one instance answers as if it were not there
 (404), so `providers.manage` cannot replace or remove a client's database connection.
 
+Since 2026-11-26 it also ships four definitions of the kind `analytics`, in
+`src/definitions/analytics.ts`: the app a company already counts its website's visitors with,
+connected on the Apps page and read by [`@oltrem/connect`](../connect/README.md) (Website
+analytics) for the Analytics page. PostHog (a personal API key with Query Read, its region and
+project), Plausible (a Stats API key, its address and site), Umami (an API key, Cloud's address
+or its own server's, and the website's ID) and Cloudflare Web Analytics (a token with Account
+Analytics Read, the account ID and the site tag), each read with its key as a bearer token and
+capable of `web-report`. As with a data definition, the field an address is built from must carry
+a `pattern`, so a key is never sent elsewhere. The routes below treat one as they treat a data
+connection: not listed, not counted on Home, 404 on every instance route.
+
 Since 2026-11-23 it also ships six definitions of the kind `storage`, in
 `src/definitions/storage.ts`: a bucket of the client's own that the Files module may keep a
 location's files in ([`@oltrem/files`](../files/README.md), Storage locations). Each speaks S3 with
@@ -163,7 +174,7 @@ instead (since 2026-11-03). The contract refuses an id or field name in
 the wrong shape, a base URL that is not `https`, a port other than 465 or 587, an SMTP transport
 with an HTTP auth scheme, `api-key-header` without its header, `sigv4` without its service, a
 repeated field name, a `data` block on a definition of another kind or none on a `data` one, a
-`pattern` that is not a regular expression, a data definition whose address field has no pattern, an event mapped to an unknown kind, a webhook signature without the field it
+`pattern` that is not a regular expression, a data or analytics definition whose address field has no pattern, an event mapped to an unknown kind, a webhook signature without the field it
 reads its key from, `hmac-body` without its header. A field marked `optional` may be left out of an instance: the webhook keys
 are, so a provider sends before its delivery reports are set up.
 
@@ -187,7 +198,7 @@ instances and pastes their keys.
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
 | `PUT /definitions/:id` | definitions, at the company | the client's own definition, or its change to the kit's; checked, then a row |
 | `DELETE /definitions/:id` | definitions, at the company | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
-| `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set; never a data connection |
+| `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set; never a data connection, a storage bucket or an analytics app |
 | `GET /instances/:id` | read | one instance; never its credential |
 | `POST /instances` | manage, at the company | sets one up: the definition, a label, every field the definition lists; `201` |
 | `POST /instances/:id/credential` | manage, at the company | the fields again (a new key, a changed domain); a secret left out keeps the one stored, so a webhook secret is added without the key being pasted again; a suggestion becomes confirmed |

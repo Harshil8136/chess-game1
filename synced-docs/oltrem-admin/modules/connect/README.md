@@ -25,6 +25,9 @@ technical background. One page, from the top (the owner's makeover of 2026-11-22
   connect after the person confirms it (below, "Supabase, for the data part", and "Airtable, for
   the data part").
 - **Automation.** Each event starts a Zapier, Make or n8n flow.
+- **Analytics.** The website analytics app the company already counts its visitors with:
+  PostHog, Plausible, Umami (Cloud or its own server) or Cloudflare Web Analytics, connected with
+  a read-only key (below, "Website analytics"). Its figures feed the Analytics page.
 - **Any other app.** Paste any webhook link: the portal works out which app it is from the address
   (`src/detect.ts`) and sends the chat's line or the signed standard webhook. A link that cannot
   work (a retired Teams connector, a Slack Workflow link, n8n's test address) is refused with what
@@ -68,6 +71,7 @@ address. Empty, the cards offer the pasted link only.
 |---|---|
 | `connect.self` (every account) | see their own links, make their calendar link, delete their own links |
 | `connect.share` (bit plane `31`, operate) | make a spreadsheet link. It hands a whole list out of the portal, so an Owner can withhold it, as `files.share` for one file; taken away, the person's spreadsheet links open nothing until it is given back |
+| `connect.analytics.manage` (admin, at the company) | connect, check, give a new key to and remove the company's website analytics apps (`/api/connect/analytics`, 2026-11-26); someone without it sees the four cards greyed with "Ask an Owner" |
 | `connect.links.manage` (admin, at the company) | see everyone's links on `/connect/links` (whose each is, when an app last read it; never a secret) and delete any, audited as `connect.end` with whose it was (`GET /api/connect/links/everyone`, `DELETE /api/connect/links/everyone/:id`, 2026-11-24) |
 
 A chat alert or an automation needs `developer.manage`, checked by the Developer module. Without
@@ -231,6 +235,52 @@ verification and Google's app verification, with a refresh token kept for each a
 Make only for apps listed in their stores. Those stay on the pasted link (the owner's choice of
 2026-11-22).
 
+## Website analytics
+
+Added 2026-11-26, the owner's ask: "PostHog and the best ones, with all possible features". Each
+connection is a providers instance of the kind `analytics` (`@oltrem/providers`, its definitions
+in `src/definitions/analytics.ts`): its key sealed by the registry, its address built only from
+fields a pattern pins to the app's own shape, so a key is never sent elsewhere. The email
+providers' pages neither list nor count one. `src/web.ts` reads each app into one report,
+`WebReport` (`src/types.ts`): the window's visitors, visits, page views, the share that left after
+one page, the average visit, the same window before it, each day, the top pages, sources,
+countries, devices, browsers and the app's own events, and the people on the site now. A figure
+an app does not keep is left out, never estimated.
+
+| App | Asked through | What it does not give |
+|---|---|---|
+| PostHog | one HogQL query, `POST /api/projects/<id>/query/`, a personal key with Query Read | nothing |
+| Plausible | the Stats API v2, `POST /api/v2/query`, at most 10 calls (its limit is 600 an hour) | nothing; events are its goals |
+| Umami | `stats`, `pageviews`, `metrics`, `active` (Cloud under `api.umami.is/v1`; an older server's answers and its `url` page list read too) | nothing |
+| Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups`, a token with Account Analytics Read | visitors, the share that left, the average visit, events, people on the site now |
+
+A report is kept ten minutes in the Cache API, keyed by the connection, the window and the key's
+last change, so a page opened again calls no one and a new key is read at once; nothing is
+written to KV. A refusal is said in plain words ("Plausible refused the key. Make a new key and
+paste it here."), with the connection's page as the fix when a new key or a changed field fixes
+it. `connect.web(env, tenantId, days)` (7, 30 or 90) answers one report per connection, at most
+four (`WEB_MAX`), for the Analytics page, which calls it only after its own check. The template
+hands in `registry: providers.registry`, without which these routes are not mounted, and passes
+`connect.web` to the analytics module as its `web` option.
+
+| Route | |
+|---|---|
+| `GET /api/connect/analytics` | the four apps, their fields and steps, and the connections made to each with their last check |
+| `POST /api/connect/analytics` | connect one (`definitionId`, `fields`, optional `label`), then a first check; the same app and site twice is `KIT-E-0422` |
+| `GET /api/connect/analytics/:id` | one connection: its fields that are no secret and its last check |
+| `GET /api/connect/analytics/:id/report?days=` | its report (7 when left out), kept ten minutes |
+| `POST /api/connect/analytics/:id/credential` | a new key or a changed field (a field left out keeps what is saved), checked at once |
+| `POST /api/connect/analytics/:id/check` | the last day asked for; asked again within 30 seconds, the last answer |
+| `DELETE /api/connect/analytics/:id` | the connection and its sealed key; the app and its figures are not touched |
+
+The Apps page reads the connections with the person's links: `GET /api/connect/links` answers
+`analytics` (each connection, as `GET /api/connect/analytics/:id` does) for someone who holds the
+permission at the company, `null` for someone who does not, read in one D1 batch with the links,
+so the page stays inside its 10 queries.
+
+The registry audits each as `providers.create`, `providers.probe`, `providers.credential` and
+`providers.remove`.
+
 ## The page
 
 | Path | Shows |
@@ -241,12 +291,16 @@ Make only for apps listed in their stores. Those stay on the pasted link (the ow
 | `/connect?show=sheets` | Google Sheets and Excel; the window's row of lists, forms and invoices, then "Create the sheet in Google" (one-click) or "Create the link"; once made, the `=IMPORTDATA("…")` cell with "Open a new Google Sheet", or the Excel steps |
 | `/connect?show=automate` | Zapier, Make, n8n and "Any other app" |
 | `/connect?show=data` | the data services the providers part lists (kind `data`), each opening `/data/connect/<id>`, or once connected its connection's page |
+| `/connect?show=analytics` | PostHog, Plausible, Umami and Cloudflare Web Analytics, each opening `/connect/analytics/new/<app>`, or once connected its page; greyed with "Ask an Owner" without `connect.analytics.manage`; no filter where the part is not mounted |
+| `/connect/analytics/new/<app>` | the steps in the app with links to its pages, then Name and its fields, "Connect <app>"; a refusal keeps what was typed but never the key |
+| `/connect/analytics/<id>` | the app, what it reads and its last check; the last 7 days (the figures with the change on the 7 days before, page views each day, top pages, sources and countries); "Change the key"; Check now, Open in <app> and Disconnect (asked first) beside the title |
 | `/connect/links` | Everyone's links, for `connect.links.manage`: the 200 most recently used, each with its person, its health and Delete (asked first); reached by "Everyone's links" beside the Apps title |
 | `/connect/back` | one-click's way back: it redirects to the row made, the new sheet, or the page with why nothing was made; for Supabase it shows "Pick a Supabase project" or "Connect <project>?", and for Airtable "Connect Airtable?", whose Connect posts to `/connect/back` ("Supabase, for the data part", "Airtable, for the data part") |
 
 ## The logos
 
-Slack, Discord, Google Chat, Google Calendar, Google Sheets, Zapier, Make and n8n show their own
+Slack, Discord, Google Chat, Google Calendar, Google Sheets, Zapier, Make, n8n, PostHog, Plausible,
+Umami and Cloudflare show their own
 one-colour mark from the Simple Icons project (CC0 data; each brand keeps its trademark), drawn in
 the brand's colour on the logo tile (`src/brands.ts`, the design system's one exception for logos):
 white in the light theme, clear in the dark one, where a brand colour too dark to see
@@ -289,6 +343,7 @@ without `connect.share` is `KIT-E-0403`; a link that is not theirs is `KIT-E-040
 
 ## Not here yet
 
+- Google Analytics 4, Matomo and Fathom among the analytics apps (the next batch).
 - One-click for Microsoft Teams, Google Chat, Excel, Zapier and Make (see "One-click sign-in").
 - Calendar items from modules other than bookings, shifts, time off and tasks.
 - A Google Sheet's Google account named before its link is written. Today the way back only
@@ -314,7 +369,13 @@ relay's key unreadable said as not available, who may start, a sheet's address s
 relay opens it, the link written only once the sheet's address comes back, none when the relay
 could not make the sheet or names another address, and no second one when the way back is
 replayed. The Data filter's cards, drawn where the data part answers and absent where it does not
-(`test/pages.test.ts`). The Custom card's guess from each
+(`test/pages.test.ts`). Website analytics (`test/analytics.test.ts`): each app's answer read into
+one report, Umami's older answers and Cloudflare's missing window before, a refusal in plain
+words with the fix only where a key fixes it, a report kept and read again at once after a new
+key; through the pipeline, the routes behind `connect.analytics.manage`, connecting, a second
+connection of the same site and an address of another shape refused, no key shown back, a new key
+checked, a check pressed twice calling once, `web` for the Analytics page, removing. The Analytics
+cards, locked or absent, and the connect and connection pages (`test/pages.test.ts`). The Custom card's guess from each
 app's address, the links it refuses and an app's own page pasted by mistake
 (`test/detect.test.ts`). Each store's `calendar()` and the invoices' `csv()` have their own tests
 in their modules. The client template's screens test makes a calendar and a spreadsheet link as
