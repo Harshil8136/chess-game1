@@ -123,6 +123,8 @@ The records since 16 November:
 | [Every dialog remade](2026-11-25-dialogs-remade.md) | head, body, foot |
 | [Reports remade](2026-11-26-reports-remade.md) | one trend with the period before, six figures with their move, what stands out in words, who and when, every list with its trend and an audit log link, the website from connected apps; migration 0097; P900-P905 |
 | [Reports: a tab for money, customers and work](2026-11-26-reports-every-part.md) | Activity, Website, Money, Customers and Work as tabs; invoices, quotes, expenses, customers, form answers, tasks and bookings each bring a section: figures against the period before, a line a day, lists into their pages; no new table; P970-P974 |
+| [Reports, Money: days to get paid, win rate, each currency](2026-11-26-reports-money.md) | Invoices' days from sent to paid, the quotes' win rate, every currency listed apart once there are two; P976-P978 |
+| [Reports, Money: from visit to paid](2026-11-26-reports-funnel.md) | one funnel across apps on the Money tab: visitors, form answers, quotes sent and accepted, invoices paid, each with its move and the share that carried on; P979-P980 |
 | [Verification log, 22 November](2026-11-22-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 23 November](2026-11-23-verification-log.md) | the log's rows of that day, moved when it reached its size |
 | [Verification log, 24 November](2026-11-24-verification-log.md) | the log's rows of that day, moved when it reached its size |

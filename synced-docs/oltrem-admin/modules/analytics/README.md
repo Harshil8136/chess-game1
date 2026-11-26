@@ -86,7 +86,7 @@ with the first cause, so the Jobs page shows it.
 
 | Path | Shows |
 |---|---|
-| `/analytics` | tabs in a sideways row (2026-11-26, [the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers** and **Work** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
+| `/analytics` | tabs in a sideways row (2026-11-26, [the record](../../archive/records/2026-11-26-reports-every-part.md)): **Activity** (below), **Website** when the portal hands website reports in, and **Money**, **Customers**, **Work** and **Email** when a module brings a section there (below); a tab with nothing under it opens Activity. Activity, remade 2026-11-26 ([the record](../../archive/records/2026-11-26-reports-remade.md)): a row of periods (7, 30 or 90 days, today included) and one of whose work (Everyone, People, Automatic, Vendor); six figures (actions, people active, sign-ins, the share done automatically, the share that went through, refused or failed), each with its move against the period before; **Each day**, one trend of the figure picked above it (actions, people, sign-ins, automatic, refused or failed) with the period before as a dashed line, the days as a table and the CSV; **What stands out**, the figures as sentences (busier or quieter, the busiest day, the busiest hour, the area that grew most, the people and how many a day, the portal's own share, what was refused most); **Who did the work** and how it went, as split bars; **When work happens**, a week of hours in shades on the company's clock; **By area** with a trend each, **Most frequent** actions in words (`Tasks: create`), **People** (active, new, came back, a day, who did the most), **Work done** (the summary's named work) and **Refused or failed**, each row with its move and a link into the audit log narrowed to it. A part with nothing to show is left out. The period row is every tab's; whose work is Activity's alone |
 | `/analytics/csv` | the period's days as a CSV file (the same whose work): day, actions, automatic, vendor, people, sign-ins, refused, failed; numbers and dates only |
 
 The charts are the kit's report charts (`@oltrem/core-ui`, its README), SVG drawn on the server
@@ -110,14 +110,21 @@ KV), so a page view asks no app.
 ### The modules' sections
 
 Each module that declares `report` (`@oltrem/core-module`, its README) brings a section to one of
-the tabs Money, Customers or Work: invoices, quotes and expenses under Money; customers and form
-answers under Customers; tasks and bookings under Work. The page asks `GET /parts` for the list
+the tabs Money, Customers, Work or Email: invoices, quotes and expenses under Money; customers and
+form answers under Customers; tasks and bookings under Work; email and campaigns under Email. The page asks `GET /parts` for the list
 and today's date, then only the open tab's sections, each from its own module's
 `GET /api/<module>/report` as the person and side by side. A section is a pane: its figures with
 their moves against the period before (none when the period before cannot be known), one line a
 day with the period before dashed, and its lists, each row opening its page. Amounts are shown in
 their currency. A section the person may not see (403) is left out; one that could not be read
 says so; a tab where none is left says so.
+
+The Money tab opens with **From visit to paid**: the website's visitors (the first connected app
+that counts them), then the steps the parts count (`steps`): form answers, quotes sent, quotes
+accepted, invoices paid. Each step shows its count, its move against the period before and the
+share of the step before that carried on; a step the person may not see, or that nothing counts,
+is left out, and with fewer than two steps nothing is drawn. No single app holds more than one
+step, so Money also reads the website and the form answers for it.
 
 ## The routes
 
