@@ -32,7 +32,12 @@ never estimated.
 the figures (which must answer), where visitors came from, where they are and what they use with
 the hours, and speed with stuck taps, right now, recordings, errors and the funnel. Right now is
 also asked on its own, one question (`web.live`), for an app's full view every 30 seconds; a
-refusal there answers null and the page keeps the last one. A funnel step is
+refusal there answers null and the page keeps the last one. Its recordings are two more questions
+side by side (`web.recordings`): the latest `RECORDINGS_MAX` (50) visits of the window from
+`session_replay_events`, each joined with its events (pages, stuck taps, device, country, the
+funnel's first and last step), narrowed by errors, stuck taps, a minute active, a phone or a funnel
+left unfinished; and one visit's first 200 events (`VISIT_ID` checks its id) told as steps, a
+stuck or repeated tap folded into the tap it marks. A funnel step is
 a page path (a trailing `*` takes every page under it) or an event name (`WEB_STEP`, no quote, so
 it is safe in the question), kept on the connection as the providers option `steps` and counted
 with `windowFunnel` (each step within a day of the one before). A question it does not answer is named in
@@ -90,7 +95,8 @@ with no copy is said in plain words, with the connection's page as the fix when 
 `waitUntil`; the module adds each app's `calls`) answers at most `WEB_MAX` (4) connections for the Analytics page.
 `connect.webApp(env, tenantId, id, days, how)` answers one of them with every call of the request
 (`WEB_CALLS`), its kind (`service`) and the apps to move between, for its full view on Reports;
-`connect.webLive(env, tenantId, id)` its right now (PostHog only). Both answer null for an id that
+`connect.webLive(env, tenantId, id)` its right now and `connect.webRecordings(env, tenantId, id, ask)`
+its recordings (PostHog only; a refusal answers `{ok: false}` with the fix). All answer null for an id that
 is not one of the company's apps. The routes mount only with `registry`.
 
 | Route (`/api/connect`) | |

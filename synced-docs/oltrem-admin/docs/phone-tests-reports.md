@@ -146,3 +146,12 @@ From [record](../archive/records/2026-11-27-reports-explore.md):
 | P1044 | Tap the dashed line's key under the chart | The period before hides, then shows again |
 | P1045 | Tap a cell of When work happens | The line under the grid says that hour's count; a second tap puts the shades back |
 | P1046 | Reports on a computer | Each day takes two thirds of the row, What stands out beside it; a drag across days zooms to them |
+
+From [record](../archive/records/2026-11-27-website-recordings.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1047 | PostHog's full view, then Recordings beside Overview | A row of chips (All visits, With errors, Stuck taps...) and up to 50 visits, each a sentence with its time and length |
+| P1048 | With errors, then Stuck taps | Only visits with errors, then only visits with taps where nothing happened; the address keeps your pick |
+| P1049 | A visit's sentence | "What happened, in order" above the list: pages, taps and errors in words, each with its minute and second |
+| P1050 | Watch on a row, then Open in PostHog | PostHog opens that recording, then its list of recordings, in a new tab |
