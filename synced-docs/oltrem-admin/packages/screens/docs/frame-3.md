@@ -49,7 +49,7 @@ A `TrendChart` (`@oltrem/core-ui`) carries its figures in `data-chart`; the scri
 
 - **Pointer:** a line on the nearest day, its dots, and a readout beside it: the day, its figure,
   the same day of the period before with the move, what happened that day. The readout stays
-  inside the chart.
+  inside the chart, and it is the only pop-up: the chart carries no browser titles.
 - **Tap or click:** keeps the readout, with **Open this day** (the page's `open`, `day=` added)
   and, over more than seven days, **Zoom to the week around it** (`zoom`, `from=` and `to=`). The
   click a tap makes on the readout it just opened opens nothing. A press elsewhere lets it go.

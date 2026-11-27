@@ -3,7 +3,7 @@ title: "Phone tests owed: Reports"
 status: living
 owner: vendor
 last_verified: 2026-11-27
-sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; archive/records/2026-11-27-cloudflare-domain.md; modules/analytics/README.md]
+sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; archive/records/2026-11-27-cloudflare-domain.md; archive/records/2026-11-27-reports-focus.md; modules/analytics/README.md]
 ---
 
 # Phone tests owed: Reports
@@ -164,3 +164,14 @@ From [record](../archive/records/2026-11-27-website-replay.md):
 | P1052 | A visit on Recordings, then Play the visit here | "Loading the recording…", then the visit plays in the box, fitted to your screen, with Pause, the bar, the time and 1× |
 | P1053 | A time in the visit's steps | The player jumps to that moment and plays from there; 1× moves to 2×, 4×, 8× |
 | P1054 | Play on a visit while PostHog is not reconnected | A sentence saying to press Reconnect, with Fix it on Apps; Play stays there to try again |
+
+From [record](../archive/records/2026-11-27-reports-focus.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1070 | Reports, then hold a finger on the Each day chart | One card beside the line only, no second grey box |
+| P1071 | Reports on a computer, scroll under the chart | The panes fill three columns with no tall blank under a short one |
+| P1072 | Tap a row of By area | That area's report: Showing with All areas and the area, the chart and lists only for it |
+| P1073 | In it, tap a row of Actions | That one action's report; All areas brings back everything |
+| P1074 | Latest in the log, tap a row | The Audit log on that day, searched for that action |
+| P1075 | Tap People in Who did the work | Reports for people's work only, the area kept |
