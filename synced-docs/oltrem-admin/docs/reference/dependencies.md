@@ -12,7 +12,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 21 tools (used only to build, check or test) and 11 runtime packages (shipped inside a Worker).
+**Where things stand:** 22 tools (used only to build, check or test) and 11 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
@@ -22,6 +22,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 | @eslint/js | 10.0.1 | tool | oltrem-tools | ESLint's own recommended rules for the plain JavaScript scripts of the verify chain. | 15.6 |
 | @fontsource-variable/inter | 5.3.0 | tool | @oltrem/screens | The portal's font, the owner's choice (2026-11-11): Inter's variable font, Latin letters only (English first, Spanish's accents ready), one woff2 of about 48 KB that pnpm ui:build copies into the screens' generated assets, served by the Worker at /ui/inter.woff2 under its version and kept by the browser for good. SIL Open Font License 1.1. | 12.2 |
 | @internationalized/date | 3.12.4 | runtime | @oltrem/core-ui | The calendar arithmetic the date picker machine requires as its peer dependency; time zones and locales done right instead of by hand. | 12.3 |
+| @rrweb/replay | 2.2.2 | tool | @oltrem/screens | The recording player, the owner's yes (2026-11-27, "play them in the portal"): rrweb's Replayer plays a PostHog recording inside the portal. pnpm ui:build bundles it alone into /ui/replay.js, which the browser fetches only when Play is pressed; the portal streams the recording from PostHog, so the key stays on the server. MIT. | 12.2 |
 | @tailwindcss/node | 4.3.3 | tool | @oltrem/core-ui, @oltrem/screens | Compiles the kit's theme stylesheet in a test, so a broken token list or a palette that was not reset fails verify, not a client's build. | 12.2 |
 | @types/node | 22.20.5 | tool | @oltrem/analytics, @oltrem/announcements, @oltrem/approvals, @oltrem/assets, @oltrem/automations, @oltrem/bookings, @oltrem/cli, @oltrem/connect, @oltrem/core-ui, @oltrem/customers, @oltrem/data, @oltrem/developer, @oltrem/expenses, @oltrem/files, @oltrem/invoices, @oltrem/jobs, @oltrem/privacy, @oltrem/quotes, @oltrem/screens, @oltrem/shifts, @oltrem/tasks, @oltrem/timeclock, @oltrem/timeoff, oltrem-module-template | The types of Node's own modules (fs, path, child_process) for the command-line tool, which runs on Node rather than in a Worker. | 15.3 |
 | @vitest/coverage-istanbul | 4.1.12 | tool | oltrem-tools | Measures which lines the package and module tests run, inside the Workers runtime too (the Workers pool supports Istanbul only), so the coverage gate can refuse a change that lowers a package's figure (kit review K6; the owner's yes of 2026-11-03). | 15.6 |

@@ -96,7 +96,12 @@ with no copy is said in plain words, with the connection's page as the fix when 
 `connect.webApp(env, tenantId, id, days, how)` answers one of them with every call of the request
 (`WEB_CALLS`), its kind (`service`) and the apps to move between, for its full view on Reports;
 `connect.webLive(env, tenantId, id)` its right now and `connect.webRecordings(env, tenantId, id, ask)`
-its recordings (PostHog only; a refusal answers `{ok: false}` with the fix). All answer null for an id that
+its recordings (PostHog only; a refusal answers `{ok: false}` with the fix), and
+`connect.webReplay(env, tenantId, id, visit, run?)` one recording for the player: without `run`
+its blocks (`web.replayBlocks`: PostHog's `snapshots?blob_v2=true`, at most `REPLAY_BLOCKS`, 500),
+with `run` (`from`, `to`, at most `REPLAY_RUN`, 20, blocks) PostHog's answer itself (`web.replayRun`,
+`REPLAY_TIMEOUT_MS`, 25 s), which the route streams on. It needs Session recording Read (a key) or
+`session_recording:read` (a sign-in); a refusal names that fix. All answer null for an id that
 is not one of the company's apps. The routes mount only with `registry`.
 
 | Route (`/api/connect`) | |

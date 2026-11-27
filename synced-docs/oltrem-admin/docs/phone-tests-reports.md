@@ -155,3 +155,12 @@ From [record](../archive/records/2026-11-27-website-recordings.md):
 | P1048 | With errors, then Stuck taps | Only visits with errors, then only visits with taps where nothing happened; the address keeps your pick |
 | P1049 | A visit's sentence | "What happened, in order" above the list: pages, taps and errors in words, each with its minute and second |
 | P1050 | Watch on a row, then Open in PostHog | PostHog opens that recording, then its list of recordings, in a new tab |
+
+From [record](../archive/records/2026-11-27-website-replay.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1051 | PostHog's connection on Apps, then Reconnect | PostHog asks again and now lists reading recordings; you come back connected |
+| P1052 | A visit on Recordings, then Play the visit here | "Loading the recording…", then the visit plays in the box, fitted to your screen, with Pause, the bar, the time and 1× |
+| P1053 | A time in the visit's steps | The player jumps to that moment and plays from there; 1× moves to 2×, 4×, 8× |
+| P1054 | Play on a visit while PostHog is not reconnected | A sentence saying to press Reconnect, with Fix it on Apps; Play stays there to try again |
