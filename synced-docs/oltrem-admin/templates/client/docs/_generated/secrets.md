@@ -45,10 +45,10 @@ sealed, and its recipe is on the provider's definition.
 |---|---|
 | Needed by | `providers` |
 | Purpose | Wraps the data key that seals every provider credential stored in the database, so the database alone never reveals a key. |
-| Create | On a computer with Node, make a key: node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))". Keep it in the vendor's password manager, since a rotation needs it again and Cloudflare never shows a secret back. Then run npx wrangler secret put KEK and paste it. |
+| Create | On a computer with Node, make a key: node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))". Keep it in the vendor's password manager, since a rotation needs it again and Cloudflare never shows a secret back. npm run deploy makes it and puts it in the account's Secrets Store as <worker>_kek, bound as KEK_STORE (2026-11-27); by hand, npx wrangler secret put KEK still works. |
 | Scopes | none: the kit makes it |
 | Test | Paste a provider's key on the portal: it is stored. KIT-E-1301 means the secret is not set; KIT-E-1302 that it is not one or two keys of 32 bytes. |
-| Rotate | Make a new key as above and keep it; set KEK to the new key, a space and the old one; call POST /api/providers/keys/rewrap; then set KEK to the new key alone. Do it on the vendor's schedule, and at once when someone who held the key leaves or it may have been seen. |
+| Rotate | Make a new key as above and keep it; set KEK (the stored secret <worker>_kek in Secrets Store, or the Worker secret) to the new key, a space and the old one; call POST /api/providers/keys/rewrap; then set KEK to the new key alone. Do it on the vendor's schedule, and at once when someone who held the key leaves or it may have been seen. |
 | Without it | No provider credential can be stored or opened (KIT-E-1301), so no email is sent and Status shows the messages waiting for a retry. If the key is lost, set a new one and paste each provider's key again. |
 
 ## `KIT_OPS_TOKEN`

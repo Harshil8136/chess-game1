@@ -24,6 +24,14 @@ const apiKey = await envelope.open(wrapped, sealed, { tenant, row: instanceId })
 | `open(wrapped, sealed, { tenant, row })` | the plaintext, when the value was sealed under this data key at this address; a value copied to another row, altered, or sealed under another key is refused |
 | `needsRewrap(wrapped)` | true when the data key was wrapped by a key-encryption key that is not the current one |
 | `rewrap(wrapped)` | the same data key wrapped by the current key-encryption key |
+| `masterKey(stored, secret)` | the KEK as the envelope takes it (a promise is fine): the Secrets Store binding's value first, the Worker secret beside it while a portal moves, two keys at most; a store that cannot be read falls back to the secret |
+
+**Where the KEK lives** (2026-11-27, the owner's pick): in the account's Cloudflare Secrets Store,
+bound as `KEK_STORE`, where a change shows in the account's audit log and a person who may deploy
+Workers cannot replace it; portals set up before keep the `KEK` Worker secret until `npm run
+deploy` moves it (`@oltrem/cli` kek-store.ts). A Worker can only read a stored secret, so the
+credentials themselves stay sealed in the database: Secrets Store holds one key per portal, never
+the keys people add.
 
 ## Rotation with one secret name
 

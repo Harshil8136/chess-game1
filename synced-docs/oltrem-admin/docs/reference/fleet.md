@@ -62,7 +62,10 @@ Nothing is written in a repository; the key lives only in Cloudflare's build sec
 3. **Make the fleet key** under My Profile, API Tokens, Custom token (not an account's own API Tokens
    page, which reaches one account only):
    - Account: Workers Scripts Edit, D1 Edit, Workers KV Storage Edit, Workers R2 Storage Edit,
-     Queues Edit, Account Settings Read.
+     Queues Edit, Account Secrets Store Edit, Account Settings Read. Secrets Store Edit is what
+     binds a portal's master key once `npm run deploy` has moved it there (2026-11-27); a key
+     without it can still read nothing there, so such a portal's release is refused by wrangler,
+     never run without its key. An existing key gets it by Edit on the token: its value stays.
    - Zone: Workers Routes Edit, Zone WAF Edit.
    - User: Memberships Read, User Details Read.
    - Account Resources: the accounts with portals, or All (the fleet acts only on portals and

@@ -58,7 +58,7 @@ planned; Cloudflare, the client's own Cloudflare account. Source: plan section 1
 
 planned; Cloudflare, the client's own Cloudflare account; one token per client, made by hand in that account's dashboard. Source: plan section 9.2 and 14.1.
 
-- **May do:** Account, Workers Scripts: Edit; Account, D1: Edit; Account, Workers KV Storage: Edit; Account, Workers R2 Storage: Edit; Account, Queues: Edit
+- **May do:** Account, Workers Scripts: Edit; Account, D1: Edit; Account, Workers KV Storage: Edit; Account, Workers R2 Storage: Edit; Account, Account Secrets Store: Edit; Account, Queues: Edit
 - **Used by:** as CLOUDFLARE_ACCOUNT_ID
 - **Stored in:** as CLOUDFLARE_ACCOUNT_ID
 - **Rotation:** make a new token from the same template in the client's dashboard, replace the repository secret, delete the old token; yearly, or at once if exposed
@@ -70,7 +70,7 @@ planned; Discord, the Vendor's Discord application. Source: archive/records/2026
 
 - **May do:** none: the app's public id; it asks for webhook.incoming only
 - **Used by:** the connect relay (packages/relay), the Vendor's Worker for one-click sign-in
-- **Stored in:** a Worker secret of the relay (wrangler secret put or the Cloudflare dashboard)
+- **Stored in:** a Worker secret of the relay (its README says how to set it)
 - **Rotation:** changes only when the app is made again; set the new id
 - **Why:** Discord exchanges the sign-in code for the channel's webhook only with the application's id and secret.
 
@@ -110,7 +110,7 @@ planned; Google, the Vendor's Google Cloud OAuth client (a Web application). Sou
 
 - **May do:** none: the app's public id; it asks for https://www.googleapis.com/auth/drive.file only
 - **Used by:** the connect relay (packages/relay), the Vendor's Worker for one-click sign-in
-- **Stored in:** a Worker secret of the relay (wrangler secret put or the Cloudflare dashboard)
+- **Stored in:** a Worker secret of the relay (its README says how to set it)
 - **Rotation:** changes only when the app is made again; set the new id
 - **Why:** Google exchanges the sign-in code for a one-time access token, used once by the portal to create the sheet, only with the client's id and secret.
 
@@ -130,8 +130,8 @@ planned; none: generated locally, the client's Worker. Source: plan section 8.4.
 
 - **May do:** none: a random key that wraps the provider credentials stored encrypted in the database
 - **Used by:** the providers core package (envelope encryption); the connect module's one-click sign-in (the ten-minute trip cookie is sealed under it)
-- **Stored in:** a Worker secret (wrangler secret put)
-- **Rotation:** generate a new key, re-wrap every stored credential under it, set it, retire the old one
+- **Stored in:** Secrets Store (KEK_STORE), else a Worker secret
+- **Rotation:** set it to <new> <old>, POST /api/providers/keys/rewrap, then <new>
 - **Why:** Provider credentials are stored encrypted; the wrapping key stays out of the database.
 
 ## KIT_OPS_TOKEN
@@ -140,7 +140,7 @@ planned; Cloudflare, the client's own Cloudflare account; account-owned, not tie
 
 - **May do:** Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for Status's budgets)
 - **Used by:** the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; Status's measure job: the day's use of the free plan and R2's month, from the GraphQL Analytics API, shown on Status and Files, Storage
-- **Stored in:** as KEK
+- **Stored in:** a Worker secret (wrangler secret put)
 - **Rotation:** make a new token with the same two scopes (the form npm run deploy shows), set it with wrangler secret put, delete the old one; yearly
 - **Why:** The nightly export calls the database export API, which needs an account token; widened with Account Analytics Read for Status's budgets. It is the only token that lives inside a Worker.
 
@@ -158,9 +158,9 @@ planned; GitHub, the Vendor's own GitHub account. Source: plan section 14.4.
 
 planned; Cloudflare, the Vendor's own Cloudflare login (a user token), which is a member of every client's account. Source: as OLTREM_FLEET_GITHUB_TOKEN.
 
-- **May do:** Account, on all accounts: Workers Scripts: Edit, D1: Edit, Workers KV Storage: Edit, Workers R2 Storage: Edit, Queues: Edit, Account Settings: Read; Zone, on all zones: Workers Routes: Edit, Zone WAF: Edit; User: Memberships: Read, User Details: Read
+- **May do:** Account, on all accounts: Workers Scripts: Edit, D1: Edit, Workers KV Storage: Edit, Workers R2 Storage: Edit, Queues: Edit, Account Secrets Store: Edit, Account Settings: Read; Zone, on all zones: Workers Routes: Edit, Zone WAF: Edit; User: Memberships: Read, User Details: Read
 - **Used by:** oltrem fleet, the deploy command of the kit's one Workers Builds connection in the Vendor's account: finds every portal and releases each one (docs/reference/fleet.md)
-- **Stored in:** a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account (Settings, Build, Variables and secrets)
+- **Stored in:** a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account
 - **Rotation:** make a new token with the same permissions in the Vendor's profile, replace the build secret, delete the old token; yearly, or at once if exposed
 - **Why:** The owner chose that every push to the kit updates every client's portal. Cloudflare's builder connects to the kit repository from one account only, so one key reaches the clients' accounts from there. It replaces the client repositories' CLOUDFLARE_API_TOKEN for portals the fleet updates.
 
@@ -180,7 +180,7 @@ planned; none: a list the Vendor writes, the relay Worker in the Vendor's own Cl
 
 - **May do:** none: the portal addresses the relay may send a person back to, separated by spaces or commas; kept as a secret so no portal's address appears in a file
 - **Used by:** the connect relay (packages/relay), the Vendor's Worker for one-click sign-in
-- **Stored in:** a Worker secret of the relay (wrangler secret put or the Cloudflare dashboard)
+- **Stored in:** a Worker secret of the relay (its README says how to set it)
 - **Rotation:** add or remove a portal's address and set it again; no other step
 - **Why:** The relay sends a sealed answer back only to a portal on this list, so nobody can start a sign-in that lands on a site of their own.
 
@@ -210,7 +210,7 @@ planned; Slack, the Vendor's Slack app, distributed to any workspace. Source: ar
 
 - **May do:** none: the app's public id; it asks for incoming-webhook only
 - **Used by:** the connect relay (packages/relay), the Vendor's Worker for one-click sign-in
-- **Stored in:** a Worker secret of the relay (wrangler secret put or the Cloudflare dashboard)
+- **Stored in:** a Worker secret of the relay (its README says how to set it)
 - **Rotation:** changes only when the app is made again; set the new id
 - **Why:** Slack exchanges the sign-in code for the channel's webhook address only with the app's id and secret, which no portal should hold.
 

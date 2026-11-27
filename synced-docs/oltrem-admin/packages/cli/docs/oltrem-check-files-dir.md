@@ -32,7 +32,10 @@ Run by the client template's deploy workflow on `main` after its checks; no pers
    status`.
 3. **The migrations**, as `migrations apply`. A failure stops the release.
 4. **The deploy.** A binding the account refuses and the portal can run without is taken out of
-   the release's copy, deployed again once, and named in the log.
+   the release's copy, deployed again once, and named in the log. When the portal's master key is
+   in its account's Secrets Store (`<worker>_kek`, put there by `oltrem deploy`), the copy gets the
+   `KEK_STORE` binding in place of the `KEK` secret (`kek-store.ts`); its place unread, the release
+   deploys as before, and wrangler refuses a portal whose `KEK` secret is gone.
 5. **The health check** (`watchHealth`): `/healthz` on `PUBLIC_HOST` or the workers.dev address,
    six reads 5 s apart. The door must let `/healthz` through.
 6. **The step back** (`stepBack`): no `ok`, and `wrangler rollback` returns to step 2's version.

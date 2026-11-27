@@ -52,7 +52,10 @@ It refuses:
   other, or a binding whose kind differs;
 - more of a kind than its cap, without an exception;
 - a kind the kit does not use (a service binding, Hyperdrive, Vectorize, AI, Browser Rendering,
-  mTLS, a dispatch namespace, Secrets Store, Pipelines and the rest);
+  mTLS, a dispatch namespace, Pipelines and the rest);
+- a Secrets Store binding other than `<NAME>_STORE` for a listed secret `NAME`: that one stands in
+  for the secret, which may then be missing from `secrets.required` (the master key, `KEK_STORE`,
+  2026-11-27), and `env.<NAME>_STORE` counts as listed;
 - named environments (`env`), and a `wrangler.toml`;
 - an `env.NAME` or `env['NAME']` in the code the manifest does not list. The scan is textual and
   skips `process.env`, `import.meta.env`, tests, `*.d.ts`, `node_modules`, `dist`, `.wrangler`; a

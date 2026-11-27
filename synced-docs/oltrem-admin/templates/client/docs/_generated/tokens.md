@@ -69,7 +69,7 @@ Every credential by name only (R-05); no value is written anywhere. 6 name(s), l
 | Provider | Cloudflare |
 | Account | the client's own Cloudflare account; one token per client, made by hand in that account's dashboard |
 | Stored in | a GitHub repository secret in the client repository |
-| Scopes | Account, Workers Scripts: Edit; Account, D1: Edit; Account, Workers KV Storage: Edit; Account, Workers R2 Storage: Edit; Account, Queues: Edit |
+| Scopes | Account, Workers Scripts: Edit; Account, D1: Edit; Account, Workers KV Storage: Edit; Account, Workers R2 Storage: Edit; Account, Account Secrets Store: Edit; Account, Queues: Edit |
 | Used by | the client repository's deploy workflow: oltrem release on main, wrangler-action on a branch; the client repository's operations menu: oltrem operate, from main |
 | Owner | vendor |
 | Created | not yet |
@@ -85,13 +85,13 @@ Every credential by name only (R-05); no value is written anywhere. 6 name(s), l
 | Status | planned |
 | Provider | none: generated locally |
 | Account | the client's Worker |
-| Stored in | a Worker secret, set with wrangler secret put |
+| Stored in | Secrets Store (KEK_STORE, put there by npm run deploy), else a Worker secret; a copy in oltrem-keys.txt |
 | Scopes | none: a random key that wraps the provider credentials stored encrypted in the database |
 | Used by | the providers core package (envelope encryption) |
 | Owner | vendor |
 | Created | not yet |
 | Expires | never |
-| Rotation | generate a new key, re-wrap every stored credential under it, set it, retire the old one |
+| Rotation | set it to <new> <old>, POST /api/providers/keys/rewrap, then <new> |
 | Why it exists | Provider credentials are stored encrypted; the wrapping key stays out of the database. |
 | Plan | 8.4 |
 
