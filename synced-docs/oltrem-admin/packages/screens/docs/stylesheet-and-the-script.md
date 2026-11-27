@@ -14,7 +14,7 @@ sources: [packages/screens/src; packages/screens/test; templates/client/test/scr
 
 | File | What it is |
 |---|---|
-| `/ui/app.css` | The one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and the classes of the pages, primitives and every module's `src/*.tsx`, under the size `test/css.test.ts` allows (204 KiB). A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()` |
+| `/ui/app.css` | The one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and the classes of the pages, primitives and every module's `src/*.tsx`, under the size `test/css.test.ts` allows (208 KiB). A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()` |
 | `/ui/app.js` | The orb's engine and the frame's script (`src/client/frame.js`), shrunk by esbuild; the build checks each part still compiles |
 | `/ui/inter.woff2` | Inter Variable, Latin letters only (SIL Open Font License 1.1, its notice in the generated file), from `@fontsource-variable/inter` at build time, its `@font-face` at the top of the stylesheet, preloaded under `APP_FONT_VERSION`, `font-display: swap`; a brand font (`--brand-font`) comes first |
 | `/ui/mark/:file` | The icon, named by its contents, kept for good, with its own type and `nosniff`; anything else is 404 |

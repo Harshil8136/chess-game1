@@ -1,5 +1,5 @@
 ---
-title: "@oltrem/screens: the frame: compose boxes, the composer, what the script leaves alone"
+title: "@oltrem/screens: the frame: compose boxes, the composer, exploring a chart, what the script leaves alone"
 status: living
 owner: vendor
 last_verified: 2026-11-26
@@ -42,6 +42,25 @@ into the textarea and adds a hidden `editor=rich`. `data-rich-hide` nodes hide a
 `data-rich-show` nodes show. Choosing `html` hands the textarea back as code; going back shows the
 code as the composer's lines. A block with no `format` radios (a signature) gives pasted code to
 the textarea and steps aside. The server cleans the HTML again.
+
+## Exploring a chart
+
+A `TrendChart` (`@oltrem/core-ui`) carries its figures in `data-chart`; the script reads them.
+
+- **Pointer:** a line on the nearest day, its dots, and a readout beside it: the day, its figure,
+  the same day of the period before with the move, what happened that day. The readout stays
+  inside the chart.
+- **Tap or click:** keeps the readout, with **Open this day** (the page's `open`, `day=` added)
+  and, over more than seven days, **Zoom to the week around it** (`zoom`, `from=` and `to=`). The
+  click a tap makes on the readout it just opened opens nothing. A press elsewhere lets it go.
+- **Drag:** a finger moved sideways moves the kept readout day by day; a mouse dragged across days
+  draws a band and opens the page on those days. Up and down still scroll (`touch-action: pan-y`).
+- **Keys:** the chart takes focus; the arrows, Home and End step; Enter opens the first link;
+  Escape lets go.
+- **Key:** the dashed line's key is a switch (`aria-pressed`) that hides that line and its words.
+
+A cell of a week of hours (`Heatmap`) tapped says its figure where the shades' key was, for a
+phone has no hover; tapped again, the key comes back.
 
 ## What the script leaves to the browser
 

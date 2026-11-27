@@ -134,3 +134,15 @@ From [record](../archive/records/2026-11-27-website-full-view.md):
 | P1035 | Visitors and Page views above the chart | The chart switches figure and keeps its dashed line; the address keeps your pick |
 | P1036 | Right now in the full view, page left open a minute | "It updates every 30 seconds"; the count and pages change without the page reloading |
 | P1037 | Apps, PostHog's connection, then Full view at the top right | Reports opens on PostHog's full view; Settings there brings you back |
+
+From [record](../archive/records/2026-11-27-reports-explore.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1040 | Reports, Activity: slide a finger along Each day | A line follows the finger, with a card: the day, its count and the same day before with the change |
+| P1041 | Tap a day, then the links in its card | The card stays; Open this day in the Audit log opens that day; Zoom to the week around it shows it |
+| P1042 | Tap People active above the chart | The chart draws people, its title says so and the figure is underlined |
+| P1043 | Earlier, then Later, beside the periods | The same number of days just before, then back; no Later on today's period |
+| P1044 | Tap the dashed line's key under the chart | The period before hides, then shows again |
+| P1045 | Tap a cell of When work happens | The line under the grid says that hour's count; a second tap puts the shades back |
+| P1046 | Reports on a computer | Each day takes two thirds of the row, What stands out beside it; a drag across days zooms to them |

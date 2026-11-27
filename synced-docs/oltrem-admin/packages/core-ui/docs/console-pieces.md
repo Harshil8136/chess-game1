@@ -19,8 +19,8 @@ marks identity only.
 | Piece | Rule it keeps |
 |---|---|
 | `Toolbar`, `Segmented` | The page's options in one sideways row on a phone, wrapping when wide; current marked, with counts |
-| `PaneGrid`, `Pane` | One column on a phone, two from 44 rem, three when asked from 60 rem; `span="all"`; a pane is a size container with its own heading, icon and tools, its head wrapping |
-| `Figures` | A `<dl>` row: label, number, note (no note on a phone); a tone colours the number; `href` links the whole figure |
+| `PaneGrid`, `Pane` | One column on a phone, two from 44 rem, three when asked from 60 rem; `span="all"`, or `"wide"` for two of three columns (a chart with a pane beside it); a pane is a size container with its own heading, icon and tools, its head wrapping |
+| `Figures` | A `<dl>` row: label, number, note (no note on a phone); a tone colours the number; `href` links the whole figure; `current` underlines the one a chart below draws |
 | `Rows`, `Row` | A lead, a one-line title, a line, an aside, a tone bar; a row's buttons outside its link; rows on the page sit on a card |
 | `Avatar`, `initialsOf`, `hueFor` | Two letters on the hue the address always picks |
 | `Timeline` | Each step an icon, state, time and detail |
@@ -34,7 +34,7 @@ said on hover and to a screen reader, a fixed height, in their pane's `data-hue`
 
 | Piece | Shows |
 |---|---|
-| `TrendChart` | A filled line a day, the period before dashed, a three-step scale (`niceTop`), 176 px high; `events` as dotted lines, listed under it |
+| `TrendChart` | A line a day over a fill fading from its hue, the period before dashed, a three-step scale (`niceTop`), 176 px high; `events` as dotted lines, listed under it. Explorable ([the frame](../../screens/docs/frame-3.md)): `data-chart`, focus, the dashed line's key as a switch; `iso` with `open` (a day's page) and `zoom` (the page on days dragged across) |
 | `Delta`, `moved` | `↑50%`, `↓25%`, `new`; green the good way, red the bad (`good: 'down'`), quiet when unmoved, full words for a screen reader |
 | `Heatmap` | Rows by columns in five shades from the busiest, a key from Less to More |
 | `SplitBar` | One bar in parts, each named with figure and share (a link when it has a page) |
