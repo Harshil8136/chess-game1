@@ -24,12 +24,15 @@ source with their bounce and visit length (`channels`); page speed per device at
 (`speed`); pages where visitors got stuck (`trouble`); right now (`now`); and the app's own page
 for each part (`links`). PostHog adds the five recordings worth watching (`recordings`: most
 errors, then most clicks) and the five errors met most (`issues`), each opening itself in PostHog,
-and a funnel (`funnel`) from two to five steps picked on the Reports page. A figure an app does
-not keep is left out, never estimated.
+and a funnel (`funnel`) from two to five steps picked on the Reports page, and the window before
+day for day (`previousDaily`, the chart's dashed line). A figure an app does not keep is left out,
+never estimated.
 
 **PostHog** is asked four HogQL questions, two at a time (it answers three at once per project):
 the figures (which must answer), where visitors came from, where they are and what they use with
-the hours, and speed with stuck taps, right now, recordings, errors and the funnel. A funnel step is
+the hours, and speed with stuck taps, right now, recordings, errors and the funnel. Right now is
+also asked on its own, one question (`web.live`), for an app's full view every 30 seconds; a
+refusal there answers null and the page keeps the last one. A funnel step is
 a page path (a trailing `*` takes every page under it) or an event name (`WEB_STEP`, no quote, so
 it is safe in the question), kept on the connection as the providers option `steps` and counted
 with `windowFunnel` (each step within a day of the one before). A question it does not answer is named in
@@ -84,8 +87,11 @@ minutes, a caller that hands in `waitUntil` gets it at once while a new one is r
 the app does not answer, the copy is answered with `kept` (why), which the page says. A refusal
 with no copy is said in plain words, with the connection's page as the fix when a key fixes it.
 `connect.web(env, tenantId, days, how)` (`WEB_DAYS`: 7, 30, 90; `how`: the company's `zone` and
-`waitUntil`; the module adds each app's `calls`) answers at most `WEB_MAX` (4) connections for the Analytics page. The routes mount
-only with `registry`.
+`waitUntil`; the module adds each app's `calls`) answers at most `WEB_MAX` (4) connections for the Analytics page.
+`connect.webApp(env, tenantId, id, days, how)` answers one of them with every call of the request
+(`WEB_CALLS`), its kind (`service`) and the apps to move between, for its full view on Reports;
+`connect.webLive(env, tenantId, id)` its right now (PostHog only). Both answer null for an id that
+is not one of the company's apps. The routes mount only with `registry`.
 
 | Route (`/api/connect`) | |
 |---|---|

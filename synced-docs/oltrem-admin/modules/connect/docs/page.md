@@ -26,7 +26,7 @@ when several), with "Add another" under it.
 | `?show=data` | The data services (kind `data`), each a pop-up posted to `/data/connect/<id>` ("Continue with Supabase" or Airtable first where the relay is set), or its connection's page; "Any other database" posted to `/data/connect`. A refused key answers with the data part's page and what was typed |
 | `?show=analytics` | The seven analytics apps, greyed without `connect.analytics.manage`, absent where the part is not mounted |
 | `/connect/analytics/new/<app>` | What the pop-up posts to, also a page: steps, name and fields; PostHog and Google start with "Continue with <app>". A refused key reopens the pop-up with what was typed, never the key |
-| `/connect/analytics/<id>` | What it reads, the last check, the last 7 days (figures against the week before, views a day, top pages, sources, countries); Change the key, Check now, Open in <app>, Disconnect (asked first); a sign-in app adds Reconnect (on top after a failed check) |
+| `/connect/analytics/<id>` | What it reads, the last check, the last 7 days (figures against the week before, views a day, top pages, sources, countries); Change the key, Check now, Open in <app>, Disconnect (asked first), and Full view (the app's full view on Reports); a sign-in app adds Reconnect (on top after a failed check) |
 | `/connect/links` | Everyone's links for `connect.links.manage`: the 200 most recently used, whose, health, Delete (asked first); linked as "Links your team made" |
 | `/connect/back` | One-click's way back: to the row made, the new sheet, or why nothing was made; for Supabase "Pick a Supabase project" or "Connect <project>?", for Airtable "Connect Airtable?"; `?confirm=1&p=<app>` lists the analytics sites to connect |
 

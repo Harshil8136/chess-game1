@@ -125,3 +125,12 @@ From [record](../archive/records/2026-11-27-cloudflare-dns-mail-turnstile.md):
 | P1031 | DNS lookups, under the domain's parts | Names looked up most, kinds of record and answers in words (Found, No such name) |
 | P1032 | Turnstile (a domain with a Turnstile form) | Checks shown and the share passed over the last 7 days; Open in Cloudflare opens Turnstile |
 | P1033 | In plain words, at the top of the board | A line on requests and the cache's share, and one on what the protections did |
+
+From [record](../archive/records/2026-11-27-website-full-view.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1034 | Reports, Website, then Full view on PostHog's board | A row of apps with PostHog marked, Overview and Settings under it, and the board with a dashed line for the days before |
+| P1035 | Visitors and Page views above the chart | The chart switches figure and keeps its dashed line; the address keeps your pick |
+| P1036 | Right now in the full view, page left open a minute | "It updates every 30 seconds"; the count and pages change without the page reloading |
+| P1037 | Apps, PostHog's connection, then Full view at the top right | Reports opens on PostHog's full view; Settings there brings you back |
