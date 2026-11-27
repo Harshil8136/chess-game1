@@ -21,7 +21,7 @@ secret or variable.
 | Option | What it hands in |
 |---|---|
 | `timeZone` | The company's zone for the week of hours (UTC without it) |
-| `web` | The website reports from the Apps page (`WebReport`, `src/types.ts`) |
+| `web` | The website reports from the Apps page (`WebReport`, `src/types.ts`); the page's call hands in the company's clock and `waitUntil` |
 | `modules` | The modules whose `report` sections are listed and whose money and steps the summary reads |
 | `events` | More marks on the trend (the template: each day a version went live) |
 | `alerts` | Where the morning check raises an unusual day |
@@ -77,7 +77,7 @@ Tuesday"); a usual day resolves it. The page shows the same for the period's las
 |---|---|
 | `/analytics` | Tabs: **Activity**, **Website** when `web` is wired, and **Money**, **Customers**, **Work**, **Email**, **Services** where a module brings a section; an empty tab opens Activity. A period row for every tab (`PERIODS` 7, 30, 90, and **Custom**: any 1 to 90 days of the last year against as many before, without audit links or website apps) |
 | Activity | Whose work (`WHO`: everyone, people, automatic, vendor); six figures with their moves; **Each day**, one trend of the picked figure with the period before dashed and `MARKS` (campaigns out, invoices sent) and `events` as dotted lines, the days as a table; **What stands out** in sentences, with an unusual last day; **Who did the work** as split bars; **When work happens** in shades; **By area** with trends, **Most frequent** in words, **People** (new, came back, busiest), **Work done**, **Refused or failed**, each linked into the audit log. Empty parts left out |
-| Website | A pane per app: figures and moves, a visitors trend, its lists, people on now, a link to its dashboard and the unusual line; a failed report says why with a fix on Apps; with none connected, how to connect one |
+| Website | A board per app (`src/website.tsx`, 2026-11-27): figures and moves (events, goals, errors, stuck taps and recordings where counted, each linked to the app), "In plain words" sentences from the figures, a visitors trend, when visitors come (weekday by hour, company clock), right now, how visitors found the site (kinds of source with bounce and visit length, websites, campaigns), pages (top, where visits start and end), where visitors are, what they use, how fast pages are (each reading graded against Google's limits: Good, Needs improvement, Poor), where visitors got stuck, and events and goals; each part shows only when the app counts it and opens the app's own page for it. A kept copy says when it was read and why, with a link to the connection; a part the app did not give is named; a failed report says why with a fix on Apps; with none connected, how to connect one |
 | Module tabs | The open tab's sections from `GET /api/<module>/report` as the person, side by side: figures with moves, a daily line with the period before, lists linking their pages, amounts in their currency; a 403 is left out, a failure said. Money opens with **From visit to paid**: visitors, form answers, quotes sent, accepted, invoices paid, each with its count, move and carry-on share (two steps at least) |
 | `/analytics/csv` | The period's days: day, actions, automatic, vendor, people, sign-ins, refused, failed |
 
@@ -111,7 +111,7 @@ Counts and ids the log already holds, never what changed. No errors of its own: 
 |---|---|
 | `test/analytics.test.ts` | The manifest; nothing before the first run; the log counted from its first row in chunks, once; quiet days at zero, the period before, areas and actions; the company check; pruning; whose work, the hours on a clock ahead of UTC and caught up; people, refusals, named work; the Monday summary (timing, the week, the Owners and who is not one, never twice, a failed send made up with the same keys, money, steps and website read once) |
 | `test/unusual.test.ts` | An unusual day, a range with its marks and last full day, the alert raised and resolved |
-| `test/pages.test.ts` | Areas and actions in words linked to the log, what stands out, option rows keeping each other, the chart's figure, the Website part hidden, empty, filled or failed, the marks, the unusual line, Custom, the CSV |
+| `test/pages.test.ts` | Areas and actions in words linked to the log, what stands out, option rows keeping each other, the chart's figure, the Website part hidden, empty, filled or failed, the board's every part with its words, grades, links, kept copy and missing part, the marks, the unusual line, Custom, the CSV |
 
 The template's screens test opens the page before any count, then reads it after a tick and
 downloads the CSV.

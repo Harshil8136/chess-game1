@@ -2,7 +2,7 @@
 title: "@oltrem/connect: website analytics"
 status: living
 owner: vendor
-last_verified: 2026-11-26
+last_verified: 2026-11-27
 sources: [modules/connect/src/web.ts, oneclick.ts, module.ts, types.ts]
 ---
 
@@ -17,11 +17,23 @@ Each connection is a providers instance of kind `analytics` (`@oltrem/providers`
 pinned to the app's own shape. Email's pages neither list nor count one. `src/web.ts` reads each
 app into one `WebReport`: visitors, visits, page views, bounce share, average visit, the window
 before, each day, top pages, sources, countries, devices, browsers, the app's events and people on
-the site now. A figure an app does not keep is left out, never estimated.
+the site now. Since 2026-11-27 a report may also hold events, goals, errors, stuck taps and
+recordings among its figures; entry and exit pages, regions, cities, systems, campaigns and goals
+among its lists; visits by weekday and hour on the company's clock (`hours`, `zone`); kinds of
+source with their bounce and visit length (`channels`); page speed per device at 3 visits in 4
+(`speed`); pages where visitors got stuck (`trouble`); right now (`now`); and the app's own page
+for each part (`links`). A figure an app does not keep is left out, never estimated.
+
+**PostHog** is asked four HogQL questions, two at a time (it answers three at once per project):
+the figures (which must answer), where visitors came from, where they are and what they use with
+the hours, and speed with stuck taps and right now. A question it does not answer is named in
+`missing` and the rest of the report stands. A key's check asks the figures alone. The company's
+time zone (Settings) is written into the hours question only when the runtime knows it (`clockOf`),
+else UTC.
 
 | App | Asked through | Not given |
 |---|---|---|
-| PostHog | One HogQL query, `POST /api/projects/<id>/query/` (Query Read key) | Nothing |
+| PostHog | Four HogQL questions, `POST /api/projects/<id>/query/` (Query Read key) | Goals (its events stand in) |
 | Plausible | Stats API v2, `POST /api/v2/query`, at most 10 calls | Nothing; events are its goals |
 | Umami | `stats`, `pageviews`, `metrics`, `active` (Cloud under `api.umami.is/v1`; older servers read too) | Nothing |
 | Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups` (Account Analytics Read) | Visitors, bounce, average visit, events, people now |
@@ -29,18 +41,22 @@ the site now. A figure an app does not keep is left out, never estimated.
 | Matomo | One `API.getBulkRequest` POST with all reports, the token in the body; a part switched off leaves its figure out | Visitors over a range unless turned on |
 | Fathom | `/aggregations` and `/current_visitors`, nine calls in turns of `FATHOM_AT_ONCE` (5) | Visits apart from visitors, events |
 
-An answer past `ANSWER_MAX` (2 MB) is refused unread. A report is kept `WEB_CACHE_SECONDS` (10
-minutes) in the Cache API, keyed by connection, window and the key's last change; nothing goes to
-KV. A refusal is said in plain words, with the connection's page as the fix when a key fixes it.
-`connect.web(env, tenantId, days)` (`WEB_DAYS`: 7, 30, 90) answers at most `WEB_MAX` (4)
-connections for the Analytics page. The routes mount only with `registry`.
+An answer past `ANSWER_MAX` (2 MB) is refused unread. A report is kept in the Cache API, keyed by
+connection, window, clock and the key's last change; nothing goes to KV. It is fresh for
+`WEB_CACHE_SECONDS` (10 minutes) and kept `WEB_KEEP_SECONDS` (a day) as the fallback: past its ten
+minutes, a caller that hands in `waitUntil` gets it at once while a new one is read behind it; when
+the app does not answer, the copy is answered with `kept` (why), which the page says. A refusal
+with no copy is said in plain words, with the connection's page as the fix when a key fixes it.
+`connect.web(env, tenantId, days, how)` (`WEB_DAYS`: 7, 30, 90; `how`: the company's `zone` and
+`waitUntil`) answers at most `WEB_MAX` (4) connections for the Analytics page. The routes mount
+only with `registry`.
 
 | Route (`/api/connect`) | |
 |---|---|
 | `GET /analytics` | The apps, fields, steps, `signIn` where set up, and connections with their last check; fields a sign-in fills never listed |
 | `POST /analytics` | Connect one (`definitionId`, `fields`, `label`), then a first check; the same site twice is `KIT-E-0422`; a token, refresh token or client typed in is refused |
 | `GET /analytics/:id` | Its fields that are no secret and its last check |
-| `GET /analytics/:id/report?days=` | Its report (7 by default) |
+| `GET /analytics/:id/report?days=` | Its report (7 by default), a kept one answered at once past its ten minutes |
 | `POST /analytics/:id/credential` | A new key or field (left out keeps what is saved), checked at once; a signed-in connection's site or region changes only with a key (`KIT-E-0422`) |
 | `POST /analytics/:id/check` | The last day; again within 30 s, the last answer |
 | `DELETE /analytics/:id` | The connection and its sealed key; the app is not touched |

@@ -2,8 +2,8 @@
 title: "Phone tests owed: Reports"
 status: living
 owner: vendor
-last_verified: 2026-11-26
-sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; modules/analytics/README.md]
+last_verified: 2026-11-27
+sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; modules/analytics/README.md]
 ---
 
 # Phone tests owed: Reports
@@ -77,3 +77,14 @@ From [record](../archive/records/2026-11-26-reports-smarter.md):
 | P1000 | Custom on Money | Sections for those days; a line says website apps report 7, 30 or 90 days |
 | P1001 | Features, Reports | Unusual days, off; switched on, Alerts says a far-from-usual day |
 | P1002 | Monday summary email | Money amounts, From visit to paid, website visitors |
+
+From [record](../archive/records/2026-11-27-website-board.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1011 | Reports, Website, 30 days | PostHog's figures with Events, Errors, Stuck taps and Recordings, then In plain words |
+| P1012 | Scroll the Website tab | When visitors come, Right now, How visitors found the website, Pages, Where visitors are, What visitors use |
+| P1013 | How fast pages are | Each device with Good, Needs improvement or Poor beside each reading |
+| P1014 | Where visitors got stuck | Pages with taps that did nothing, quick repeated taps and errors |
+| P1015 | Open in PostHog on a part | PostHog opens on that part: Web vitals, Live, Replay |
+| P1016 | The Website tab again within ten minutes | It opens at once with the same read time |
