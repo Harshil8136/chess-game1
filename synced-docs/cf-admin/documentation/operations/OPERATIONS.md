@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-10
+last_verified: 2026-11-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-27 | Scope-limited pass for the 45-day gate: §1 against `wrangler.toml` (all 12 `binding =` names, the 3 queue names and both cron expressions appear here); `madagascar-db` and `ADMIN_SESSION` read back by ID through the Cloudflare connector (names match; the D1 database reports 31 tables) | Match; nothing changed. Not checked: §2 to §8, the secret list, the other accounts' namespaces |
 | 2026-11-19 | §5's `CLOUDFLARE_API_TOKEN` row and §5.2 against the token and the Worker's secret names read back through Cloudflare's API connector after the owner's yes (token cut to 10 permissions; five unread secrets deleted) | Both, and §5.1's chatbot row removed. Not checked: the rest of the document |
 | 2026-11-19 | §5's `CLOUDFLARE_API_TOKEN` row against every Cloudflare API call in `src/` that uses it (control plane, Developer Tools, health, log scan, Sentry, analytics, jobs) and the account's token list through Cloudflare's API connector (names, permission counts, last use; no value read); §5's `SUPABASE_SERVICE_ROLE_KEY` row against `src/lib/supabase.ts`, `src/lib/health/catalog.ts`, `src/lib/analytics/providers/supabase.ts`, supabase-js 2.110.8 and Supabase's API-key, migration and Metrics API pages | Both rows. No binding, secret or variable changed. Not checked: the rest of the document; whether cf-astro's own `CLOUDFLARE_API_TOKEN` holds the same value (it needs only Cache Purge) |
 | 2026-11-19 | §4.0's "Who is emailed" against both Sentry rules, read back through the Sentry connector after their email action was pointed at the hotel's Sentry account instead of issue owners falling back to all active members | Wording changed to one recipient. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |

@@ -1,6 +1,6 @@
 ---
 title: "GitHub page — design"
-status: active
+status: historical
 audience: [owner, ai, technical, operator]
 last_verified: 2026-10-07
 verified_against: [code, infra, live-mcp]

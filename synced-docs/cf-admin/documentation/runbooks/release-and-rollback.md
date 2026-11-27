@@ -3,7 +3,7 @@
 title: "Release & Rollback Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-10-11
+last_verified: 2026-11-27
 verified_against: [code, infra]
 owner: harshil
 related_code: [scripts/release.mjs, scripts/lib/release-guards.mjs, scripts/verify.mjs, scripts/lib/verify-runner.mjs, scripts/d1_schema_snapshot.mjs, src/pages/api/health.ts, package.json, .githooks/pre-push]
@@ -175,6 +175,7 @@ and somebody has to actually run them.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-27 | claude | scope-limited pass for the 45-day gate: every `npm run` command the runbook names (`build`, `build:ci`, `cf:deploy`, `deploy:ci`, `release`, `verify`) exists in `package.json`, and every `scripts/` path it names exists. Not checked: a live release or rollback, a Builds log | pass |
 | 2026-11-19 | claude | the install step: `npm ci` under npm 12.2.2 on Node 22.23 blocked only `esbuild`, `workerd` and `@sentry/cli`, and `npm run verify` and `npm run build` passed with all three denied (`sentry-cli --version` answers from `@sentry/cli-linux-x64`); Cloudflare's build image page read the same day (npm 10.9.2 default, `packageManager` honoured, Node 22.23.4 preinstalled). Not checked: a Builds log (not readable from here) | pass |
 | 2026-09-02 | claude | `node scripts/release.mjs preflight` (refuses a dirty tree; `--allow-dirty` passes), `node scripts/release.mjs migrate` against production (drift check clean, nothing pending), `test/release-guards.test.ts` (12), `test/api-health.test.ts` (4) | pass; Builds commands not yet switched (owner step §3) |
 | 2026-09-19 | claude | `package.json` `verify`/`build:ci`/`deploy:ci` read; `.github/workflows/quality.yml` lines 9-16; Workers Builds vs `quality` check-run durations on `a9dd974` and `67a5cf6`; `d1_migrations` applied-at vs commit author times for `0052`/`0053`/`0054`; repository Actions secrets listed | **Builds still on its default command** — §1 rewritten with a banner and a target-state diagram; the `verify` chain, the Python-gate count, the `--ci` env triggers and the §5 snapshot row corrected. Not readable from here: the Build settings in the Cloudflare dashboard (the three lines above are inference from observable behaviour) |

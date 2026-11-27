@@ -3,7 +3,7 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-10-11
+last_verified: 2026-11-27
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, THREAT-MODEL.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -321,6 +321,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-27 | §3 Sub-processors against the outside hosts the code in `src/` calls (Cloudflare, Brevo, Resend, Supabase, Sentry, PostHog, Google, GitHub, OpenRouter; the IndexNow and search-engine pings carry public URLs only, no personal data; no Upstash or Anthropic call from cf-admin, as the rows say) | Sections 1, 2 and 4 to 6; the other repositories' calls; `last_verified` moved for this scope-limited pass |
 | 2026-11-08 | Activity A's categories: the colour theme and who set it, against `src/lib/dal/UserSettingsRepository.ts` (`saveLook`) and `src/pages/api/settings/user.ts` | The rest of the document; `last_verified` left as it was |
 | 2026-11-06 | §2 L's Retention and Recipients for lab 1.19.0's downloads, erasure, removal by days and months kept, against `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES`, `BOT_AI_CHANGES`), `insights/BotData.tsx`, `insights/Conversations.tsx` (`ChatActions`) and cf-vps `apps/whatsapp-lab/src/data.ts` (`forgetChat`, `removeRange`, `setKeep`, the log's `last4`) at `7c7c411`; `test/whatsapp-bot-data.test.ts` and `test/vps-gateway.test.ts` pass | Nothing live: lab 1.19.0 is not installed and no real customer's message is stored yet; `last_verified` left as it was |
 | 2026-11-06 | §2 L's subjects and data for the bot's settings against cf-vps `apps/whatsapp-lab/src/settings.ts` (`SettingsVersion`: `at`, `by`, `settings`; `HISTORY_MAX` 20; model names and switches only) and `admin.ts` (`runRecordChange`, `by` from the signed actor) at `a8ab434` | The rest of the document; `last_verified` left as it was |
