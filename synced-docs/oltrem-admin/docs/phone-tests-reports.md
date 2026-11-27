@@ -165,6 +165,15 @@ From [record](../archive/records/2026-11-27-website-replay.md):
 | P1053 | A time in the visit's steps | The player jumps to that moment and plays from there; 1× moves to 2×, 4×, 8× |
 | P1054 | Play on a visit while PostHog is not reconnected | A sentence saying to press Reconnect, with Fix it on Apps; Play stays there to try again |
 
+From [record](../archive/records/2026-11-27-website-lists.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1055 | PostHog's full view, then Errors | The errors visitors met, the most frequent first, with times and when last met; a row opens its issue in PostHog |
+| P1056 | Watch on an error's row | Recordings opens that visit's steps and its player |
+| P1057 | Events | Every event the site sent, "Page opened" and the site's own names, each with a move against the days before |
+| P1058 | Visitors | Visitors, New and Returning, then a sentence per visitor (on a phone from Mexico, came from www.google.com); no name, address or email anywhere |
+
 From [record](../archive/records/2026-11-27-reports-focus.md):
 
 | # | Open | You should see |

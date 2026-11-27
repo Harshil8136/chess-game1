@@ -101,7 +101,11 @@ its recordings (PostHog only; a refusal answers `{ok: false}` with the fix), and
 its blocks (`web.replayBlocks`: PostHog's `snapshots?blob_v2=true`, at most `REPLAY_BLOCKS`, 500),
 with `run` (`from`, `to`, at most `REPLAY_RUN`, 20, blocks) PostHog's answer itself (`web.replayRun`,
 `REPLAY_TIMEOUT_MS`, 25 s), which the route streams on. It needs Session recording Read (a key) or
-`session_recording:read` (a sign-in); a refusal names that fix. All answer null for an id that
+`session_recording:read` (a sign-in); a refusal names that fix. `connect.webList(env, tenantId, id, {days, of})`
+(`web.list`, 2026-11-27) is one HogQL question for `errors` (`$exception` by issue, `LIST_MAX` 50) or
+`events` (each event in these days and the same days before, `EVENTS_MAX` 100), two side by side for
+`visitors` (the latest 50 by person, then everyone and those first seen before); it asks for no name,
+address, email or id but the latest visit's. All answer null for an id that
 is not one of the company's apps. The routes mount only with `registry`.
 
 | Route (`/api/connect`) | |
