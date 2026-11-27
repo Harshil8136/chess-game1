@@ -117,3 +117,11 @@ From [record](../archive/records/2026-11-27-cloudflare-domain.md):
 | P1028 | Open in Cloudflare on a part | Cloudflare opens on the domain's Traffic or Caching page |
 | P1029 | Security, under the domain's parts | What each protection did ("Blocked by Your custom rules"), pages and countries acted on most, and the latest events with no visitor address |
 | P1030 | Bots and addresses, then Open in Cloudflare | Known bots by kind and the kinds of addresses; the button opens the domain's Bots page |
+
+From [record](../archive/records/2026-11-27-cloudflare-dns-mail-turnstile.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1031 | DNS lookups, under the domain's parts | Names looked up most, kinds of record and answers in words (Found, No such name) |
+| P1032 | Turnstile (a domain with a Turnstile form) | Checks shown and the share passed over the last 7 days; Open in Cloudflare opens Turnstile |
+| P1033 | In plain words, at the top of the board | A line on requests and the cache's share, and one on what the protections did |

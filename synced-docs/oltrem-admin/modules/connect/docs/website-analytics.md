@@ -48,9 +48,14 @@ the pages that failed. Its security over the same days (`edgeSecurityQuery`): wh
 protection did (`securityAction` and `securitySource`, allowed and logged requests left out), the
 pages and countries it acted on most, verified bots by kind, and the latest 10 events
 (`firewallEventsAdaptive`) with their rule; `ipClassMap` says what Cloudflare knows of the
-addresses. No visitor's address or browser string is asked for. The domain alone fills the board's
-figures too (distinct visitors, HTML pages). Four calls: the zone, its year question, then its
-detail and its security side by side.
+addresses. Over the same days, its DNS lookups (`edgeMoreQuery`: all, by name, kind of record and
+answer) and the mail Email Routing handled (by what happened, and SPF, DKIM and DMARC passes); and
+the account's Turnstile checks on the domain and its subdomains over the last week at most
+(`turnstileQuery`, the free plan's widest span; left quiet when the token lacks Account Analytics
+Read). No visitor's address or browser string is asked for. The domain alone fills the board's
+figures too (distinct visitors, HTML pages), and the board's "In plain words" gains the domain's
+sentences (`edgeReading`). Six calls: the zone, its year question, then its detail, its security,
+DNS and mail, and Turnstile side by side.
 
 **The other six apps** fill the same parts where their APIs allow (the table below). A report's
 calls are shared: `WEB_CALLS` (40 of the 50 a free-plan request may make) split evenly between the
@@ -67,7 +72,7 @@ one (`links`, `linksOf` in `web.ts`).
 | PostHog | Four HogQL questions, `POST /api/projects/<id>/query/` (Query Read key) | All of them, with recordings, errors and the funnel | Goals (its events stand in) |
 | Plausible | Stats API v2, `POST /api/v2/query`, 10 calls, then one per part | Channels, hours (site's clock), entry and exit pages, right now, regions, cities, systems, campaigns | Speed, stuck taps, minutes |
 | Umami | `stats`, `pageviews`, `metrics`, `active`, then `metrics/expanded`, `sessions/weekly` (Cloud under `api.umami.is/v1`; older servers read too) | Channels, hours (company clock), entry and exit pages, right now with minutes, regions, cities, systems, campaigns | Speed, stuck taps |
-| Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups`, then `rumWebVitalsEventsAdaptiveGroups` (Account Analytics Read); the domain's `httpRequests1dGroups` and `httpRequestsAdaptiveGroups` (Zone Read, Zone Analytics Read) | Hours (company clock), systems, speed (microseconds), right now with minutes, the domain's part (`edge`) with its security and bots | Visitors (from Web Analytics), bounce, average visit, events, channels, places below country |
+| Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups`, then `rumWebVitalsEventsAdaptiveGroups` (Account Analytics Read); the domain's `httpRequests1dGroups`, `httpRequestsAdaptiveGroups`, `firewallEventsAdaptive`, `dnsAnalyticsAdaptiveGroups` and `emailRoutingAdaptiveGroups` (Zone Read, Zone Analytics Read); `turnstileAdaptiveGroups` | Hours (company clock), systems, speed (microseconds), right now with minutes, the domain's part (`edge`) with its security, bots, DNS, routed mail and Turnstile | Visitors (from Web Analytics), bounce, average visit, events, channels, places below country |
 | Google Analytics 4 | Data API `batchRunReports` twice and `runRealtimeReport`, then two batches and two realtime reports, with a token for the service account's JSON key signed in the Worker (`analytics.readonly`; the account a Viewer) | Channels, hours (property's clock), landing pages, goals (`keyEvents`), regions, cities, systems, campaigns, right now with minutes | Exit pages, speed; its built-in events and `(not set)` left out |
 | Matomo | One `API.getBulkRequest` POST with all reports, the token in the body; a part switched off leaves only itself out | Channels, entry and exit pages, goals, regions, cities, systems, campaigns, all in the same request | Visitors over a range unless turned on, hours, speed, right now |
 | Fathom | `/aggregations` and `/current_visitors?detailed=true`, nine calls in turns of `FATHOM_AT_ONCE` (5), then one per part | Hours over 7 days or less (site's clock), entry and exit pages, right now, regions, cities, systems, campaigns | Visits apart from visitors, events, channels, speed |
