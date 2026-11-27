@@ -3,7 +3,7 @@ title: "Phone tests owed: Reports"
 status: living
 owner: vendor
 last_verified: 2026-11-27
-sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; modules/analytics/README.md]
+sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; archive/records/2026-11-27-cloudflare-domain.md; modules/analytics/README.md]
 ---
 
 # Phone tests owed: Reports
@@ -106,3 +106,14 @@ From [record](../archive/records/2026-11-27-website-funnel.md):
 | P1022 | The Funnel after saving two or more steps | A bar per step, numbered, with "% of step 1" after the first |
 | P1023 | Recordings worth watching, then a row | The recording opens in PostHog in a new tab |
 | P1024 | Errors visitors met, then a row | The error opens in PostHog's Error tracking in a new tab |
+
+From [record](../archive/records/2026-11-27-cloudflare-domain.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1025 | Apps, Cloudflare Web Analytics, Connect | Domain and Site tag marked optional, and the token steps asking for three read permissions |
+| P1026 | Reports, Website, with your domain connected | "At Cloudflare:" and your domain, with requests, data served, from the cache, threats stopped and two daily charts |
+| P1027 | How Cloudflare answered | A bar split into worked, moved, refused and failed, and the pages that failed with their answer in words |
+| P1028 | Open in Cloudflare on a part | Cloudflare opens on the domain's Traffic or Caching page |
+| P1029 | Security, under the domain's parts | What each protection did ("Blocked by Your custom rules"), pages and countries acted on most, and the latest events with no visitor address |
+| P1030 | Bots and addresses, then Open in Cloudflare | Known bots by kind and the kinds of addresses; the button opens the domain's Bots page |
