@@ -22,24 +22,40 @@ recordings among its figures; entry and exit pages, regions, cities, systems, ca
 among its lists; visits by weekday and hour on the company's clock (`hours`, `zone`); kinds of
 source with their bounce and visit length (`channels`); page speed per device at 3 visits in 4
 (`speed`); pages where visitors got stuck (`trouble`); right now (`now`); and the app's own page
-for each part (`links`). A figure an app does not keep is left out, never estimated.
+for each part (`links`). PostHog adds the five recordings worth watching (`recordings`: most
+errors, then most clicks) and the five errors met most (`issues`), each opening itself in PostHog,
+and a funnel (`funnel`) from two to five steps picked on the Reports page. A figure an app does
+not keep is left out, never estimated.
 
 **PostHog** is asked four HogQL questions, two at a time (it answers three at once per project):
 the figures (which must answer), where visitors came from, where they are and what they use with
-the hours, and speed with stuck taps and right now. A question it does not answer is named in
+the hours, and speed with stuck taps, right now, recordings, errors and the funnel. A funnel step is
+a page path (a trailing `*` takes every page under it) or an event name (`WEB_STEP`, no quote, so
+it is safe in the question), kept on the connection as the providers option `steps` and counted
+with `windowFunnel` (each step within a day of the one before). A question it does not answer is named in
 `missing` and the rest of the report stands. A key's check asks the figures alone. The company's
 time zone (Settings) is written into the hours question only when the runtime knows it (`clockOf`),
 else UTC.
 
-| App | Asked through | Not given |
-|---|---|---|
-| PostHog | Four HogQL questions, `POST /api/projects/<id>/query/` (Query Read key) | Goals (its events stand in) |
-| Plausible | Stats API v2, `POST /api/v2/query`, at most 10 calls | Nothing; events are its goals |
-| Umami | `stats`, `pageviews`, `metrics`, `active` (Cloud under `api.umami.is/v1`; older servers read too) | Nothing |
-| Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups` (Account Analytics Read) | Visitors, bounce, average visit, events, people now |
-| Google Analytics 4 | Data API `batchRunReports` twice and `runRealtimeReport`, with a token for the service account's JSON key signed in the Worker (`analytics.readonly`; the account a Viewer) | Nothing; its built-in events left out |
-| Matomo | One `API.getBulkRequest` POST with all reports, the token in the body; a part switched off leaves its figure out | Visitors over a range unless turned on |
-| Fathom | `/aggregations` and `/current_visitors`, nine calls in turns of `FATHOM_AT_ONCE` (5) | Visits apart from visitors, events |
+**The other six apps** fill the same parts where their APIs allow (the table below). A report's
+calls are shared: `WEB_CALLS` (40 of the 50 a free-plan request may make) split evenly between the
+apps connected (`how.calls`). Each app asks its first answer, then its other parts in order of
+worth (channels, the hours, where visits start, right now, regions, systems, campaigns, where
+visits end, cities) while its share lasts, so four apps get fewer parts than one. A part the app's
+version does not know (400, 404) is left out quietly; any other failure is named in `missing`.
+Hours an app keeps on its own clock (Plausible, Google Analytics, Fathom) carry no `zone`, and the
+page says they are on the clock set in the app. Each part opens the app's own report where it has
+one (`links`, `linksOf` in `web.ts`).
+
+| App | Asked through | Other parts | Not given |
+|---|---|---|---|
+| PostHog | Four HogQL questions, `POST /api/projects/<id>/query/` (Query Read key) | All of them, with recordings, errors and the funnel | Goals (its events stand in) |
+| Plausible | Stats API v2, `POST /api/v2/query`, 10 calls, then one per part | Channels, hours (site's clock), entry and exit pages, right now, regions, cities, systems, campaigns | Speed, stuck taps, minutes |
+| Umami | `stats`, `pageviews`, `metrics`, `active`, then `metrics/expanded`, `sessions/weekly` (Cloud under `api.umami.is/v1`; older servers read too) | Channels, hours (company clock), entry and exit pages, right now with minutes, regions, cities, systems, campaigns | Speed, stuck taps |
+| Cloudflare Web Analytics | GraphQL `rumPageloadEventsAdaptiveGroups`, then `rumWebVitalsEventsAdaptiveGroups` (Account Analytics Read) | Hours (company clock), systems, speed (microseconds), right now with minutes | Visitors, bounce, average visit, events, channels, places below country |
+| Google Analytics 4 | Data API `batchRunReports` twice and `runRealtimeReport`, then two batches and two realtime reports, with a token for the service account's JSON key signed in the Worker (`analytics.readonly`; the account a Viewer) | Channels, hours (property's clock), landing pages, goals (`keyEvents`), regions, cities, systems, campaigns, right now with minutes | Exit pages, speed; its built-in events and `(not set)` left out |
+| Matomo | One `API.getBulkRequest` POST with all reports, the token in the body; a part switched off leaves only itself out | Channels, entry and exit pages, goals, regions, cities, systems, campaigns, all in the same request | Visitors over a range unless turned on, hours, speed, right now |
+| Fathom | `/aggregations` and `/current_visitors?detailed=true`, nine calls in turns of `FATHOM_AT_ONCE` (5), then one per part | Hours over 7 days or less (site's clock), entry and exit pages, right now, regions, cities, systems, campaigns | Visits apart from visitors, events, channels, speed |
 
 An answer past `ANSWER_MAX` (2 MB) is refused unread. A report is kept in the Cache API, keyed by
 connection, window, clock and the key's last change; nothing goes to KV. It is fresh for
@@ -48,7 +64,7 @@ minutes, a caller that hands in `waitUntil` gets it at once while a new one is r
 the app does not answer, the copy is answered with `kept` (why), which the page says. A refusal
 with no copy is said in plain words, with the connection's page as the fix when a key fixes it.
 `connect.web(env, tenantId, days, how)` (`WEB_DAYS`: 7, 30, 90; `how`: the company's `zone` and
-`waitUntil`) answers at most `WEB_MAX` (4) connections for the Analytics page. The routes mount
+`waitUntil`; the module adds each app's `calls`) answers at most `WEB_MAX` (4) connections for the Analytics page. The routes mount
 only with `registry`.
 
 | Route (`/api/connect`) | |
@@ -59,6 +75,7 @@ only with `registry`.
 | `GET /analytics/:id/report?days=` | Its report (7 by default), a kept one answered at once past its ten minutes |
 | `POST /analytics/:id/credential` | A new key or field (left out keeps what is saved), checked at once; a signed-in connection's site or region changes only with a key (`KIT-E-0422`) |
 | `POST /analytics/:id/check` | The last day; again within 30 s, the last answer |
+| `POST /analytics/:id/steps` | PostHog's funnel: `steps`, two to five, or none to take it away; another app or one step is `KIT-E-0422` |
 | `DELETE /analytics/:id` | The connection and its sealed key; the app is not touched |
 | `POST /analytics/signin` | After signing in: `held` and `site`; saves (new, again, or that site's) and checks; answers `{id, again, check}` |
 

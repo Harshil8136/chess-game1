@@ -3,7 +3,7 @@ title: "Phone tests owed: Reports"
 status: living
 owner: vendor
 last_verified: 2026-11-27
-sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; modules/analytics/README.md]
+sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; modules/analytics/README.md]
 ---
 
 # Phone tests owed: Reports
@@ -88,3 +88,21 @@ From [record](../archive/records/2026-11-27-website-board.md):
 | P1014 | Where visitors got stuck | Pages with taps that did nothing, quick repeated taps and errors |
 | P1015 | Open in PostHog on a part | PostHog opens on that part: Web vitals, Live, Replay |
 | P1016 | The Website tab again within ten minutes | It opens at once with the same read time |
+
+From [record](../archive/records/2026-11-27-website-other-apps.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1017 | Reports, Website, with Plausible, Umami, Google Analytics or Fathom connected | How visitors found the website, Where visits start, What visitors use, and When visitors come |
+| P1018 | When visitors come, for Plausible, Google Analytics or Fathom | "the clock set in" and the app's name, instead of your company's time zone |
+| P1019 | Reports, Website, with Cloudflare Web Analytics connected | How fast pages are, with Good, Needs improvement or Poor, and Right now |
+| P1020 | Open in Plausible or Matomo on Pages | The app opens on its own pages report |
+
+From [record](../archive/records/2026-11-27-website-funnel.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1021 | Reports, Website, with PostHog connected: Funnel, then Pick the steps | A pop-up with five steps; type /, then pick a page or event from the list, and Save the steps |
+| P1022 | The Funnel after saving two or more steps | A bar per step, numbered, with "% of step 1" after the first |
+| P1023 | Recordings worth watching, then a row | The recording opens in PostHog in a new tab |
+| P1024 | Errors visitors met, then a row | The error opens in PostHog's Error tracking in a new tab |

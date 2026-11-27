@@ -2,7 +2,7 @@
 title: "@oltrem/providers: delivery reports, detection, checks, credentials, tables, tests"
 status: living
 owner: vendor
-last_verified: 2026-11-26
+last_verified: 2026-11-27
 sources: [modules/providers/src/webhooks, detection, registry.ts, module.ts, errors.ts]
 ---
 
@@ -79,7 +79,7 @@ for the public address.
 
 | Function | What it does |
 | --- | --- |
-| `registry.setOption(env, actor, id, name, value)` | One of `OPTIONS` beside the fields, kept across new keys: `edits` (`on` or `null`), `columns` (2 to 8,000 characters of JSON) |
+| `registry.setOption(env, actor, id, name, value)` | One of `OPTIONS` beside the fields, kept across new keys: `edits` (`on` or `null`), `columns` (2 to 8,000 characters of JSON), `steps` (a website app's funnel, 2 to 1,000 characters of JSON) |
 | `registry.setCredential(..., { replace: true })` | The pasted fields are the whole credential (a sign-in drops a key and the reverse); audited `replaced: true` |
 | `registry.renew(env, tenant, id, from, secret)` | Seals `token`, `refresh`, `expires` or `access` a service renewed, only while `from` is still stored (false when another request won); never moves the host; the one unaudited write (Airtable's and Supabase's hourly renewals) |
 | `registry.recordUsage(db, id, usage)` | Keeps the provider's used and left |
