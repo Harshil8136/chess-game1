@@ -93,6 +93,7 @@ the app does not answer, the copy is answered with `kept` (why), which the page 
 with no copy is said in plain words, with the connection's page as the fix when a key fixes it.
 `connect.web(env, tenantId, days, how)` (`WEB_DAYS`: 7, 30, 90; `how`: the company's `zone` and
 `waitUntil`; the module adds each app's `calls`) answers at most `WEB_MAX` (4) connections for the Analytics page.
+`connect.webApps(env, tenantId)` lists them, each with its logo (`mark`);
 `connect.webApp(env, tenantId, id, days, how)` answers one of them with every call of the request
 (`WEB_CALLS`), its kind (`service`) and the apps to move between, for its full view on Reports;
 `connect.webLive(env, tenantId, id)` its right now and `connect.webRecordings(env, tenantId, id, ask)`

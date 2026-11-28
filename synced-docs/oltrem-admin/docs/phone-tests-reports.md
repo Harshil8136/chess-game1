@@ -8,10 +8,8 @@ sources: [the Reports records of 26 and 27 November in archive/records/; modules
 
 # Phone tests owed: Reports
 
-> **In plain words.** The phone tests still owed on Admin, Reports, moved here from
-> [the Backups and System status list](phone-tests-system.md) on 26 November so each list stays
-> small enough to read whole. They run the same way, and a passed or failed line moves to
-> [Phone tests owed](phone-tests.md)'s "Passed" or "Failed, to fix" with the date.
+> **In plain words.** The phone tests still owed on Admin, Reports. A passed or failed line
+> moves to [Phone tests owed](phone-tests.md)'s "Passed" or "Failed, to fix" with the date.
 
 ## Owed
 
@@ -130,7 +128,7 @@ From [record](../archive/records/2026-11-27-website-full-view.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P1034 | Reports, Website, then Full view on PostHog's board | A row of apps with PostHog marked, Overview and Settings under it, and the board with a dashed line for the days before |
+| P1034 | Reports, Website | The first app alone: a row of app logos, its name beside its own; Overview and Settings under it; a dashed line for the days before |
 | P1035 | Visitors and Page views above the chart | The chart switches figure and keeps its dashed line; the address keeps your pick |
 | P1036 | Right now in the full view, page left open a minute | "It updates every 30 seconds"; the count and pages change without the page reloading |
 | P1037 | Apps, PostHog's connection, then Full view at the top right | Reports opens on PostHog's full view; Settings there brings you back |
@@ -193,3 +191,11 @@ From [record](../archive/records/2026-11-28-cloudflare-lists.md):
 | P1077 | Tap Security | Counts stopped by action (and host), then the latest events: page, what happened, when, from where; no address or browser |
 | P1078 | Tap Workers | Each Worker with requests against the days before and median CPU; Open in Cloudflare and a Worker's name open Cloudflare |
 | P1079 | Tap 90 days on Security or Workers | The page says the last 30 days, the most Cloudflare keeps in detail |
+
+From [record](../archive/records/2026-11-28-apps-apart.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1087 | Reports, Website: tap Cloudflare's logo, then PostHog's | Each app alone with its name beside its logo; nothing of the other app's figures |
+| P1088 | On a computer, rest the pointer on a logo | Its full name |
+| P1089 | The same row in the dark theme | PostHog's black logo drawn light |
