@@ -184,3 +184,12 @@ From [record](../archive/records/2026-11-27-reports-focus.md):
 | P1073 | In it, tap a row of Actions | That one action's report; All areas brings back everything |
 | P1074 | Latest in the log, tap a row | The Audit log on that day, searched for that action |
 | P1075 | Tap People in Who did the work | Reports for people's work only, the area kept |
+
+From [record](../archive/records/2026-11-28-cloudflare-lists.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1076 | Cloudflare's full view on Reports | Chips Overview, Security, Workers and Settings; no Recordings, Errors or Visitors |
+| P1077 | Tap Security | Counts stopped by action (and host), then the latest events: page, what happened, when, from where; no address or browser |
+| P1078 | Tap Workers | Each Worker with requests against the days before and median CPU; Open in Cloudflare and a Worker's name open Cloudflare |
+| P1079 | Tap 90 days on Security or Workers | The page says the last 30 days, the most Cloudflare keeps in detail |
