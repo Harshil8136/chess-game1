@@ -133,4 +133,4 @@ before each deploy and records them in the `oltrem_migrations` table.
 
 | This client's migration |
 |---|
-| none yet |
+| `0104_alerts_fix.sql` |

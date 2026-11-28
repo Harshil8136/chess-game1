@@ -119,6 +119,9 @@ Off while the nightly backup is off.
 | `backup.fresh` | Newest copy within `FRESH_HOURS` (26) | To `STALE_HOURS` (50), no copy yet, or fresh after a failure | Past 50 hours, or no copy and the last run failed |
 | `backup.drill` | A passed drill within `DRILL_DAYS` (35) | None yet, or older | The last failed |
 
+`backup.fresh` carries the fix Back up now (`POST /api/backup/runs`): its alert offers it on Home's
+Needs you.
+
 The daily `backup.prune` removes run records past `RUNS_KEPT_DAYS` (365), keeping running ones and
 the newest of each kind and outcome. Copies go after 90 days by the bucket's rule.
 

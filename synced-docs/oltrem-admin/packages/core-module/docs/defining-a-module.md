@@ -100,7 +100,8 @@ the body unread and reads `request` under its own limit, checking the declared l
   resume; `step.sleep` costs no CPU.
 - **Health:** an id, a lane, a summary, `run` answering `ok`, `warn` or `fail`, and `every` (15
   minutes, `CHECK_EVERY`). `@oltrem/core-health` runs them on the tick, keeps the last result and
-  opens a problem after two failures in a row.
+  opens a problem after two failures in a row. An optional `fix` (a label and an API path) is the
+  one press the problem's alert offers on Home's Needs you.
 
 ## Home and search
 

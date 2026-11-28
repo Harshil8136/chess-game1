@@ -43,7 +43,8 @@ report: { title: 'Notes', tab: 'work', capability: 'notes.read',
 `todo`: a capability and `list(ctx)` answering items (title, optional note, page). It adds `GET
 /api/<module>/todo`, at most 5 items (`TODO_ITEMS`). Home asks every module in sidebar order and
 shows them first. `list` answers only what this person can act on, by the same rules the action
-checks. Count what is many ("3 requests to decide").
+checks. Count what is many ("3 requests to decide"). An item may carry an `action` (a label and an API path from `/api/`): Home
+shows its button and `/do/needs-you` POSTs `{}` only to a fix the module still offers.
 
 ## Get started
 

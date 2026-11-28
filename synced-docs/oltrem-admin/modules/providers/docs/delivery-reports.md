@@ -60,6 +60,7 @@ failover. Activating needs a credential; a suggestion is never activated by itse
 | --- | --- |
 | `providers.connections` (Status, email lane, `CONNECTIONS_EVERY` 1 h) | Probes each email instance set to send (`CONNECTIONS_MAX` 5) side by side within `CONNECTION_WAIT_MS` (4 s), keeps `last_probe` (only when changed, or daily) without an audit row, and says it in words (`connectionSaid`): 401 or 403 a refused key with the fix, 429 a warning. The active one failing fails the check (two hours open a problem); a failover only warns. A failed write warns, never blaming the service |
 | `providers.checkup` (job, hourly) | The `CHECKUP_BATCH` (3) connections of this part's kinds with a key and no check in `CHECKUP_DUE_MS` (20 h), never-checked first. A passing failure (`passingFailure`: timeout, lost connection, 408, 425, 429, 5xx) is retried after `CHECKUP_RETRY_MS` (2 s) and kept as `fixed`. Audited as `providers.checkup`; `GET /checkup` lists every kind |
+| The watcher (`watch`) | After each checkup run, every connection's last check goes through `connectionAlert`: a failure raises `connection.<id>` (`WATCH_RAISE` 2 a run) with a Check again fix by kind; an answer, or a working Check again (`checked`), resolves it |
 
 ## Credentials
 

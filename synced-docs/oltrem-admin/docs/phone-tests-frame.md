@@ -347,3 +347,12 @@ From [record](../archive/records/2026-11-15-one-sidebar-and-colour.md):
 |---|---|---|
 | P240 | Home, Users and Settings, press Menu; light and dark | The sidebar tinted with the portal's colour, each icon on a tile of its group's colour, the page on screen a solid tile and bold |
 | P242 | Any page, press Menu | The drawer as narrow as the computer's sidebar, no wide blank strip beside the names; a long address ends in … |
+
+From [record](../archive/records/2026-11-28-needs-you-watcher.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1080 | Home with an alert open nobody took | One row per alert, worst first, with what to do and a button; Assign to me takes it off |
+| P1081 | Integrations: paste a wrong key on a connection and press Check | One email "<name> stopped working"; on Home its row with Check again |
+| P1082 | Paste the right key back, then press Check again on Home | The row leaves; Alerts shows it resolved |
+| P1083 | Home when backups are two days late | A row with Back up now; it starts a copy, and the row leaves once done |

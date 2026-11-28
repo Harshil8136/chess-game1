@@ -99,8 +99,9 @@ Under `/api/alerts`; capabilities on bit plane 8: `alerts.read`, `alerts.manage`
 | `POST /bulk` | `alerts.manage` | `{ action, ids }`: `acknowledge`, `resolve` or `delete` (resolved, `alerts.delete`), `BULK_MAX` 100; one audit entry; answers `done` |
 
 Each is audited (`alerts.acknowledge`, `.release`, `.resolve`, `.note`, `.mute`, `.delete`). Module
-parts: Home's card (open, critical), Needs you (unacknowledged and the worst, `alerts.manage`), and
-Get started (done once someone is named).
+parts: Home's card (open, critical), Needs you, and Get started (done once someone is named).
+Needs you (`alerts.manage`) lists each untaken alert, critical first, at most `TODO_ALERTS` (5),
+with its "What to do:" line and one press: its `fix` (an API route), else Assign to me.
 
 ## The table
 
@@ -111,6 +112,7 @@ Get started (done once someone is named).
 | `0064` | An index of resolved alerts, newest first |
 | `0096` | `resolved_by`, `note`, `note_by`, `note_at`, `muted_until`, an index on key and mute |
 | `0098` | `resolution` |
+| `0104` | `fix`: the one press offered on Needs you, as JSON |
 
 Not built: routes other than email; an alert emailed again while it stays open; snoozing.
 
