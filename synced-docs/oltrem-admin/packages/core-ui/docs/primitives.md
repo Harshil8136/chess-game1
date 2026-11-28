@@ -17,6 +17,7 @@ emits a `style` attribute, so the hash-based CSP holds; a test renders each and 
 
 | Primitive | Built on | Rule it keeps |
 |---|---|---|
+| `BrandButton` | `<button>`, or `<a>` with `href` | Connects an app: 44 px, its mark on a white tile, "Continue with <app>", the brand as tint and glow; `google` follows Google's own rules. Never beside a key box |
 | `Button`, `IconButton`, `LinkButton` | `<button>`; `<a>` for a page's tools | Four looks; heights 40/44 (mouse/finger), `chip` 32/36 beside a heading; 14 px medium; flat fill, no shadow; never a fixed width; an icon button refuses an empty label |
 | `ChipRow`, `CommandRow` | `<nav>` in the `.ui-chip-row` scroller | Every option visible, the current marked, `count` as a badge; filters a tray from 640 px; commands are quiet bordered buttons, never chips, destructive last and red. The scroller reaches into the gutter, so it needs a parent with the gutter's padding |
 | `ChoiceChips`, `CheckChips` | `<fieldset>` of radios or checkboxes in chips | Every option visible, posts without a script; a ticked check posts `name-value` as `1` |

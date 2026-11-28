@@ -3,7 +3,7 @@ title: "Phone tests owed: Reports"
 status: living
 owner: vendor
 last_verified: 2026-11-27
-sources: [archive/records/2026-11-26-reports-remade.md; archive/records/2026-11-26-reports-every-part.md; archive/records/2026-11-26-reports-money.md; archive/records/2026-11-26-reports-funnel.md; archive/records/2026-11-26-reports-email.md; archive/records/2026-11-26-reports-services.md; archive/records/2026-11-26-reports-smarter.md; archive/records/2026-11-27-website-board.md; archive/records/2026-11-27-website-other-apps.md; archive/records/2026-11-27-website-funnel.md; archive/records/2026-11-27-cloudflare-domain.md; archive/records/2026-11-27-reports-focus.md; modules/analytics/README.md]
+sources: [the Reports records of 26 and 27 November in archive/records/; modules/analytics/README.md]
 ---
 
 # Phone tests owed: Reports

@@ -14,3 +14,4 @@ folder (`.ignore`).
 | [Kit review](2026-11-03-kit-review.md) | what kept the kit at fine rather than best, and the order of fixes |
 | [Product plan](2026-11-03-product-plan.md) | the product line, its modules and five phases of work |
 | [Positioning](2026-11-28-positioning.md) | who buys, every feature kept, cut or improved, the next three to build |
+| [Staying current](2026-11-28-staying-current.md) | watch, link and describe providers; never copy their dashboards |

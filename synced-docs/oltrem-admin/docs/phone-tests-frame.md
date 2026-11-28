@@ -356,3 +356,5 @@ From [record](../archive/records/2026-11-28-needs-you-watcher.md):
 | P1081 | Integrations: paste a wrong key on a connection and press Check | One email "<name> stopped working"; on Home its row with Check again |
 | P1082 | Paste the right key back, then press Check again on Home | The row leaves; Alerts shows it resolved |
 | P1083 | Home when backups are two days late | A row with Back up now; it starts a copy, and the row leaves once done |
+| P1084 | As Owner, open an app's board in Reports and press the pin by its title | It shows under Home in the sidebar, by the app's name; the pin again removes it |
+| P1085 | As a Member, the same portal | The pinned page shows if you may open it; no pin by titles |

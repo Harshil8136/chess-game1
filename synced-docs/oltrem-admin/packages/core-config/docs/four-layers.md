@@ -104,8 +104,9 @@ live setting, an Owner `owner` and `admin` ones, others with `settings.manage` t
 | `settings.portal_name` (`NAME_SETTING`) | The portal's name, 40 characters; empty, the client file's `name` |
 | `settings.portal_mark` (`MARK_SETTING`) | The tile: empty for initials, `icon:<name>`, or `picture:<file>` under `ui/mark/` in the bucket |
 | `settings.portal_tagline` (`TAGLINE_SETTING`) | The line under the name, 40 characters; empty, "Admin portal" |
+| `settings.pinned` (`PINNED_SETTING`) | Up to 8 `Name \| /address` lines, pinned under Home by the pin beside a page's title |
 
-All four are Owner-editable, immediate, and read from memory with the parts on every request.
+All five are Owner-editable, immediate, and read from memory with the parts on every request.
 
 ## The company's clock
 

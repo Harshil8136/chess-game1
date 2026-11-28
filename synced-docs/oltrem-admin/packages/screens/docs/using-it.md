@@ -46,7 +46,9 @@ address: the function takes the page as drawn and the page's API and returns wha
 The client template hands `{ '/email': emailFrame }` from `@oltrem/email/pages`, so the delivery log
 sits beside Email's folders like every other Email page.
 
-`createScreens({ brand, files })` give the portal its own name and icon: `brand()` returns the
+`pinned()` returns the `settings.pinned` lines: those pages show under Home for whoever is shown
+their section, and an Owner or the Vendor gets a pin beside each title (`/do/pin`). A page's
+`name` names it there; else its title. `createScreens({ brand, files })` give the portal its own name and icon: `brand()` returns the
 `settings.portal_name`, `settings.portal_mark` and `settings.portal_tagline` (`line`) values (the
 template's reads them from the settings snapshot), and `files(env)` the portal's one bucket, where a
 picture icon is kept under `ui/mark/`. Without `brand` the name is `portal` and the tile its
