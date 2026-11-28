@@ -13,3 +13,4 @@ folder (`.ignore`).
 | [Mail projects](2026-11-02-mail-projects.md) | 35 mail projects compared; a mail repository |
 | [Kit review](2026-11-03-kit-review.md) | what kept the kit at fine rather than best, and the order of fixes |
 | [Product plan](2026-11-03-product-plan.md) | the product line, its modules and five phases of work |
+| [Positioning](2026-11-28-positioning.md) | who buys, every feature kept, cut or improved, the next three to build |

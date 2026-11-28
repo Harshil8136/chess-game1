@@ -38,7 +38,7 @@ redacted: all of it is written as if public (R-04).
 |---|---|
 | [ai.md](../ai.md), [rules.md](../rules.md) | The session start, the rules in one line each, the commands; every rule in full |
 | [Where things stand](status.md) | The parts still waiting, and on whom |
-| [Roadmap](roadmap.md) | What buyers pay for, the editions, what is started or later |
+| [Roadmap](roadmap.md) | Who buys, the next three to build, the editions, what is started or later |
 | [Architecture guide](architecture.md) | The parts, how a request and a job travel, what a module is, the numbers taken |
 | [The licence in plain words](licence.md) | What the Oltrem Licence allows and how to ask for more |
 | [Versions and release notes](release.md) | Versioning and how a change's note is written |
