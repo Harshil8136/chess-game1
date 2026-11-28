@@ -19,7 +19,6 @@ From [record](../archive/records/2026-11-22-apps-page-and-one-click-connect.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P376 | Admin, Integrations, Apps | Connected on top when anything is; then All, Chat, Calendar, Spreadsheets, Automation in a sideways row; every app a card with its state on the right (Connect, Add, Create, or how it is doing) |
 | P377 | Slack, after the relay is set up: Continue to Slack, pick a channel, Allow | Back on Apps, "Slack is connected. A test was sent"; the row is marked for a moment; the test line is in the channel |
 | P378 | Discord the same way; then press Cancel on Discord's page instead of Authorize | First: connected, the test arrives. Then: "You cancelled on the app’s page, so nothing was connected" |
 | P379 | Spreadsheets, Google Sheets, pick a list, Create the sheet in Google | Google asks for your account; a new Google Sheet opens with the list filling in; Connected lists it |
@@ -27,7 +26,6 @@ From [record](../archive/records/2026-11-22-apps-page-and-one-click-connect.md):
 | P381 | A row under Connected: Send test, Pause, Turn on, Delete | Each says what it did; Paused shows a grey dot; Delete asks first |
 | P382 | Calendar, Outlook, Create my link; then Google Calendar | Outlook's panel offers Outlook.com and work or school; Google's link is a second one, and both rows are listed |
 | P383 | As a person without the Developer permission | The chat and automation cards are greyed with "Ask an Owner"; Calendar still works |
-| P384 | Apps, tap Chat, then Calendar | The filter row is near the top; Connected shows only that filter's rows |
 | P385 | Any other app; paste the address of a Slack channel page (app.slack.com/…) | Refused: it says this is a Slack page and where the webhook link is |
 
 ### The Apps page: logos, what is running, logs, 23 November
@@ -36,8 +34,6 @@ From [record](../archive/records/2026-11-23-apps-logs-connected-look.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P468 | Admin, Integrations, Apps with the phone in dark mode | Every logo sits on the card with a thin outline, none on a bright white square; Slack and Make are drawn light, Apple Calendar in grey; Zapier shows its orange asterisk |
-| P469 | The same page in light mode | The logos on white tiles, in their own colours, as before |
 | P470 | With Airtable connected: the Airtable card | It shows Working (or Not answering) with the base's name, how fast it answered and when; tapping it opens that database's page, not Connect. "Add another" under it opens the Airtable connect page |
 | P471 | Connected, at the top | One line such as "2 working, 1 needs a look"; the Airtable base is listed among the rows and opens its page |
 | P472 | A Zapier or Slack card with one connection; then a calendar card with a link made | The card shows that connection's last delivery and opens its page; the calendar card scrolls to its row under Connected |
@@ -98,7 +94,6 @@ From [record](../archive/records/2026-11-26-analytics-sign-in.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P933 | Apps, Analytics, PostHog | "Sign in with PostHog" first, marked Recommended, with three short steps and the one filled button; the key under "Or connect with a key", closed |
 | P934 | Sign in with PostHog, Authorize on PostHog's page | Back on the portal: "Signed in to PostHog." and your projects; Connect on one opens its page with the last 7 days, and no key was asked for |
 | P935 | Apps, Analytics, Google Analytics, Sign in with Google, pick your account, Allow | Your GA4 properties listed; Connect on one opens its page with the last 7 days |
 | P936 | Sign in with PostHog again, then Cancel on PostHog's page | Back on PostHog's Connect page: you cancelled, so nothing was connected |
@@ -106,16 +101,25 @@ From [record](../archive/records/2026-11-26-analytics-sign-in.md):
 | P938 | Remove the portal's access in PostHog (or your Google account's third-party access); wait a day, then Home | Under Needs you: "PostHog stopped answering"; it opens the page with Sign in with PostHog at the top; signing in again clears the line |
 | P939 | Admin, Data, with a Supabase database connected (its card has "Add another"); then Apps at full width | The other cards in the row keep their own height; no card grows to match a taller one |
 
+### The Apps page remade, 28 November
+
+From [record](../archive/records/2026-11-28-apps-page-remade.md):
+
+| # | Open | You should see |
+|---|---|---|
+| P1120 | Apps, on a phone and a computer | Find an app; each card one row with a Connect, Add or Create pill |
+| P1121 | Type "post", then "zzz" | Only PostHog; then "No app by that name here" with Connect any other app |
+| P1122 | A failing and a working connection | Connected lists the failing first; the app's card has a red dot on its logo |
+
 ### Every Connect a pop-up, in colour, no fake login, 26 November
 
-Since this batch, P933 to P938 read "Continue with PostHog" (or Google Analytics) and "Reconnect"
+Since this batch, P934 to P938 read "Continue with PostHog" (or Google Analytics) and "Reconnect"
 where they say "Sign in with" and "Sign in again".
 
 From [record](../archive/records/2026-11-26-apps-pop-ups-and-no-fake-login.md):
 
 | # | Open | You should see |
 |---|---|---|
-| P940 | Apps, on a phone and at full width | Each app's logo on its own colour in a large tile; the head and first cards within the top fifth |
 | P941 | Apps, a connected app's card | What it holds as a dot and a word (for example "3 events"), not a grey line |
 | P942 | Apps, Chat, Connect on Slack (or Discord) | A pop-up with numbered steps; with the sign-in service set, Continue with Slack |
 | P943 | Apps, Analytics, Connect on Plausible | A pop-up over the Apps page, never a page of its own; Cancel or Escape leaves you on Apps |

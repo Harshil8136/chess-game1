@@ -2,7 +2,7 @@
 title: "@oltrem/connect: the page, logos, logging, tables, errors, tests"
 status: living
 owner: vendor
-last_verified: 2026-11-26
+last_verified: 2026-11-28
 sources: [modules/connect/src/pages.tsx, brands.ts, module.ts, links.ts]
 ---
 
@@ -12,13 +12,17 @@ sources: [modules/connect/src/pages.tsx, brands.ts, module.ts, links.ts]
 
 ## The page
 
-Every Connect is a pop-up on `/connect`, never a page of its own. A connected card shows its health
-and last use and opens what runs (the webhook's page, the link's row, the database, or Connected
-when several), with "Add another" under it.
+Every Connect is a pop-up on `/connect`, never a page of its own. Since 2026-11-28 (the UX laws): a
+find box beside the kinds hides the cards that do not match and offers Any other app when none
+does; each card is one row (its logo on its colour, name, a line, and the same pill: Connect, Add,
+Create or Continue), its edge in the app's colour under the pointer. A connected card has that
+edge, a health dot on its logo and its state, opens what runs (the webhook's page, the link's row,
+the database, or Connected when several), with "Add another" under it. Connected lists what fails
+first, then what waits, then what works.
 
 | Path | Shows |
 |---|---|
-| `/connect` | Connected (working and needing a look as dots on its title), the filters, the cards by group (each logo a coloured tile), "Any other app" |
+| `/connect` | The find box and the kinds, Connected (its counts on its title), the cards by kind under headings in the kind's colour, "Any other app" |
 | `?show=chat` | Four chat cards; a window of numbered steps: "Continue to Slack" when one-click is set, else (or under "Or paste a link instead") the steps with Open <app> and the link; events and name under Options; "Connect and send a test" |
 | `?show=calendar` | Google, Apple, Outlook, "Another calendar app"; once made, the button that adds it (Outlook.com, or work or school) and the link to copy |
 | `?show=sheets` | Google Sheets and Excel: lists, forms and invoices, then "Create the sheet in Google" or "Create the link"; the `=IMPORTDATA("…")` cell or the Excel steps |
@@ -32,13 +36,11 @@ when several), with "Add another" under it.
 
 ## The logos
 
-Simple Icons marks (CC0; each brand keeps its trademark) for Slack, Discord, Google Chat, Calendar
-and Sheets, Zapier (its asterisk drawn here), Make, n8n, PostHog, Plausible, Umami, Cloudflare,
-Google Analytics, Matomo and Fathom, in the brand's colour (`src/brands.ts`, the design system's
-one exception): white in light, and a colour too dark to see in dark (Slack's, Make's) in the text
-colour (`inkOf`, `@oltrem/core-ui`). Microsoft had its marks removed, so Teams, Outlook and Excel
-show a plain icon in their colour; Apple Calendar and the generic cards a plain icon. One line says
-names and logos belong to their owners.
+Simple Icons marks (CC0; each brand keeps its trademark) in the brand's colour (`src/brands.ts`, the
+design system's one exception); on a row, a mark too dark for the dark theme takes the text colour
+(`inkOf`). Microsoft removed its marks, so Teams, Outlook and Excel show a plain icon in their
+colour, as do Apple Calendar and the generic cards. One line says names and logos belong to their
+owners.
 
 ## Logging, tables, personal data, errors
 
@@ -64,12 +66,10 @@ names and logos belong to their owners.
 
 | File | What it proves |
 |---|---|
-| `test/connect.test.ts` | The manifest; what a person may link; a calendar link shown once, hashed, escaped, all-day days, a failing source left out, the read written hourly, replaced per app; refused when guessed, of the other kind, blocked, signed out (deleted), switched off and on, deleted, 90 days unread; sheets without `connect.share`, read as the person, closed when the list or module goes; the 20-link limit; privacy search; audit rows. One-click: the trip, sealed answers, refusals for another person, nonce, service, time, seal or key; the sheet's address sealed for the relay, the link written only on return and never twice |
-| `test/analytics.test.ts` | Each app's answer into one report (old Umami, Cloudflare's window, Google's token, Matomo with a part off, Fathom's five at once); refusals in plain words; the routes behind the permission, duplicates and other shapes refused, no key shown back, check pressed twice; sign-in fields never listed, PostHog in both regions with renewal, another relay's client refused, Google's refused renewal, Home's line, the daily job |
-| `test/pages.test.ts` | The Data and Analytics cards drawn, locked or absent; the connect and connection pages; Sign in first with the key folded; the way back through the pick page |
+| `test/connect.test.ts` | The manifest; who may link what; a calendar link shown once, hashed, escaped, read hourly, one per app; refused when guessed, of the other kind, blocked, signed out, switched off, deleted or 90 days unread; sheets read as the person and closed with their list; the 20-link limit; privacy and audit. One-click: the trip and its sealed answers, every refusal, the link written once on return |
+| `test/analytics.test.ts` | Each app's answer into one report; refusals in plain words; the routes behind the permission, duplicates refused, no key shown back; sign-in (PostHog's regions and renewal, Google's refusal, another relay refused); Home's line; the daily job |
+| `test/pages.test.ts` | The Data and Analytics cards drawn, locked or absent; the find box, each card's filter words, colour and spoken press; Connected failing first; the connect and connection pages; the way back through the pick page |
 | `test/detect.test.ts` | The Custom card's guess from each address, the links refused, an app's own page pasted by mistake |
 
-Each store's `calendar()` and the invoices' `csv()` are tested in their modules. The template's
-screens test makes, reads (with no sign-in), filters and deletes a calendar and a sheet link, and
-with the relay set walks one-click from Continue to the alert, refused for another person and
-cancelled.
+Each store's `calendar()` and the invoices' `csv()` are tested in their modules; the template's
+screens test walks a calendar and a sheet link, and one-click with the relay set.

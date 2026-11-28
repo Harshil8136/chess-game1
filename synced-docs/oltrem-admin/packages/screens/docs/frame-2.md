@@ -57,7 +57,7 @@ portal link, a search, a filter or a form's change in place: it fetches the next
 | Loading | The loading orb (`oltremOrb`, from thinking-orbs, placed by `pnpm ui:build`) in a round chip at the top, and in a form's button while it sends; after 150 ms the page dims (`data-loading`). One still frame under reduced motion. |
 | A change shown at once | A form or button with `data-optimistic` changes its row (`data-optimistic-row`) or the ticked rows before sending: `hide`, `set:<name>`, `unset:<name>`, `toggle:<name>` (with `aria-pressed` and `data-optimistic-label`). No dimming; the answer puts the true page in place; no answer puts every row back and says the change may not have been saved. |
 | Small helpers | `data-copy` copies a value and says "Copied" (aloud too) for two seconds. `data-fill` (a field's id) with `data-value` puts an example in the field. |
-| Lists to filter | `data-filter` hides the `data-filter-item` rows and emptied `data-filter-group`s of the element it names; the control starts `hidden` with `data-enhance`. |
+| Lists to filter | `data-filter` hides the `data-filter-item` rows and emptied `data-filter-group`s of the element it names, and shows its `data-filter-empty` line when none match; the control starts `hidden` with `data-enhance`. |
 | Needed by | A box with `data-needed-by` shows its `aria-describedby` element while it is off and one of the named values is on (Features). |
 
 ## The page alone

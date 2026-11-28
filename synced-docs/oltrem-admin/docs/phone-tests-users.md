@@ -103,8 +103,6 @@ From [record](../archive/records/2026-11-14-users-sessions-blocking-owner-overri
 | P217 | Then Unblock them | They can sign in again; the browser the block signed out must sign in again |
 | P216 | A user (not an Owner), Sessions: Block sign-in, 1 day, a reason | Signed out at once; Users lists them under Blocked; their Sessions page says until when, with Unblock |
 | P215 | A user, Sessions: Set end time on an active session, In 1 hour, Save | The row says ends with the time; past it, that browser must sign in again |
-| P214 | A user's page | Their name is the heading; one line of facts; no big card; Overview, Permissions, Overrides, Sessions, Activity |
-| P213 | Users | A small Invite beside the heading; each row two lines, name then roles and last sign-in; a pill only for Blocked or Deactivated |
 
 From [record](../archive/records/2026-11-11-users-pages.md):
 
@@ -115,12 +113,6 @@ From [record](../archive/records/2026-11-11-users-pages.md):
 | P135 | A user, Sessions: End one sign-in, then Sign out everywhere | Each asks first; the browser is signed out; Sign-in history lists their sign-ins with the browser in words |
 | P134 | A user's page: give another role with Access ends 1 day; then Change it to another role | The row says "until" tomorrow; the change dialog offers Keep first; the grid of modules shows their level in colour |
 | P133 | Users, Invite people: pick a role card, leave No end date, send | Each card says what the role does and how many have it; the invitation is made; its row says the role |
-
-From [record](../archive/records/2026-10-27-access-screens.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P11 | Users, Invite people | the form, the invitation made, its link copyable |
 
 From [record](../archive/records/2026-10-21-see-it-as.md):
 
@@ -143,7 +135,6 @@ From [record](../archive/records/2026-11-22-email-settings-compose-role-editor.m
 | P416 | Email, any folder | A gear in the top bar, beside Search (on a computer, at the head's right beside the bell); press it: Email settings. Back in Email, a Settings row at the foot of the sidebar (on a phone, in the menu) opens the same page |
 | P417 | Email, Compose | A plain head with New email and Close; at the foot one row: Send with an arrow beside it, Attach, Template, Preview, a green check mark when it is ready, and More |
 | P418 | The arrow beside Send; then More | Schedule send with a day and a time; then More opens Save draft and Save as template. The bold, italic and list buttons sit under the message |
-| P419 | Users, a user, Permissions, open a module | Each permission with Inherit, Allow and Deny as one even control, nothing cut off or faded, and its name such as `access.users.read` in small code type with a Copy button; Copy puts the name on the clipboard |
 | P420 | The same user: the Policy JSON tab at the top | Their access as Policy JSON with Copy, one tap from Permissions |
 | P421 | Users, Roles, a role | Three tabs: Permissions, Assigned to, Policy JSON. Permissions is one list of modules with None, View, Edit and Manage; a level a module has not shows a dash. Assigned to shows the users and groups, Move up and Move down, and Remove when the role was never given |
 
@@ -151,8 +142,6 @@ From [record](../archive/records/2026-11-23-locked-layout-user-page-policy-edito
 
 | # | Open | You should see |
 |---|---|---|
-| P455 | Users, a user (Overview) | Under their name one line with their avatar, status and role, then Overview, Permissions, Sessions, Activity; no Signed in today or Access requests chips. Cards numbered 1 Roles (Add role at the top right), 2 Their own Allow and Deny (Change at the top right), 3 What they can do; Account beside them on a computer, under them on a phone |
-| P456 | The same user, 3 What they can do | One even list: each area with a coloured dot and Manage, Edit, View or Limited, and "2 of 8"; the areas with no access as one line at the end; tap an area: its permissions open |
 | P457 | The same user, Permissions, then Policy JSON at the right end of the row | Their own policy in a box with Format, Copy and Download at the top right; From roles beside it (under it on a phone) with each role's Policy JSON link |
 | P458 | Policy JSON: delete a comma | The line under the box says Not valid JSON at line N, column N; press Format: back in order once fixed. Press Check with a valid edit: what Save would add and end; Save: Their permissions were saved |
 | P459 | Settings, Name and icon | A preview of the sidebar, the phone bar and the browser tab; type a name and a Line under the name (Front desk): all three change as you type; Save: the sidebar shows Front desk under the name |
@@ -229,13 +218,6 @@ From the dialogs skill:
 | P791 | In that question press Keep editing, then tap outside again and press Discard | Keep editing goes back to the field; Discard closes the dialog, and opening it again shows it empty |
 | P792 | Open the same dialog, type nothing, tap outside; then type and press Cancel | Both close at once: only a tap outside or Escape after typing asks |
 | P793 | Tasks, New task: type a few words in Notes | Under the box a count such as "12 / 4000" follows each letter (with a keyboard, Ctrl+Enter saves like the main button) |
-
-From [record](../archive/records/2026-11-24-api-keys.md):
-
-| # | Open | You should see |
-|---|---|---|
-| P650 | As an Owner: Users and access, Settings, API keys, Make a key: a name, a role (no Owner offered), Make the key | The key shown once with Copy; the list shows it with No end date, never used |
-| P651 | The same key's row, Revoke, Revoke it | The key was revoked; its row says Revoked with today's date and no Revoke button |
 
 From [record](../archive/records/2026-11-20-codebase-review.md):
 
